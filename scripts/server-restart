@@ -1,0 +1,8 @@
+#! /bin/bash
+
+mkdir log -p
+echo 'Killing ...'
+killall boselecta
+sleep 0.2
+echo 'Starting ...'
+dist/build/boselecta/boselecta boselecta.conf > /dev/null 1>/dev/null & disown

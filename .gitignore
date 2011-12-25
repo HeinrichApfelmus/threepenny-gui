@@ -1,0 +1,6 @@
+*.hi
+*.o
+cabal-dev
+dist
+TAGS
+log
