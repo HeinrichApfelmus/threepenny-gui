@@ -49,10 +49,10 @@ data Signal
   = Init ()
   | Elements [Element]
   | SingleElement Element
-  | Event (Integer,String)
+  | Event (String,String)
   deriving (Show)
 
-data Element = Element Integer
+data Element = Element String
   deriving (Data,Typeable,Show)
 
 instance JSON Signal where
@@ -72,8 +72,8 @@ instance JSON Element where
 data Session = Session
   { sSignals :: Chan Signal
   , sInstructions :: Chan Instruction
-  , sEventHandlers :: MVar (Map (Integer,String) EventHandler)
-  , sMutex :: MVar ()
+  , sEventHandlers :: MVar (Map (String,String) EventHandler)
+  , sElementIds :: MVar [Integer]
   }
 
 main = do
@@ -208,7 +208,7 @@ onHover = bind "hover"
 
 data EventData = EventData
 
-data Closure = Closure (Integer,String)
+data Closure = Closure (String,String)
   deriving (Typeable,Data,Show)
 
 type EventHandler = EventData -> SessionM ()
@@ -248,11 +248,17 @@ debug = run . Debug
 
 clear = run $ Clear ()
 
-newElement tagName = 
-  call (NewElement tagName) $ \signal ->
-    case signal of
-      SingleElement el -> return (Just el)
-      _                -> return Nothing
+-- newElement tagName = 
+--   call (NewElement tagName) $ \signal ->
+--     case signal of
+--       SingleElement el -> return (Just el)
+--       _                -> return Nothing
+
+newElement tagName = do
+  Session{..} <- ask
+  elid <- io $ modifyMVar sElementIds $ \elids ->
+    return (tail elids,"*" ++ show (head elids) ++ ":" ++ tagName)
+  return (Element elid)
 
 run i = do
   Session{..} <- ask
@@ -294,11 +300,12 @@ newSession = do
   instructions <- newChan
   handlers <- newMVar M.empty
   mutex <- newMVar ()
+  ids <- newMVar [0..]
   return $ Session
     { sSignals = signals
     , sInstructions = instructions
     , sEventHandlers = handlers
-    , sMutex = mutex
+    , sElementIds = ids
     }
 
 readInput :: (MonadSnap f,Read a) => ByteString -> f (Maybe a)

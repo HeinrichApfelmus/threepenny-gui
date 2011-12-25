@@ -3,7 +3,7 @@
 var sessionToken = null;
 var global_ids = [], element_count = 0, el_table = [];
 var transaction = false;
-console.log = function(){};
+//console.log = function(){};
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main entry point
@@ -104,7 +104,7 @@ function runEvent(event,continuation){
       var set = event.SetStyle;
       var id = set[0];
       var style = set[1];
-      var el = el_table[id];
+      var el = lookupElementTable(id);
       var len = style.length;
       for(var i = 0; i < len; i++){
         el.style[style[i][0]] = style[i][1];
@@ -115,7 +115,7 @@ function runEvent(event,continuation){
     case "NewElement": {
       var el = document.createElement(event.NewElement);
       signal({
-        SingleElement: { Element: getElementGuid(el) }
+        SingleEl1ement: { Element: getElementGuid(el) }
       },function(){
         continuation();
       });
@@ -123,19 +123,19 @@ function runEvent(event,continuation){
     }
     case "Append": {
       var append = event.Append;
-      $(el_table[append[0]]).append($(el_table[append[1]]));
+      $(lookupElementTable(append[0])).append($(lookupElementTable(append[1])));
       continuation();
       break;
     }
     case "SetText": {
       var set = event.SetText;
-      $(el_table[set[0]]).text(set[1]);
+      $(lookupElementTable(set[0])).text(set[1]);
       continuation();
       break;
     }
     case "SetHtml": {
       var set = event.SetHtml;
-      $(el_table[set[0]]).html(set[1]);
+      $(lookupElementTable(set[0])).html(set[1]);
       continuation();
       break;
     }
@@ -143,7 +143,7 @@ function runEvent(event,continuation){
       var bind = event.Bind;
       var eventType = bind[0];
       var handlerGuid = bind[2];
-      var el = el_table[bind[1]];
+      var el = lookupElementTable(bind[1]);
       console.log('event type: ' + eventType);
       $(el).bind(eventType,function(){
         if(!transaction) {
@@ -180,6 +180,21 @@ function signal(signal,continuation){
   });
 }
 
+function lookupElementTable(elid){
+  if(el_table[elid]){
+    return el_table[elid];
+  } else {
+    if(elid[0] == '*'){
+      var create = elid.split(':');
+      var el = document.createElement(create[1]);
+      el_table[elid] = el;
+      return el;
+    } else {
+      throw "Unknown element: " + elid;
+    }
+  }
+}
+
 // Get/generate a guid for an element
 
 function getElementGuid(element){
@@ -191,10 +206,11 @@ function getElementGuid(element){
       el_table[id] = element;
       return id;
     } else {
-      var id = element_count;
+      var id = element_count.toString();
       element.id = id;
       el_table[id] = element;
-      return element_count++;
+      element_count++;
+      return id;
     }
   }
 }
