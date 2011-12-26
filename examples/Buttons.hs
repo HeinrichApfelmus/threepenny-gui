@@ -4,6 +4,7 @@
 module Main where
 
 import Control.Concurrent
+import Control.Monad.Extra
 import Control.Monad.IO
 import Graphics.UI.Ji
 
@@ -15,13 +16,11 @@ main = serve 10001 runJi worker
 worker :: MonadJi m => m ()
 worker = do
   setTitle "Buttons"
-  els <- getElementByTagName "body"
-  case els of
-    Nothing -> error "Where's the body?"
-    Just body -> do
-      setStyle body [("background","#333")]
-      greet body
-      makeButtons body
+  body <- getElementByTagName "body"
+  whenJust body $ \body -> do
+    setStyle body [("background","#333")]
+    greet body
+    makeButtons body
   handleEvents
 
 greet :: MonadJi m => Element -> m ()
