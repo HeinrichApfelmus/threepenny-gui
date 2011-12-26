@@ -13,7 +13,7 @@ main :: IO ()
 main = serve 10001 runJi worker
 
 -- | A per-user worker thread. Each user session has a thread.
-worker :: Ji ()
+worker :: MonadJi m => m ()
 worker = do
   els <- getElementByTagName "body"
   case els of

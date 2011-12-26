@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE DeriveDataTypeable #-}
@@ -63,10 +64,10 @@ instance JSON Element where
     obj <- readJSON obj
     Element <$> valFromObj "Element" obj
 
-data Session = Session
+data Session m = Session
   { sSignals :: Chan Signal
   , sInstructions :: Chan Instruction
-  , sEventHandlers :: MVar (Map (String,String) EventHandler)
+  , sEventHandlers :: MVar (Map (String,String) (EventData -> m ()))
   , sElementIds :: MVar [Integer]
   , sToken :: Integer
   }
@@ -76,14 +77,11 @@ data EventData = EventData
 data Closure = Closure (String,String)
   deriving (Typeable,Data,Show)
 
-type EventHandler = EventData -> SessionM ()
-
-type SessionM a = ReaderT Session IO a
-
 class MonadIO m => MonadJi m where
-  askSession :: m Session
+  askSession :: m (Session m)
 
-instance MonadJi (ReaderT Session IO) where
+newtype Ji a = Ji { getJi :: ReaderT (Session Ji) IO a }
+  deriving (Monad,MonadIO,MonadReader (Session Ji))
+
+instance MonadJi Ji where
   askSession = ask
-
-type Ji = ReaderT Session IO

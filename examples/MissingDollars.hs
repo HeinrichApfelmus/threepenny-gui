@@ -14,7 +14,7 @@ main :: IO ()
 main = serve 10002 runJi worker
 
 -- | A per-user worker thread. Each user session has a thread.
-worker :: Ji ()
+worker :: MonadJi m => m ()
 worker = do
   body <- getElementByTagName "body"
   whenJust body $ \body -> do
@@ -22,7 +22,7 @@ worker = do
     missingDollarRiddle body headerMe
     handleEvents
 
-attribution :: Element -> Ji Element
+attribution :: MonadJi m => Element -> m Element
 attribution body = do
   header <- newElementText body "h1" "The "
   headerMe <- newElementText header "span" "…"
@@ -35,7 +35,7 @@ attribution body = do
   
   return headerMe
 
-missingDollarRiddle :: Element -> Element -> Ji ()
+missingDollarRiddle :: MonadJi m => Element -> Element -> m ()
 missingDollarRiddle body headerMe = do
   newElementText' body "h2" "The Guests, The Bellhop, And The Pizza"
   -- User input area.
@@ -111,20 +111,20 @@ missingDollarRiddle body headerMe = do
           append parent el
           return el
 
-link :: String -> String -> Ji Element
+link :: MonadJi m => String -> String -> m Element
 link url text = do
   el <- newElement "a"
   setAttr el "href" url
   setText el text
   return el
 
-newElementText :: Element -> String -> String -> Ji Element
+newElementText :: MonadJi m => Element -> String -> String -> m Element
 newElementText parent tagName text = do
   el <- newElement tagName
   append parent el
   setText el text
   return el
 
-newElementText' :: Element -> String -> String -> Ji ()
+newElementText' :: MonadJi m => Element -> String -> String -> m ()
 newElementText' parent tagName text =
   newElementText parent tagName text >> return ()
