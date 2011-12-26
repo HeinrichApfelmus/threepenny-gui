@@ -86,7 +86,6 @@ import           Snap.Core
 import           Snap.Http.Server
 import           Snap.Util.FileServe
 import           Text.JSON.Generic
-import           Text.Printf
 
 
 --------------------------------------------------------------------------------
@@ -251,8 +250,7 @@ handleEvent :: MonadJi m => m ()
 handleEvent = do
   signal <- get
   case signal of
-    ev@(Event (elid,eventType)) -> do
-      _ <- io $ printf "Received event: %s\n" (show ev)
+    Event (elid,eventType) -> do
       Session{..} <- askSession
       handlers <- io $ withMVar sEventHandlers return
       case M.lookup (elid,eventType) handlers of
@@ -433,7 +431,6 @@ readValuesList = liftM (sequence . map readMay) . getValuesList
 call :: MonadJi m => Instruction -> (Signal -> m (Maybe a)) -> m a
 call instruction withSignal = do
   Session{..} <- askSession
-  _ <- io $ printf "Calling instruction as function on: %s\n" (show instruction)
   run $ instruction
   newChan <- liftIO $ dupChan sSignals
   go newChan
@@ -443,15 +440,13 @@ call instruction withSignal = do
       signal <- liftIO $ readChan newChan
       result <- withSignal signal
       case result of
-        Just signal -> do _ <- io $ printf "Got response for %s\n" (show instruction)
-                          return signal
+        Just signal -> return signal
         Nothing     -> go newChan
 
 -- Run the given instruction.
 run :: MonadJi m => Instruction -> m ()
 run i = do
   Session{..} <- askSession
-  _ <- io $ printf "Writing instruction: %s\n" (show i)
   io $ writeChan sInstructions i
 
 
