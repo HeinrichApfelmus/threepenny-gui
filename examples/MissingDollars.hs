@@ -28,6 +28,11 @@ attribution body = do
   headerMe <- newElementText header "span" "…"
   newElementText' header "span" " Dollars"
   
+  p <- newElementText body "p" ""
+  vex <- link "https://github.com/chrisdone/ji/blob/master/examples/MissingDollars.hs"
+              "MissingDollars.hs"
+  append p vex
+
   author <- newElementText body "p" "Originally by "
   vex <- link "http://www.vex.net/~trebla/humour/missing_dollar.html"
               "Albert Lai"

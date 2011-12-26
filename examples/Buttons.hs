@@ -32,6 +32,11 @@ greet body = do
   append body header
   setText header "Hello, Haskell!"
   
+  p <- newElementText body "p" ""
+  vex <- link "https://github.com/chrisdone/ji/blob/master/examples/Buttons.hs"
+              "Buttons.hs"
+  append p vex
+
   greeting <- newElement "div"
   setText greeting "Try the buttons below, they hover and click."
   append body greeting
@@ -76,3 +81,18 @@ appendButton body caption = do
                   ,("color","#acc2a1")
                   ,("text-decoration","underline")]
   return button
+
+link :: MonadJi m => String -> String -> m Element
+link url text = do
+  el <- newElement "a"
+  setAttr el "href" url
+  setText el text
+  setStyle el [("color","#acc2a1")]
+  return el
+
+newElementText :: MonadJi m => Element -> String -> String -> m Element
+newElementText parent tagName text = do
+  el <- newElement tagName
+  append parent el
+  setText el text
+  return el
