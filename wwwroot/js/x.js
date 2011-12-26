@@ -3,7 +3,7 @@
 var sessionToken = null;
 var global_ids = [], element_count = 0, el_table = [];
 var transaction = false;
-//console.log = function(){};
+console.log = function(){};
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main entry point
