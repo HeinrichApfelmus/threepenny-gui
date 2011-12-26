@@ -1,1 +1,1 @@
-thingie http://chrisdone.com:10001/
+Missing dollars example: http://chrisdone.com/ji/missing-dollars

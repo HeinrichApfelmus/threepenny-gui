@@ -6,17 +6,16 @@
 module Main where
 
 import Control.Monad.Extra
-import Data.Maybe
 import Graphics.UI.Ji
 import Graphics.UI.Ji.Types
 
 -- | Main entry point. Starts a ji server.
 main :: IO ()
-main = serve 10002 worker
+main = serve 10002 runJi worker
 
 -- | A per-user worker thread. Each user session has a thread.
-worker :: Session -> IO ()
-worker session = runJi session $ do
+worker :: Ji ()
+worker = do
   body <- getElementByTagName "body"
   whenJust body $ \body -> do
     headerMe <- attribution body
@@ -98,14 +97,10 @@ missingDollarRiddle body headerMe = do
   -- Calculate button.
   calculate <- newElementText body "button" "Calculate"
   onClick calculate $ \_ -> do
-    getout  <- readValue hotelOut
-    getcost <- readValue hotelCost
-    gethold <- readValue hotelHold
-    fromMaybe (return ()) $ do
-      out  <- getout
-      cost <- getcost
-      hold <- gethold
-      return $ updateDisplay out cost hold
+    result <- readValuesList [hotelOut,hotelCost,hotelHold]
+    case result of
+      Just [getout,getcost,gethold] -> updateDisplay getout getcost gethold
+      _ -> return ()
   -- 
   updateDisplay 30 25 2
 

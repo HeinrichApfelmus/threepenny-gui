@@ -133,10 +133,15 @@ function runEvent(event,continuation){
       });
       break;
     }
-    case "NewElement": {
-      var el = document.createElement(event.NewElement);
+    case "GetValues": {
+      var ids = event.GetValues;
+      var len = ids.length;
+      var values = [];
+      for(var i = 0; i < len; i++) {
+        values.push($(lookupElementTable(ids[i])).val());
+      }
       signal({
-        SingleEl1ement: { Element: getElementGuid(el) }
+        Values: values
       },function(){
         continuation();
       });

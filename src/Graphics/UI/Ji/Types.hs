@@ -25,12 +25,12 @@ data Instruction
   | GetElementsByTagName String
   | SetStyle Element [(String,String)]
   | SetAttr Element String String
-  | NewElement String
   | Append Element Element
   | SetText Element String
   | SetHtml Element String
   | Bind String Element Closure
   | GetValue Element
+  | GetValues [Element]
   deriving (Typeable,Data,Show)
 
 data Signal
@@ -39,6 +39,7 @@ data Signal
   | SingleElement Element
   | Event (String,String)
   | Value String
+  | Values [String]
   deriving (Show)
 
 data Element = Element String
@@ -53,7 +54,8 @@ instance JSON Signal where
         element = SingleElement <$> valFromObj "SingleElement" obj
         event = Event <$> valFromObj "Event" obj
         value = Value <$> valFromObj "Value" obj
-    init <|> elements <|> element <|> event <|> value
+        values = Values <$> valFromObj "Values" obj
+    init <|> elements <|> element <|> event <|> value <|> values
   
 instance JSON Element where
   showJSON _ = error "JSON.Element.showJSON: No method implemented."

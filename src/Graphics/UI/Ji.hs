@@ -5,9 +5,9 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS -fno-warn-name-shadowing #-}
 
 module Graphics.UI.Ji
---  (serve)
   where
   
 import Graphics.UI.Ji.Types
@@ -30,12 +30,22 @@ import           Snap.Util.FileServe
 import           Text.JSON.Generic
 import           Text.Printf
 
-serve :: Int -> (Session -> IO a) -> IO ()
-serve port worker = do
+-- | Run a Ji server with Snap on the specified port and the given
+--   worker action.
+serve :: MonadJi m
+      => Int                      -- ^ Port.
+      -> (Session -> m a -> IO a) -- ^ How to run the worker monad.
+      -> m a                      -- ^ The worker.
+      -> IO ()                    -- ^ A Ji server.
+serve port run worker = do
   sessions :: MVar (Map Integer Session) <- newMVar M.empty
-  httpServe server (router worker sessions)
+  httpServe server (router (\session -> run session worker) sessions)
  where server = setPort port defaultConfig
- 
+
+-- | Convenient way to a run a worker with a session.
+runJi :: Session             -- ^ The browser session.
+      -> ReaderT Session m a -- ^ The worker.
+      -> m a                 -- ^ A worker runner.
 runJi session m = runReaderT m session
 
 router :: (Session -> IO a) -> MVar (Map Integer Session) -> Snap ()
@@ -89,21 +99,22 @@ init sessionThread sessions = do
   key <- io $ modifyMVar sessions $ \sessions -> do
     let newKey = maybe 0 (+1) (lastMay (M.keys sessions))
     session <- newSession newKey
-    forkIO $ do _ <- sessionThread session; return ()
+    _ <- forkIO $ do _ <- sessionThread session; return ()
     return (M.insert newKey session sessions,newKey)
   writeJson $ SetToken key
 
+handleEvents :: SessionM b
 handleEvents = forever $ do
   signal <- get
   case signal of
     ev@(Event (elid,eventType)) -> do
-      io $ printf "Received event: %s\n" (show ev)
+      _ <- io $ printf "Received event: %s\n" (show ev)
       Session{..} <- ask
       handlers <- io $ withMVar sEventHandlers return
       case M.lookup (elid,eventType) handlers of
         Nothing -> return ()
         Just handler -> handler EventData
-    unknown -> return ()
+    _ -> return ()
  
 onClick :: MonadJi m => Element -> EventHandler -> m ()
 onClick = bind "click"
@@ -128,12 +139,19 @@ newEventHandler eventType (Element elid) thunk = do
     
   where key = (elid,eventType)
 
+setStyle :: (MonadJi m) => Element -> [(String, String)] -> m ()
 setStyle el props = run $ SetStyle el props
+
+setAttr :: (MonadJi m) => Element -> String -> String -> m ()
 setAttr el key value = run $ SetAttr el key value
 
+setText :: (MonadJi m) => Element -> String -> m ()
 setText el props = run $ SetText el props
+
+setHtml :: (MonadJi m) => Element -> String -> m ()
 setHtml el props = run $ SetHtml el props
 
+append :: (MonadJi m) => Element -> Element -> m ()
 append el props = run $ Append el props
 
 getElementByTagName :: MonadJi m => String -> m (Maybe Element)
@@ -153,8 +171,18 @@ getValue el =
       Value str -> return (Just str)
       _         -> return Nothing
 
+getValuesList :: MonadJi m => [Element] -> m [String]
+getValuesList el =
+  call (GetValues el) $ \signal ->
+    case signal of
+      Values strs -> return (Just strs)
+      _           -> return Nothing
+
 readValue :: (MonadJi m,Read a) => Element -> m (Maybe a)
 readValue = liftM readMay . getValue
+
+readValuesList :: (MonadJi m,Read a) => [Element] -> m (Maybe [a])
+readValuesList = liftM (sequence . map readMay) . getValuesList
 
 debug :: MonadJi m => String -> m ()
 debug = run . Debug
@@ -172,9 +200,10 @@ newElement tagName = do
 run :: MonadJi m => Instruction -> m ()
 run i = do
   Session{..} <- askSession
-  io $ printf "Writing instruction: %s\n" (show i)
+  _ <- io $ printf "Writing instruction: %s\n" (show i)
   io $ writeChan sInstructions i
 
+get :: SessionM Signal
 get = do
   Session{..} <- ask
   io $ readChan sSignals
@@ -182,7 +211,7 @@ get = do
 call :: MonadJi m => Instruction -> (Signal -> m (Maybe a)) -> m a
 call instruction withSignal = do
   Session{..} <- askSession
-  io $ printf "Calling instruction as function on: %s\n" (show instruction)
+  _ <- io $ printf "Calling instruction as function on: %s\n" (show instruction)
   run $ instruction
   newChan <- liftIO $ dupChan sSignals
   go newChan
@@ -192,10 +221,11 @@ call instruction withSignal = do
       signal <- liftIO $ readChan newChan
       result <- withSignal signal
       case result of
-        Just signal -> do io $ printf "Got response for %s\n" (show instruction)
+        Just signal -> do _ <- io $ printf "Got response for %s\n" (show instruction)
                           return signal
         Nothing     -> go newChan
 
+withSession :: MVar (Map Integer session) -> (session -> Snap a) -> Snap a
 withSession sessions cont = do
   token <- readInput "token"
   case token of
@@ -206,11 +236,11 @@ withSession sessions cont = do
         Nothing -> error $ "Nonexistant token: " ++ show token
         Just session -> cont session
 
+newSession :: Integer -> IO Session
 newSession token = do
   signals <- newChan
   instructions <- newChan
   handlers <- newMVar M.empty
-  mutex <- newMVar ()
   ids <- newMVar [0..]
   return $ Session
     { sSignals = signals

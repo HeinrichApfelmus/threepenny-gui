@@ -10,11 +10,11 @@ import Graphics.UI.Ji.Types
 
 -- | Main entry point. Starts a ji server.
 main :: IO ()
-main = serve 10001 worker
+main = serve 10001 runJi worker
 
 -- | A per-user worker thread. Each user session has a thread.
-worker :: Session -> IO ()
-worker session = runJi session $ do
+worker :: Ji ()
+worker = do
   els <- getElementByTagName "body"
   case els of
     Nothing -> error "Where's the body?"
