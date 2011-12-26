@@ -81,6 +81,7 @@ data Instruction
   | Bind String Element Closure
   | GetValue Element
   | GetValues [Element]
+  | SetTitle String
   deriving (Typeable,Data,Show)
 
 -- | A signal (mostly events) that are sent from the client to the

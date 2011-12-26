@@ -7,7 +7,6 @@ module Main where
 
 import Control.Monad.Extra
 import Graphics.UI.Ji
-import Graphics.UI.Ji.Types
 
 -- | Main entry point. Starts a ji server.
 main :: IO ()
@@ -16,6 +15,7 @@ main = serve 10002 runJi worker
 -- | A per-user worker thread. Each user session has a thread.
 worker :: MonadJi m => m ()
 worker = do
+  setTitle "Missing Dollars"
   body <- getElementByTagName "body"
   whenJust body $ \body -> do
     headerMe <- attribution body

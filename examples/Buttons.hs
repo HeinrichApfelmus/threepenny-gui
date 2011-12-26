@@ -6,7 +6,6 @@ module Main where
 import Control.Concurrent
 import Control.Monad.IO
 import Graphics.UI.Ji
-import Graphics.UI.Ji.Types
 
 -- | Main entry point. Starts a ji server.
 main :: IO ()
@@ -15,11 +14,11 @@ main = serve 10001 runJi worker
 -- | A per-user worker thread. Each user session has a thread.
 worker :: MonadJi m => m ()
 worker = do
+  setTitle "Buttons"
   els <- getElementByTagName "body"
   case els of
     Nothing -> error "Where's the body?"
     Just body -> do
-      debug $ "Got body: " ++ show body
       setStyle body [("background","#333")]
       greet body
       makeButtons body

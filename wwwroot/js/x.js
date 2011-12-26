@@ -20,7 +20,7 @@ function waitForEvents(){
   console.log("Polling…");
   $.ajax({
     dataType: 'json',
-    url:'/' + (sessionToken? 'poll' : 'init'),
+    url: (sessionToken? 'poll' : 'init'),
     data: { token: sessionToken },
     success: function(events){
       console.log("Running event" +(events.length>1?'s':'') +"…")
@@ -159,6 +159,11 @@ function runEvent(event,continuation){
       continuation();
       break;
     }
+    case "SetTitle": {
+      document.title = event.SetTitle;
+      continuation();
+      break;
+    }
     case "SetHtml": {
       var set = event.SetHtml;
       $(lookupElementTable(set[0])).html(set[1]);
@@ -195,7 +200,7 @@ function signal(signal,continuation){
   console.log('Signal: %s',JSON.stringify(signal));
   $.ajax({
     dataType: 'json',
-    url:'/signal',
+    url:'signal',
     data: { token: sessionToken, signal: JSON.stringify(signal) },
     success: function(){
       continuation();

@@ -38,6 +38,7 @@ module Graphics.UI.Ji
   ,setAttr
   ,setText
   ,setHtml
+  ,setTitle
   
   -- * Manipulating tree structure
   -- $treestructure
@@ -342,6 +343,13 @@ setHtml :: (MonadJi m)
         -> String  -- ^ The HTML.
         -> m ()
 setHtml el props = run $ SetHtml el props
+
+
+-- | Set the title of the document.
+setTitle :: (MonadJi m)
+        => String  -- ^ The title.
+        -> m ()
+setTitle title = run $ SetTitle title
 
 
 --------------------------------------------------------------------------------
