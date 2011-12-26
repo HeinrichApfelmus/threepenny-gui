@@ -1,27 +1,28 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Main where
+module Graphics.UI.Ji
+--  (serve)
+  where
+  
+import Graphics.UI.Ji.Types
 
-import           Control.Applicative
 import           Control.Concurrent
-import           Control.Concurrent.Chan
 import           Control.Monad.IO
 import           Control.Monad.Reader
-import           Control.Monad.Trans
-import           Data.ByteString         (ByteString)
-import           Data.Map                (Map)
-import qualified Data.Map                as M
+import           Data.ByteString      (ByteString)
+import           Data.Map             (Map)
+import qualified Data.Map             as M
 import           Data.Maybe
 import           Data.Monoid.Operator
-import           Data.Text               (pack,unpack)
+import           Data.Text            (pack,unpack)
 import           Data.Text.Encoding
-import           Prelude                 hiding ((++),init)
+import           Prelude              hiding ((++),init)
 import           Safe
 import           Snap.Core
 import           Snap.Http.Server
@@ -29,69 +30,28 @@ import           Snap.Util.FileServe
 import           Text.JSON.Generic
 import           Text.Printf
 
-data Instruction
-  = Debug String
-  | Begin ()
-  | End ()
-  | SetToken Integer
-  | Clear ()
-  | GetElementById String
-  | GetElementsByTagName String
-  | SetStyle Element [(String,String)]
-  | NewElement String
-  | Append Element Element
-  | SetText Element String
-  | SetHtml Element String
-  | Bind String Element Closure
-  deriving (Typeable,Data,Show)
-
-data Signal
-  = Init ()
-  | Elements [Element]
-  | SingleElement Element
-  | Event (String,String)
-  deriving (Show)
-
-data Element = Element String
-  deriving (Data,Typeable,Show)
-
-instance JSON Signal where
-  readJSON obj = do
-    obj <- readJSON obj
-    let init = Init <$> valFromObj "Init" obj
-        elements = Elements <$> valFromObj "Elements" obj
-        element = SingleElement <$> valFromObj "SingleElement" obj
-        event = Event <$> valFromObj "Event" obj
-    init <|> elements <|> element <|> event
-  
-instance JSON Element where
-  readJSON obj = do
-    obj <- readJSON obj
-    Element <$> valFromObj "Element" obj
-
-data Session = Session
-  { sSignals :: Chan Signal
-  , sInstructions :: Chan Instruction
-  , sEventHandlers :: MVar (Map (String,String) EventHandler)
-  , sElementIds :: MVar [Integer]
-  }
-
-main = do
+serve :: Int -> (Session -> IO a) -> IO ()
+serve port worker = do
   sessions :: MVar (Map Integer Session) <- newMVar M.empty
-  httpServe server (serve sessions)
- where server = setPort 10001 defaultConfig
+  httpServe server (router worker sessions)
+ where server = setPort port defaultConfig
+ 
+runJi session m = runReaderT m session
 
-serve sessions = route routes where
+router :: (Session -> IO a) -> MVar (Map Integer Session) -> Snap ()
+router worker sessions = route routes where
   routes = [("/",handle)
            ,("/js/",serveDirectory "wwwroot/js")
-           ,("/init",init sessions)
+           ,("/init",init worker sessions)
            ,("/poll",poll sessions)
            ,("/signal",signal sessions)]
 
+handle :: Snap ()
 handle = do
   writeText "<script src=\"/js/jquery.js\"></script>"
   writeText "<script src=\"/js/x.js\"></script>"
 
+poll :: MVar (Map Integer Session) -> Snap ()
 poll sessions = do
   withSession sessions $ \Session{..} -> do
     instructions <- io $ readAvailableChan sInstructions
@@ -112,6 +72,7 @@ readAvailableChan chan = do
                  vs <- rest
                  return (v:vs)
 
+signal :: MVar (Map Integer Session) -> Snap ()
 signal sessions = do
   withSession sessions $ \Session{..} -> do
     input <- getInput "signal"
@@ -123,73 +84,14 @@ signal sessions = do
           Error err -> error err
       Nothing -> error $ "Unable to parse " ++ show input
 
-init sessions = do
+init :: (Session -> IO void) -> MVar (Map Integer Session) -> Snap ()
+init sessionThread sessions = do
   key <- io $ modifyMVar sessions $ \sessions -> do
     let newKey = maybe 0 (+1) (lastMay (M.keys sessions))
-    session <- newSession
-    forkIO $ sessionThread newKey session
+    session <- newSession newKey
+    forkIO $ do _ <- sessionThread session; return ()
     return (M.insert newKey session sessions,newKey)
   writeJson $ SetToken key
-
-sessionThread token session@Session{..} = flip runReaderT session $ do
-  initSession
-  els <- getElementByTagName "body"
-  case els of
-    Nothing -> error "Where's the body?"
-    Just body -> do
-      debug $ "Got body: " ++ show body
-      setStyle body [("background","#333")]
-      greet body
-      addButton body
-  handleEvents
-  
-  where 
- 
-       initSession = do
-         signal <- get
-         case signal of
-           Init () -> do
-             debug "Init OK."
-             debug "Clearing screen…"
-             clear
-           signal  -> error $ "Expected signal at start-up time: " ++ show signal
-
-       greet body = do
-         greeting <- newElement "div"
-         append body greeting
-         setText greeting "Hello, Haskell!"
-         setStyle greeting [("color","#ccc")]
-         
-       addButton body = do
-         list <- newElement "ul"
-         button <- appendButton body "Button1"
-         button2 <- appendButton body "Button2"
-         setStyle list [("color","#aaa")]
-         append body list
-         onHover button $ \event -> do
-           setText button "Button1[hover]"
-         onHover button2 $ \event -> do
-           setText button2 "Button2[hover]"
-         onClick button $ \event -> do
-           li <- newElement "li"
-           io $ threadDelay $ 1000 * 1000 * 1
-           setText button "Button1[pressed]"
-           setHtml li "W<b>o</b><u>o</u>p!"
-           append list li
-         onClick button2 $ \event -> do
-           li <- newElement "li"
-           setText button2 "Button2[pressed]"
-           setHtml li "Zap!"
-           append list li
-
-       appendButton body caption = do
-         button <- newElement "a"
-         append body button
-         setText button caption
-         setStyle button [("cursor","pointer")
-                         ,("color","#acc2a1")
-                         ,("text-decoration","underline")]
-         return button
 
 handleEvents = forever $ do
   signal <- get
@@ -203,26 +105,23 @@ handleEvents = forever $ do
         Just handler -> handler EventData
     unknown -> return ()
  
+onClick :: MonadJi m => Element -> EventHandler -> m ()
 onClick = bind "click"
-onHover = bind "hover"
 
-data EventData = EventData
+onHover :: MonadJi m => Element -> EventHandler -> m ()
+onHover = bind "mouseenter"
 
-data Closure = Closure (String,String)
-  deriving (Typeable,Data,Show)
+onBlur :: MonadJi m => Element -> EventHandler -> m ()
+onBlur = bind "mouseleave"
 
-type EventHandler = EventData -> SessionM ()
-
-type SessionM a = ReaderT Session IO a
-
-bind :: String -> Element -> EventHandler -> SessionM ()
+bind :: MonadJi m => String -> Element -> EventHandler -> m ()
 bind eventType el handler = do
   closure <- newEventHandler eventType el handler
   run $ Bind eventType el closure
 
-newEventHandler :: String -> Element -> EventHandler -> SessionM Closure
+newEventHandler :: MonadJi m => String -> Element -> EventHandler -> m Closure
 newEventHandler eventType (Element elid) thunk = do
-  Session{..} <- ask
+  Session{..} <- askSession
   io $ modifyMVar_ sEventHandlers $ \handlers -> do
     return (M.insert key thunk  handlers)
   return (Closure key)
@@ -230,38 +129,49 @@ newEventHandler eventType (Element elid) thunk = do
   where key = (elid,eventType)
 
 setStyle el props = run $ SetStyle el props
+setAttr el key value = run $ SetAttr el key value
 
 setText el props = run $ SetText el props
 setHtml el props = run $ SetHtml el props
 
 append el props = run $ Append el props
 
-getElementByTagName = fmap listToMaybe . getElementsByTagName
+getElementByTagName :: MonadJi m => String -> m (Maybe Element)
+getElementByTagName = liftM listToMaybe . getElementsByTagName
 
+getElementsByTagName :: MonadJi m => String -> m [Element]
 getElementsByTagName tagName =
   call (GetElementsByTagName tagName) $ \signal ->
     case signal of
       Elements els -> return (Just els)
       _            -> return Nothing
 
+getValue :: MonadJi m => Element -> m String
+getValue el =
+  call (GetValue el) $ \signal ->
+    case signal of
+      Value str -> return (Just str)
+      _         -> return Nothing
+
+readValue :: (MonadJi m,Read a) => Element -> m (Maybe a)
+readValue = liftM readMay . getValue
+
+debug :: MonadJi m => String -> m ()
 debug = run . Debug
 
+clear :: MonadJi m => m ()
 clear = run $ Clear ()
 
--- newElement tagName = 
---   call (NewElement tagName) $ \signal ->
---     case signal of
---       SingleElement el -> return (Just el)
---       _                -> return Nothing
-
+newElement :: MonadJi m => String -> m Element
 newElement tagName = do
-  Session{..} <- ask
+  Session{..} <- askSession
   elid <- io $ modifyMVar sElementIds $ \elids ->
     return (tail elids,"*" ++ show (head elids) ++ ":" ++ tagName)
   return (Element elid)
 
+run :: MonadJi m => Instruction -> m ()
 run i = do
-  Session{..} <- ask
+  Session{..} <- askSession
   io $ printf "Writing instruction: %s\n" (show i)
   io $ writeChan sInstructions i
 
@@ -269,8 +179,9 @@ get = do
   Session{..} <- ask
   io $ readChan sSignals
    
+call :: MonadJi m => Instruction -> (Signal -> m (Maybe a)) -> m a
 call instruction withSignal = do
-  Session{..} <- ask
+  Session{..} <- askSession
   io $ printf "Calling instruction as function on: %s\n" (show instruction)
   run $ instruction
   newChan <- liftIO $ dupChan sSignals
@@ -295,7 +206,7 @@ withSession sessions cont = do
         Nothing -> error $ "Nonexistant token: " ++ show token
         Just session -> cont session
 
-newSession = do
+newSession token = do
   signals <- newChan
   instructions <- newChan
   handlers <- newMVar M.empty
@@ -306,6 +217,7 @@ newSession = do
     , sInstructions = instructions
     , sEventHandlers = handlers
     , sElementIds = ids
+    , sToken = token
     }
 
 readInput :: (MonadSnap f,Read a) => ByteString -> f (Maybe a)

@@ -112,6 +112,27 @@ function runEvent(event,continuation){
       continuation();
       break;
     }
+    case "SetAttr": {
+      var set = event.SetAttr;
+      var id = set[0];
+      var key = set[1];
+      var value = set[2];
+      var el = lookupElementTable(id);
+      $(el).attr(key,value);
+      continuation();
+      break;
+    }
+    case "GetValue": {
+      var id = event.GetValue;
+      var el = lookupElementTable(id);
+      var value = $(el).val();
+      signal({
+        Value: value
+      },function(){
+        continuation();
+      });
+      break;
+    }
     case "NewElement": {
       var el = document.createElement(event.NewElement);
       signal({
