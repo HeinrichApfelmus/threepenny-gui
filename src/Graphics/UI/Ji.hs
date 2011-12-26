@@ -151,8 +151,8 @@ router worker sessions = route routes where
 -- Setup the JS.
 handle :: Snap ()
 handle = do
-  writeText "<script src=\"/js/jquery.js\"></script>"
-  writeText "<script src=\"/js/x.js\"></script>"
+  writeText "<script src=\"js/jquery.js\"></script>"
+  writeText "<script src=\"js/x.js\"></script>"
 
 -- Initialize the session.
 init :: (Session m -> IO void) -> MVar (Map Integer (Session m)) -> Snap ()
