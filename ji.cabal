@@ -25,6 +25,7 @@ Library
                     ,containers
                     ,bytestring
                     ,json == 0.4.4
+                    ,time
 
 Executable ji-examples-buttons
   Main-is:           Buttons.hs
@@ -39,6 +40,7 @@ Executable ji-examples-buttons
                     ,containers
                     ,bytestring
                     ,json == 0.4.4
+                    ,time
 
 Executable ji-examples-missing-dollars
   Main-is:           MissingDollars.hs
@@ -53,3 +55,4 @@ Executable ji-examples-missing-dollars
                     ,containers
                     ,bytestring
                     ,json == 0.4.4
+                    ,time

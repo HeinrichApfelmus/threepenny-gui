@@ -13,6 +13,7 @@ import Control.Applicative
 import Control.Concurrent
 import Control.Monad.Reader
 import Data.Map             (Map)
+import Data.Time
 import Prelude              hiding ((++),init)
 import Text.JSON.Generic
 
@@ -52,7 +53,16 @@ data Session m = Session
   , sElementIds :: MVar [Integer]
   , sToken :: Integer
   , sMutex :: MVar ()
+  , sConnectedState :: MVar ConnectedState
+  , sThreadId :: ThreadId
   }
+
+data ConnectedState
+  = Disconnected UTCTime -- ^ The time that the poll disconnected, or
+                         -- the first initial connection time.
+  | Connected            -- ^ The client is connected, we don't care
+                         -- since when.
+  deriving (Show)
 
 -- | Data from an event. At the moment it is empty.
 data EventData = EventData

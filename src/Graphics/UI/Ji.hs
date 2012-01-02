@@ -67,6 +67,8 @@ import           Graphics.UI.Ji.Internal.Types
 
 import           Control.Concurrent
 import           Control.Concurrent.Chan.Extra
+import           Control.Concurrent.Delay
+import qualified Control.Exception             as E
 import           Control.Monad.IO
 import           Control.Monad.Reader
 import           Data.ByteString               (ByteString)
@@ -76,6 +78,7 @@ import           Data.Maybe
 import           Data.Monoid.Operator
 import           Data.Text                     (pack,unpack)
 import           Data.Text.Encoding
+import           Data.Time
 import           Prelude                       hiding ((++),init)
 import           Safe
 import           Snap.Core
@@ -126,8 +129,28 @@ serve :: MonadJi m
       -> IO ()                      -- ^ A Ji server.
 serve port run worker = do
   sessions <- newMVar M.empty
+  _ <- forkIO $ custodian 30 sessions
   httpServe server (router (\session -> run session worker) sessions)
  where server = setPort port defaultConfig
+
+-- | Kill sessions after at least n seconds of disconnectedness.
+custodian :: Integer -> MVar (Map Integer (Session m)) -> IO ()
+custodian seconds sessions = forever $ do
+  delaySeconds seconds
+  modifyMVar_ sessions $ \sessions -> do
+    killed <- fmap catMaybes $ forM (M.assocs sessions) $ \(key,Session{..}) -> do
+      state <- readMVar sConnectedState
+      case state of
+        Connected -> return Nothing
+        Disconnected time -> do
+          now <- getCurrentTime
+          let dcSeconds = diffUTCTime now time
+          if (dcSeconds > fromIntegral seconds)
+             then do killThread sThreadId
+                     return (Just key)
+             else return Nothing
+            
+    return (M.filterWithKey (\k _ -> not (k `elem` killed)) sessions)
 
 -- | Convenient way to a run a worker with a session.
 runJi :: Session Ji  -- ^ The browser session.
@@ -168,6 +191,9 @@ newSession token = do
   handlers <- newMVar M.empty
   ids <- newMVar [0..]
   mutex <- newMVar ()
+  now <- getCurrentTime
+  conState <- newMVar (Disconnected now)
+  threadId <- myThreadId
   return $ Session
     { sSignals = signals
     , sInstructions = instructions
@@ -175,13 +201,26 @@ newSession token = do
     , sElementIds = ids
     , sToken = token
     , sMutex = mutex
+    , sConnectedState = conState
+    , sThreadId = threadId
     }
 
 -- Respond to poll requests.
 poll :: MVar (Map Integer (Session m)) -> Snap ()
 poll sessions = do
   withSession sessions $ \Session{..} -> do
-    instructions <- io $ readAvailableChan sInstructions
+    let setDisconnected = do
+          now <- getCurrentTime
+          modifyMVar_ sConnectedState (const (return (Disconnected now)))
+    io $ modifyMVar_ sConnectedState (const (return Connected))
+    threadId <- io $ myThreadId
+    io $ forkIO $ do
+      delaySeconds $ 60 * 5 -- Force kill after 5 minutes.
+      killThread threadId
+    instructions <- io $ E.catch (readAvailableChan sInstructions) $ \e -> do
+      when (e == E.ThreadKilled) $ do
+        setDisconnected
+      E.throw e
     writeJson instructions
 
 -- Write JSON to output.
