@@ -1,13 +1,8 @@
--- | The main Ji module.
-
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS -fno-warn-name-shadowing #-}
+
+-- | The main Ji module.
 
 
 --------------------------------------------------------------------------------
@@ -172,12 +167,14 @@ newSession token = do
   instructions <- newChan
   handlers <- newMVar M.empty
   ids <- newMVar [0..]
+  mutex <- newMVar ()
   return $ Session
     { sSignals = signals
     , sInstructions = instructions
     , sEventHandlers = handlers
     , sElementIds = ids
     , sToken = token
+    , sMutex = mutex
     }
 
 -- Respond to poll requests.
@@ -441,17 +438,19 @@ readValuesList = liftM (sequence . map readMay) . getValuesList
 call :: MonadJi m => Instruction -> (Signal -> m (Maybe a)) -> m a
 call instruction withSignal = do
   Session{..} <- askSession
+  io $ takeMVar sMutex
   run $ instruction
-  newChan <- liftIO $ dupChan sSignals
-  go newChan
+  newChan <- io $ dupChan sSignals
+  go sMutex newChan
 
   where
-    go newChan = do
-      signal <- liftIO $ readChan newChan
+    go mutex newChan = do
+      signal <- io $ readChan newChan
       result <- withSignal signal
       case result of
-        Just signal -> return signal
-        Nothing     -> go newChan
+        Just signal -> do io $ putMVar mutex ()
+                          return signal
+        Nothing     -> go mutex newChan
 
 -- Run the given instruction.
 run :: MonadJi m => Instruction -> m ()

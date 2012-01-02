@@ -1,10 +1,5 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 -- | All Ji's types. See "Graphics.UI.Ji.Types" for only public
 --   types. Non-public types can be manipulated at your own risk, if you
@@ -56,8 +51,9 @@ data Session m = Session
   , sEventHandlers :: MVar (Map (String,String) (EventData -> m ()))
   , sElementIds :: MVar [Integer]
   , sToken :: Integer
+  , sMutex :: MVar ()
   }
-  
+
 -- | Data from an event. At the moment it is empty.
 data EventData = EventData
 
