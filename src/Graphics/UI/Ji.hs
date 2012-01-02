@@ -189,7 +189,9 @@ poll sessions = do
 
 -- Write JSON to output.
 writeJson :: (MonadSnap m, Data a) => a -> m ()
-writeJson = writeString . encodeJSON
+writeJson json = do
+    modifyResponse $ setContentType "application/json"
+    (writeString . encodeJSON) json
 
 -- Write a string to output.
 writeString :: (MonadSnap m) => String -> m ()
