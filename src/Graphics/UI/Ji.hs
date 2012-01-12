@@ -85,6 +85,7 @@ import           Snap.Core
 import           Snap.Http.Server
 import           Snap.Util.FileServe
 import           Text.JSON.Generic
+import           Paths_ji
 
 
 --------------------------------------------------------------------------------
@@ -160,12 +161,15 @@ runJi session m = runReaderT (getJi m) session
 
 -- Route requests.
 router :: (Session m -> IO a) -> MVar (Map Integer (Session m)) -> Snap ()
-router worker sessions = route routes where
-  routes = [("/",handle)
-           ,("/js/",serveDirectory "wwwroot/js")
-           ,("/init",init worker sessions)
-           ,("/poll",poll sessions)
-           ,("/signal",signal sessions)]
+router worker sessions = do
+     x_js <- liftIO $ getDataFileName "wwwroot/js/x.js"
+     jquery_js <- liftIO $ getDataFileName "wwwroot/js/jquery.js"
+     route [ ("/",handle)
+            ,("/init",init worker sessions)
+            ,("/js/x.js", serveFile x_js)
+            ,("/js/jquery.js", serveFile jquery_js)
+            ,("/poll",poll sessions)
+            ,("/signal",signal sessions)]
 
 -- Setup the JS.
 handle :: Snap ()

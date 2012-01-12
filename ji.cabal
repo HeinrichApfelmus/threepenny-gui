@@ -11,6 +11,10 @@ Category:            Web
 Build-type:          Simple
 Cabal-version:       >=1.2
 
+Data-files:           wwwroot/js/x.js
+                     ,wwwroot/js/jquery.js
+
+
 Library
   Hs-source-dirs:    src
   Exposed-modules:   Graphics.UI.Ji, Graphics.UI.Ji.Types
