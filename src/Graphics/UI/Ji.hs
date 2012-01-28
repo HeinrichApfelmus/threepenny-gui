@@ -34,25 +34,33 @@ module Graphics.UI.Ji
   ,setText
   ,setHtml
   ,setTitle
+  ,emptyEl
+  ,delete
   
   -- * Manipulating tree structure
   -- $treestructure
   ,newElement
-  ,append
+  ,appendTo
   
   -- * Querying
   -- $querying
+  ,getHead
+  ,getBody
   ,getElementsByTagName
   ,getElementByTagName
   ,getValue
   ,getValuesList
   ,readValue
   ,readValuesList
+  ,getRequestCookies
+  ,getRequestLocation
   
   -- * Utilities
   -- $utilities
   ,debug
   ,clear
+  ,callFunction
+  ,callDeferredFunction
   
   -- * Types
   ,module Graphics.UI.Ji.Types)
@@ -72,6 +80,8 @@ import qualified Control.Exception             as E
 import           Control.Monad.IO
 import           Control.Monad.Reader
 import           Data.ByteString               (ByteString)
+import           Data.ByteString.UTF8          (toString,fromString)
+import           Data.List.Extra
 import           Data.Map                      (Map)
 import qualified Data.Map                      as M
 import           Data.Maybe
@@ -79,13 +89,14 @@ import           Data.Monoid.Operator
 import           Data.Text                     (pack,unpack)
 import           Data.Text.Encoding
 import           Data.Time
+import           Network.URI
+import           Paths_ji
 import           Prelude                       hiding ((++),init)
 import           Safe
 import           Snap.Core
-import           Snap.Http.Server
+import           Snap.Http.Server              hiding (Config)
 import           Snap.Util.FileServe
 import           Text.JSON.Generic
-import           Paths_ji
 
 
 --------------------------------------------------------------------------------
@@ -123,16 +134,12 @@ import           Paths_ji
 
 -- | Run a Ji server with Snap on the specified port and the given
 --   worker action.
-serve :: MonadJi m
-      => Int                        -- ^ Port.
-      -> (Session m -> m a -> IO a) -- ^ How to run the worker monad.
-      -> m a                        -- ^ The worker.
-      -> IO ()                      -- ^ A Ji server.
-serve port run worker = do
+serve :: MonadJi m => Config m a -> IO () -- ^ A Ji server.
+serve Config{..} = do
   sessions <- newMVar M.empty
   _ <- forkIO $ custodian 30 sessions
-  httpServe server (router (\session -> run session worker) sessions)
- where server = setPort port defaultConfig
+  httpServe server (router jiStatic (\session -> jiRun session jiWorker) sessions)
+ where server = setPort jiPort defaultConfig
 
 -- | Kill sessions after at least n seconds of disconnectedness.
 custodian :: Integer -> MVar (Map Integer (Session m)) -> IO ()
@@ -160,36 +167,41 @@ runJi :: Session Ji  -- ^ The browser session.
 runJi session m = runReaderT (getJi m) session
 
 -- Route requests.
-router :: (Session m -> IO a) -> MVar (Map Integer (Session m)) -> Snap ()
-router worker sessions = do
+router :: FilePath -> (Session m -> IO a) -> MVar (Map Integer (Session m)) -> Snap ()
+router wwwroot worker sessions = do
      x_js <- liftIO $ getDataFileName "wwwroot/js/x.js"
      jquery_js <- liftIO $ getDataFileName "wwwroot/js/jquery.js"
-     route [ ("/",handle)
+     route [ ("/",serveFile (wwwroot ++ "/init.html"))
+            ,("/static",serveDirectory wwwroot)
             ,("/init",init worker sessions)
             ,("/js/x.js", serveFile x_js)
             ,("/js/jquery.js", serveFile jquery_js)
             ,("/poll",poll sessions)
             ,("/signal",signal sessions)]
 
--- Setup the JS.
-handle :: Snap ()
-handle = do
-  writeText "<script src=\"js/jquery.js\"></script>"
-  writeText "<script src=\"js/x.js\"></script>"
-
 -- Initialize the session.
 init :: (Session m -> IO void) -> MVar (Map Integer (Session m)) -> Snap ()
 init sessionThread sessions = do
+  uri <- getRequestURI
+  params <- getRequestCookies
   key <- io $ modifyMVar sessions $ \sessions -> do
     let newKey = maybe 0 (+1) (lastMay (M.keys sessions))
-    session <- newSession newKey
+    session <- newSession (uri,params) newKey
     _ <- forkIO $ do _ <- sessionThread session; return ()
     return (M.insert newKey session sessions,newKey)
-  writeJson $ SetToken key
+  modifyResponse $ setHeader "Set-Token" (fromString (show key))
+  withGivenSession key sessions pollWithSession
+    
+  where getRequestURI = do
+          uri <- getInput "info"
+          maybe (error ("Unable to parse request URI: " ++ show uri)) return (uri >>= parseURI)
+        getRequestCookies = do
+          cookies <- getsRequest rqCookies
+          return $ for cookies $ \Cookie{..} -> (toString cookieName,toString cookieValue)
 
 -- Make a new session.
-newSession :: Integer -> IO (Session m)
-newSession token = do
+newSession :: (URI,[(String, String)]) -> Integer -> IO (Session m)
+newSession info token = do
   signals <- newChan
   instructions <- newChan
   handlers <- newMVar M.empty
@@ -198,6 +210,7 @@ newSession token = do
   now <- getCurrentTime
   conState <- newMVar (Disconnected now)
   threadId <- myThreadId
+  closures <- newMVar [0..]
   return $ Session
     { sSignals = signals
     , sInstructions = instructions
@@ -207,25 +220,30 @@ newSession token = do
     , sMutex = mutex
     , sConnectedState = conState
     , sThreadId = threadId
+    , sClosures = closures
+    , sStartInfo = info
     }
 
 -- Respond to poll requests.
 poll :: MVar (Map Integer (Session m)) -> Snap ()
-poll sessions = do
-  withSession sessions $ \Session{..} -> do
-    let setDisconnected = do
-          now <- getCurrentTime
-          modifyMVar_ sConnectedState (const (return (Disconnected now)))
-    io $ modifyMVar_ sConnectedState (const (return Connected))
-    threadId <- io $ myThreadId
-    io $ forkIO $ do
-      delaySeconds $ 60 * 5 -- Force kill after 5 minutes.
-      killThread threadId
-    instructions <- io $ E.catch (readAvailableChan sInstructions) $ \e -> do
-      when (e == E.ThreadKilled) $ do
-        setDisconnected
-      E.throw e
-    writeJson instructions
+poll sessions = withSession sessions pollWithSession
+  
+-- Poll for the given session.
+pollWithSession :: Session m -> Snap ()
+pollWithSession Session{..} = do
+  let setDisconnected = do
+        now <- getCurrentTime
+        modifyMVar_ sConnectedState (const (return (Disconnected now)))
+  io $ modifyMVar_ sConnectedState (const (return Connected))
+  threadId <- io $ myThreadId
+  _ <- io $ forkIO $ do
+    delaySeconds $ 60 * 5 -- Force kill after 5 minutes.
+    killThread threadId
+  instructions <- io $ E.catch (readAvailableChan sInstructions) $ \e -> do
+    when (e == E.ThreadKilled) $ do
+      setDisconnected
+    E.throw e
+  writeJson instructions
 
 -- Write JSON to output.
 writeJson :: (MonadSnap m, Data a) => a -> m ()
@@ -260,11 +278,15 @@ withSession sessions cont = do
   token <- readInput "token"
   case token of
     Nothing -> error $ "Invalid session token format."
-    Just token -> do
-      sessions <- io $ withMVar sessions return
-      case M.lookup token sessions of
-        Nothing -> error $ "Nonexistant token: " ++ show token
-        Just session -> cont session
+    Just token -> withGivenSession token sessions cont
+    
+-- Do something with the session given by its token id.
+withGivenSession :: Integer -> MVar (Map Integer session) -> (session -> Snap a) -> Snap a
+withGivenSession token sessions cont = do
+  sessions <- io $ withMVar sessions return
+  case M.lookup token sessions of
+    Nothing -> error $ "Nonexistant token: " ++ show token
+    Just session -> cont session
 
 -- Read an input from snap.
 readInput :: (MonadSnap f,Read a) => ByteString -> f (Maybe a)
@@ -293,12 +315,12 @@ handleEvent :: MonadJi m => m ()
 handleEvent = do
   signal <- get
   case signal of
-    Event (elid,eventType) -> do
+    Event (elid,eventType,params) -> do
       Session{..} <- askSession
       handlers <- io $ withMVar sEventHandlers return
       case M.lookup (elid,eventType) handlers of
         Nothing -> return ()
-        Just handler -> handler EventData
+        Just handler -> handler params
     _ -> return ()
 
 -- Get the latest signal sent from the client.
@@ -313,16 +335,16 @@ bind :: MonadJi m
      -> Element             -- ^ The element to bind to.
      -> (EventData -> m ()) -- ^ The event handler.
      -> m ()
-bind eventType el handler = do
-  closure <- newEventHandler eventType el handler
+bind eventType (Element el) handler = do
+  closure <- newClosure eventType el (\xs -> handler (EventData xs))
   run $ Bind eventType el closure
 
 -- Make a uniquely numbered event handler.
-newEventHandler :: MonadJi m => String -> Element -> (EventData -> m ()) -> m Closure
-newEventHandler eventType (Element elid) thunk = do
+newClosure :: MonadJi m => String -> String -> ([Maybe String] -> m ()) -> m Closure
+newClosure eventType elid thunk = do
   Session{..} <- askSession
   io $ modifyMVar_ sEventHandlers $ \handlers -> do
-    return (M.insert key thunk  handlers)
+    return (M.insert key thunk handlers)
   return (Closure key)
     
   where key = (elid,eventType)
@@ -359,39 +381,57 @@ onBlur = bind "mouseleave"
 
 -- | Set the style of the given element.
 setStyle :: (MonadJi m)
-         => Element            -- ^ The element to update.
-         -> [(String, String)] -- ^ Pairs of CSS (property,value).
-         -> m ()
-setStyle el props = run $ SetStyle el props
+         => [(String, String)] -- ^ Pairs of CSS (property,value).
+         -> Element            -- ^ The element to update.
+         -> m Element
+setStyle props el = do
+  run $ SetStyle el props
+  return el
 
 -- | Set the attribute of the given element.
 setAttr :: (MonadJi m)
-        => Element -- ^ The element to update.
-        -> String  -- ^ The attribute name.
-        -> String  -- ^ The attribute value.
-        -> m ()
-setAttr el key value = run $ SetAttr el key value
+        => String  -- ^ The attribute name.
+        -> String  -- ^ The attribute value.p
+        -> Element -- ^ The element to update.
+        -> m Element
+setAttr key value el = do
+  run $ SetAttr el key value
+  return el
 
 -- | Set the text of the given element.
 setText :: (MonadJi m)
-        => Element -- ^ The element to update.
-        -> String  -- ^ The plain text.
-        -> m ()
-setText el props = run $ SetText el props
+        => String  -- ^ The plain text.
+        -> Element -- ^ The element to update.
+        -> m Element
+setText props el = do
+  run $ SetText el props
+  return el
 
 -- | Set the HTML of the given element.
 setHtml :: (MonadJi m)
-        => Element -- ^ The element to update.
-        -> String  -- ^ The HTML.
-        -> m ()
-setHtml el props = run $ SetHtml el props
-
+        => String  -- ^ The HTML.
+        -> Element -- ^ The element to update.
+        -> m Element
+setHtml props el = do
+  run $ SetHtml el props
+  return el
 
 -- | Set the title of the document.
 setTitle :: (MonadJi m)
         => String  -- ^ The title.
         -> m ()
 setTitle title = run $ SetTitle title
+
+-- | Empty the given element.
+emptyEl :: MonadJi m => Element -> m Element
+emptyEl el = do
+  run $ EmptyEl el
+  return el
+
+-- | Delete the given element.
+delete :: MonadJi m => Element -> m ()
+delete el = do
+  run $ Delete el
 
 
 --------------------------------------------------------------------------------
@@ -412,11 +452,13 @@ newElement tagName = do
   return (Element elid)
 
 -- | Append one element to another. Non-blocking.
-append :: (MonadJi m)
-       => Element -- ^ The resulting parent.
+appendTo :: (MonadJi m)
+       => Element -- ^ The parent.
        -> Element -- ^ The resulting child.
-       -> m ()
-append el props = run $ Append el props
+       -> m Element
+appendTo parent child = do
+  run $ Append parent child
+  return child
 
 
 --------------------------------------------------------------------------------
@@ -501,6 +543,22 @@ run i = do
   Session{..} <- askSession
   io $ writeChan sInstructions i
 
+-- | Get the head of the page.
+getHead :: MonadJi m => m Element
+getHead = return (Element "head")
+
+-- | Get the body of the page.
+getBody :: MonadJi m => m Element
+getBody = return (Element "body")
+
+-- | Get the request location.
+getRequestLocation :: MonadJi m => m URI
+getRequestLocation = liftM (fst . sStartInfo) askSession
+
+-- | Get the request cookies.
+getRequestCookies :: MonadJi m => m [(String,String)]
+getRequestCookies = liftM (snd . sStartInfo) askSession
+
 
 --------------------------------------------------------------------------------
 -- Utilities
@@ -519,3 +577,28 @@ debug = run . Debug
 -- | Clear the client's DOM.
 clear :: MonadJi m => m ()
 clear = run $ Clear ()
+
+-- | Call the given function. Blocks.
+callFunction
+  :: MonadJi m
+  => String            -- ^ The function name.
+  -> [String]          -- ^ Parameters.
+  -> m [Maybe String]  -- ^ Return tuple.
+callFunction func params =
+  call (CallFunction (func,params)) $ \signal ->
+    case signal of
+      FunctionCallValues vs -> return (Just vs)
+      _                     -> return Nothing
+
+-- | Call the given function with the given continuation. Doesn't block.
+callDeferredFunction
+  :: MonadJi m
+  => String                   -- ^ The function name.
+  -> [String]                 -- ^ Parameters.
+  -> ([Maybe String] -> m ()) -- ^ The continuation to call if/when the function completes.
+  -> m ()
+callDeferredFunction func params closure = do
+  Session{..} <- askSession
+  cid <- io $ modifyMVar sClosures (\(x:xs) -> return (xs,x))
+  closure' <- newClosure func (show cid) closure
+  run $ CallDeferredFunction (closure',func,params)
