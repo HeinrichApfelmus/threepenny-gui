@@ -13,7 +13,8 @@ module Graphics.UI.Ji.Types
   ,MonadJi(..)
   ,Ji
   ,Session
-  ,EventData)
+  ,EventData(..)
+  ,Config(..))
   where
   
 import Graphics.UI.Ji.Internal.Types

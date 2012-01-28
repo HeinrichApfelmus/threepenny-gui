@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
@@ -16,6 +17,7 @@ import Data.Map             (Map)
 import Data.Time
 import Prelude              hiding ((++),init)
 import Text.JSON.Generic
+import Network.URI
 
 --------------------------------------------------------------------------------
 -- Public types
@@ -49,12 +51,14 @@ instance MonadJi Ji where
 data Session m = Session
   { sSignals :: Chan Signal
   , sInstructions :: Chan Instruction
-  , sEventHandlers :: MVar (Map (String,String) (EventData -> m ()))
+  , sEventHandlers :: MVar (Map (String,String) ([Maybe String] -> m ()))
+  , sClosures :: MVar [Integer]
   , sElementIds :: MVar [Integer]
   , sToken :: Integer
   , sMutex :: MVar ()
   , sConnectedState :: MVar ConnectedState
   , sThreadId :: ThreadId
+  , sStartInfo :: (URI,[(String,String)])
   }
 
 data ConnectedState
@@ -65,7 +69,7 @@ data ConnectedState
   deriving (Show)
 
 -- | Data from an event. At the moment it is empty.
-data EventData = EventData
+data EventData = EventData [Maybe String]
 
 --------------------------------------------------------------------------------
 -- Internal types
@@ -84,10 +88,15 @@ data Instruction
   | Append Element Element
   | SetText Element String
   | SetHtml Element String
-  | Bind String Element Closure
+  | Bind String String Closure
   | GetValue Element
   | GetValues [Element]
   | SetTitle String
+  | GetLocation ()
+  | CallFunction (String,[String])
+  | CallDeferredFunction (Closure,String,[String])
+  | EmptyEl Element
+  | Delete Element
   deriving (Typeable,Data,Show)
 
 -- | A signal (mostly events) that are sent from the client to the
@@ -96,10 +105,11 @@ data Instruction
 data Signal
   = Init ()
   | Elements [Element]
-  | SingleElement Element
-  | Event (String,String)
+  | Event (String,String,[Maybe String])
   | Value String
   | Values [String]
+  | Location String
+  | FunctionCallValues [Maybe String]
   deriving (Show)
 
 instance JSON Signal where
@@ -108,13 +118,30 @@ instance JSON Signal where
     obj <- readJSON obj
     let init = Init <$> valFromObj "Init" obj
         elements = Elements <$> valFromObj "Elements" obj
-        element = SingleElement <$> valFromObj "SingleElement" obj
-        event = Event <$> valFromObj "Event" obj
+        event = do
+          (cid,typ,arguments) <- valFromObj "Event" obj
+          args <- mapM nullable arguments
+          return $ Event (cid,typ,args)
         value = Value <$> valFromObj "Value" obj
+        location = Location <$> valFromObj "Location" obj
         values = Values <$> valFromObj "Values" obj
-    init <|> elements <|> element <|> event <|> value <|> values
+        fcallvalues = do
+          FunctionCallValues <$> (valFromObj "FunctionCallValues" obj >>= mapM nullable)
+    init <|> elements <|> event <|> value <|> values <|> location <|> fcallvalues
+
+-- | Read a JSValue that may be null.
+nullable :: JSON a => JSValue -> Result (Maybe a)
+nullable JSNull = return Nothing
+nullable v      = Just <$> readJSON v
 
 -- | An opaque reference to a closure that the event manager uses to
 --   trigger events signalled by the client.
 data Closure = Closure (String,String)
   deriving (Typeable,Data,Show)
+
+data Config m a = Config
+  { jiPort   :: Int                        -- ^ Port.
+  , jiRun    :: (Session m -> m a -> IO a) -- ^ How to run the worker monad.
+  , jiWorker :: m a                        -- ^ The worker.
+  , jiStatic :: FilePath                   -- ^ Static files path.
+  }
