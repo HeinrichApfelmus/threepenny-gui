@@ -132,12 +132,7 @@ $.fn.livechange = function(ms,trigger){
         break;
       }
       case "Delete": {
-        var id = event.EmptyEl;
-        var el = lookupElementTable(id);
-        // TODO: Drop all the child ids within this element.
-        $(el).empty();
-        $(el).remove();
-        deleteElementTable(id);
+        event_delete(event);
         continuation();
         break;
       }
@@ -280,6 +275,15 @@ $.fn.livechange = function(ms,trigger){
     }
   }
 
+  function event_delete(event){
+    var id = event.Delete;
+    var el = lookupElementTable(id);
+    // TODO: Drop all the child ids within this element.
+    $(el).empty();
+    $(el).remove();
+    deleteElementTable(id);
+  }
+
   ////////////////////////////////////////////////////////////////////////////////
   // Signalling events
 
@@ -320,7 +324,7 @@ $.fn.livechange = function(ms,trigger){
   function deleteElementTable(elid){
     delete el_table[elid];
   }
- 
+  
   // Get/generate a guid for an element
   function getElementGuid(element){
     if(element.id) return element.id;
