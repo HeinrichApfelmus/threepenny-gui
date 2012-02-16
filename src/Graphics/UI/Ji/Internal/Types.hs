@@ -27,7 +27,7 @@ data Element = Element String
   deriving (Data,Typeable,Show)
 
 instance JSON Element where
-  showJSON _ = error "JSON.Element.showJSON: No method implemented."
+  showJSON (Element o) = showJSON o
   readJSON obj = do
     obj <- readJSON obj
     Element <$> valFromObj "Element" obj

@@ -45,7 +45,14 @@ $.fn.livechange = function(ms,trigger){
     $.cookie('ji_log',x.toString());
   };
   
-
+  window.jquery_animate = function(el_id,props,duration,easing,complete){
+    var el = lookupElementTable(JSON.parse(el_id));
+    $(el).animate(JSON.parse(props),
+                  duration * 1,
+                  easing * 1,
+                  complete);
+  }
+  
   function waitForEvents(){
     console_log("Polling… (%d signals so far)",signal_count);
     var data = { token: sessionToken };
