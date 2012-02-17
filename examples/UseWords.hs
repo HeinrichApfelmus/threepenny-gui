@@ -31,6 +31,7 @@ worker = do
     Right parts -> do
       body <- getBody
       wrap <- new # setClass "wrap" # addTo body
+      codeLink wrap
       heading <- new # setClass "header" # addTo wrap
       ul <- new # setClass "vars" # addTo wrap
       let (header,drop 2 -> rest) = splitAt 3 parts
@@ -59,6 +60,13 @@ addPart wrap part = do
                        (either setHtml setText)
                        (lookup var templatevars)
       return (Just (var,v))
+
+codeLink wrap = do
+  newAnchor # set "href" "https://github.com/chrisdone/ji/blob/master/examples/UseWords.hs"
+            # setText "View source code"
+            # setClass "code-link"
+            # addTo wrap
+            # unit
 
 fname = "wwwroot/and-then-haskell.txt"
 
