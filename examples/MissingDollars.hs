@@ -10,7 +10,12 @@ import Graphics.UI.Ji
 
 -- | Main entry point. Starts a ji server.
 main :: IO ()
-main = serve 10002 runJi worker
+main = serve Config
+    { jiPort = 10002
+    , jiRun = runJi
+    , jiWorker = worker
+    , jiStatic = "wwwroot"
+    }
 
 -- | A per-user worker thread. Each user session has a thread.
 worker :: MonadJi m => m ()
@@ -31,12 +36,12 @@ attribution body = do
   p <- newElementText body "p" ""
   vex <- link "https://github.com/chrisdone/ji/blob/master/examples/MissingDollars.hs"
               "MissingDollars.hs"
-  append p vex
+  appendTo p vex
 
   author <- newElementText body "p" "Originally by "
   vex <- link "http://www.vex.net/~trebla/humour/missing_dollar.html"
               "Albert Lai"
-  append author vex
+  appendTo author vex
   
   return headerMe
 
@@ -84,21 +89,22 @@ missingDollarRiddle body headerMe = do
             bal = out - ret
             sum = bal + hold
             diff = sum - out
-        setAttr hotelOut "value" (show out)
-        setAttr hotelCost "value" (show cost)
-        setAttr hotelHold "value" (show hold)
-        setText hotelChange (show change)
-        setText hotelRet (show ret)
-        setText hotelBal (show bal)
-        setText hotelPocket (show hold)
-        setText hotelBal2 (show bal)
-        setText hotelPocket2 (show hold)
-        setText hotelSum (show sum)
+        setAttr "value" (show out) hotelOut
+        setAttr "value" (show cost)  hotelCost
+        setAttr "value" (show hold)  hotelHold
+        setText (show change)  hotelChange
+        setText (show ret)  hotelRet
+        setText (show bal)  hotelBal
+        setText (show hold)  hotelPocket
+        setText (show bal)  hotelBal2
+        setText (show hold)  hotelPocket2
+        setText (show sum)  hotelSum
         if diff >= 0
-           then do setText hotelMe $ "extra $" ++ show diff ++ " come from"
-                   setText headerMe "Extra"
-           else do setText hotelMe $ "missing $" ++ show (-diff) ++ " go"
-                   setText headerMe "Missing"
+           then do setText ("extra $" ++ show diff ++ " come from") hotelMe
+                   setText "Extra" headerMe
+           else do setText ("missing $" ++ show (-diff) ++ " go")  hotelMe
+                   setText "Missing" headerMe
+        return ()
   -- Calculate button.
   calculate <- newElementText body "button" "Calculate"
   onClick calculate $ \_ -> do
@@ -111,23 +117,23 @@ missingDollarRiddle body headerMe = do
 
   where inputText parent = do
           el <- newElement "input"
-          setAttr el "type" "text"
-          setAttr el "size" "3"
-          append parent el
+          setAttr "type" "text" el
+          setAttr "size" "3" el
+          appendTo parent el
           return el
 
 link :: MonadJi m => String -> String -> m Element
 link url text = do
   el <- newElement "a"
-  setAttr el "href" url
-  setText el text
+  setAttr "href" url el
+  setText text el
   return el
 
 newElementText :: MonadJi m => Element -> String -> String -> m Element
 newElementText parent tagName text = do
   el <- newElement tagName
-  append parent el
-  setText el text
+  appendTo parent el
+  setText text el
   return el
 
 newElementText' :: MonadJi m => Element -> String -> String -> m ()
