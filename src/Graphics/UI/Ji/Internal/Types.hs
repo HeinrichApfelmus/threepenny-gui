@@ -140,8 +140,9 @@ data Closure = Closure (String,String)
   deriving (Typeable,Data,Show)
 
 data Config m a = Config
-  { jiPort   :: Int                        -- ^ Port.
-  , jiRun    :: (Session m -> m a -> IO a) -- ^ How to run the worker monad.
-  , jiWorker :: m a                        -- ^ The worker.
-  , jiStatic :: FilePath                   -- ^ Static files path.
+  { jiPort     :: Int                        -- ^ Port.
+  , jiRun      :: (Session m -> m a -> IO a) -- ^ How to run the worker monad.
+  , jiWorker   :: m a                        -- ^ The worker.
+  , jiInitHTML :: FilePath                   -- ^ Init file.
+  , jiStatic   :: FilePath                   -- ^ Static files path.
   }

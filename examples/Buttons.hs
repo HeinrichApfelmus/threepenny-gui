@@ -14,6 +14,7 @@ main = serve Config
     { jiPort = 10001
     , jiRun = runJi
     , jiWorker = worker
+    , jiInitHTML = "buttons.html"
     , jiStatic = "wwwroot"
     }
 
@@ -21,35 +22,36 @@ main = serve Config
 worker :: MonadJi m => m ()
 worker = do
   setTitle "Buttons"
-  body <- getElementByTagName "body"
-  whenJust body $ \body -> do
-    setStyle [("background","#333")] body
-    greet body
-    makeButtons body
+  body <- getBody
+  wrap <- newElement "div" >>= setAttr "class" "wrap" >>= appendTo body
+  greet wrap
+  makeButtons wrap
+  linkage wrap
   handleEvents
 
 greet :: MonadJi m => Element -> m ()
 greet body = do
-  setStyle [("color","#ccc")] body
-  
-  header <- newElement "h2"
+  header <- newElement "h1"
   appendTo body header
   setText "Hello, Haskell!" header
   
-  p <- newElementText body "p" ""
-  vex <- link "https://github.com/chrisdone/ji/blob/master/examples/Buttons.hs"
-              "Buttons.hs"
-  appendTo p vex
-
   greeting <- newElement "div"
   setText "Try the buttons below, they hover and click." greeting
   appendTo body greeting
   return ()
 
+linkage :: MonadJi m => Element -> m ()
+linkage body = do
+  p <- newElementText body "p" ""
+  vex <- link "https://github.com/chrisdone/ji/blob/master/examples/Buttons.hs"
+              "View source code" >>= setAttr "class" "view-source"
+  appendTo p vex
+  return ()
+
 makeButtons :: MonadJi m => Element -> m ()
 makeButtons body = do
   list <- newElement "ul"
-  setStyle [("color","#aaa")] list
+  setAttr "class" "buttons-list" list
   
   button1 <- appendToButton body button1Title
   button2 <- appendToButton body button2Title
@@ -84,10 +86,7 @@ appendToButton body caption = do
   appendTo body p
   appendTo p button
   setText caption button
-  setStyle [("cursor","pointer")
-           ,("color","#acc2a1")
-           ,("text-decoration","underline")]
-           button
+  setAttr "class" "button" button
   return button
 
 link :: MonadJi m => String -> String -> m Element
@@ -95,7 +94,6 @@ link url text = do
   el <- newElement "a"
   setAttr "href" url el
   setText text el
-  setStyle [("color","#acc2a1")] el
   return el
 
 newElementText :: MonadJi m => Element -> String -> String -> m Element
