@@ -14,6 +14,7 @@ main = serve Config
     { jiPort = 10002
     , jiRun = runJi
     , jiWorker = worker
+    , jiInitHTML = "missing-dollars.html"
     , jiStatic = "wwwroot"
     }
 
@@ -21,29 +22,31 @@ main = serve Config
 worker :: MonadJi m => m ()
 worker = do
   setTitle "Missing Dollars"
-  body <- getElementByTagName "body"
-  whenJust body $ \body -> do
-    headerMe <- attribution body
-    missingDollarRiddle body headerMe
-    handleEvents
+  body <- getBody
+  wrap <- newElement "div" >>= setAttr "class" "wrap" >>= appendTo body
+  headerMe <- doheader wrap
+  missingDollarRiddle wrap headerMe
+  attributionsource wrap
+  handleEvents
 
-attribution :: MonadJi m => Element -> m Element
-attribution body = do
+doheader :: MonadJi m => Element -> m Element
+doheader body = do
   header <- newElementText body "h1" "The "
   headerMe <- newElementText header "span" "…"
-  newElementText' header "span" " Dollars"
-  
+  newElementText' header "span" " Dollars"  
+  return headerMe
+
+attributionsource :: MonadJi m => Element -> m ()
+attributionsource body = do
   p <- newElementText body "p" ""
   vex <- link "https://github.com/chrisdone/ji/blob/master/examples/MissingDollars.hs"
-              "MissingDollars.hs"
+              "View source code" >>= setAttr "class" "view-source"
   appendTo p vex
-
   author <- newElementText body "p" "Originally by "
   vex <- link "http://www.vex.net/~trebla/humour/missing_dollar.html"
               "Albert Lai"
   appendTo author vex
-  
-  return headerMe
+  return ()
 
 missingDollarRiddle :: MonadJi m => Element -> Element -> m ()
 missingDollarRiddle body headerMe = do

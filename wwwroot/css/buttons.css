@@ -1,0 +1,52 @@
+body {
+  background: #333;
+  color: #ccc;
+  font-family: ubuntu, sans-serif;
+  font-size: 14px;
+  background: url(stripes-bg.png);
+  padding-top: 1em;
+  text-shadow: #000 3px 1px 3px;
+}
+.wrap {
+  width: 40em;
+  margin: auto;
+}
+.buttons-list {
+  color: #aaa;
+}
+.button {
+  cursor: pointer;
+  color: #acc2a1;
+  text-decoration: underline;
+}
+a {
+  color: #acc2a1;
+}
+button, input {
+  border: 0;
+  color: #ccc;
+  padding: 0.3em;
+  border-radius:0.3em;
+  box-shadow: #191919 2px 1px 2px;
+}
+input {
+  background: #292929;
+  width: 2em;
+}
+button:focus,input:focus {
+  background: #222;
+}
+button {
+  background: #444;
+}
+h1 {
+  font-size: 4em;
+  margin: 0;
+  padding-bottom: 0.2em;
+}
+h2 {
+  margin-top: 1.3em;
+  padding-bottom: 0em;
+  margin-bottom:0;
+}
+.view-source { float: right }

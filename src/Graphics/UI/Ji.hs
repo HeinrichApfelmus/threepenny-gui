@@ -90,12 +90,12 @@ import           Data.Text                     (pack,unpack)
 import           Data.Text.Encoding
 import           Data.Time
 import           Network.URI
-import           Paths_ji
 import           Prelude                       hiding ((++),init)
 import           Safe
 import           Snap.Core
 import           Snap.Http.Server              hiding (Config)
 import           Snap.Util.FileServe
+import           System.FilePath
 import           Text.JSON.Generic
 
 
@@ -138,7 +138,7 @@ serve :: MonadJi m => Config m a -> IO () -- ^ A Ji server.
 serve Config{..} = do
   sessions <- newMVar M.empty
   _ <- forkIO $ custodian 30 sessions
-  httpServe server (router jiStatic (\session -> jiRun session jiWorker) sessions)
+  httpServe server (router jiInitHTML jiStatic (\session -> jiRun session jiWorker) sessions)
  where server = setPort jiPort defaultConfig
 
 -- | Kill sessions after at least n seconds of disconnectedness.
@@ -167,17 +167,13 @@ runJi :: Session Ji  -- ^ The browser session.
 runJi session m = runReaderT (getJi m) session
 
 -- Route requests.
-router :: FilePath -> (Session m -> IO a) -> MVar (Map Integer (Session m)) -> Snap ()
-router wwwroot worker sessions = do
-     x_js <- liftIO $ getDataFileName "wwwroot/js/x.js"
-     jquery_js <- liftIO $ getDataFileName "wwwroot/js/jquery.js"
-     route [ ("/",serveFile (wwwroot ++ "/init.html"))
-            ,("/static",serveDirectory wwwroot)
-            ,("/init",init worker sessions)
-            ,("/js/x.js", serveFile x_js)
-            ,("/js/jquery.js", serveFile jquery_js)
-            ,("/poll",poll sessions)
-            ,("/signal",signal sessions)]
+router :: FilePath -> FilePath -> (Session m -> IO a) -> MVar (Map Integer (Session m)) -> Snap ()
+router initFile wwwroot worker sessions = do
+   route [("/static",serveDirectory wwwroot)
+         ,("/",serveFile (wwwroot </> initFile))
+         ,("/init",init worker sessions)
+         ,("/poll",poll sessions)
+         ,("/signal",signal sessions)]
 
 -- Initialize the session.
 init :: (Session m -> IO void) -> MVar (Map Integer (Session m)) -> Snap ()
