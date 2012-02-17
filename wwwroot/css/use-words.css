@@ -59,8 +59,12 @@ h2 {
   margin-bottom:0;
 }
 .view-source { float: right }
-.vars { margin-bottom: 1em }
+.vars { margin-bottom: 3em; margin-top: 2em; }
 .header {
   font-size: 3em;
-  display: inline;
+  padding-top: 0.5em;
+}
+.code-link {
+  float: right;
+  display: block;
 }
