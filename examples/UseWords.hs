@@ -1,13 +1,18 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# OPTIONS -fno-warn-name-shadowing #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Main where
 
-import Control.Concurrent
-import Control.Monad.Extra
+import Control.Applicative hiding ((<|>),many)
+
+import Control.Monad
+import Control.Arrow
 import Control.Monad.IO
+import Data.Maybe
 import Graphics.UI.Ji
 import Graphics.UI.Ji.DOM
+import Graphics.UI.Ji.Elements
+import Graphics.UI.Ji.JQuery
+import Text.Parsec
 
 main :: IO ()
 main = serve Config
@@ -18,6 +23,55 @@ main = serve Config
     , jiStatic = "wwwroot"
     }
 
-worker :: MonadJi m => m ()
+worker :: Ji ()
 worker = do
-  handleEvents
+  andthen <- io (readFile fname)
+  case parts fname andthen of
+    Left parseerror -> debug (show parseerror)
+    Right parts -> do
+      body <- getBody
+      wrap <- new # setClass "wrap" # addTo body
+      heading <- new # setClass "header" # addTo wrap
+      ul <- new # setClass "vars" # addTo wrap
+      let (header,drop 2 -> rest) = splitAt 3 parts
+      r <- liftM catMaybes $ forM header (addPart heading)
+      rs <- liftM catMaybes $ forM rest (addPart wrap)
+      forM_ vars (addVarChoice ul (r ++ rs))
+      handleEvents
+
+addVarChoice ul refs (label,(name,def)) = do
+  li <- new # addTo ul
+  newLabel # addTo li # setText (label ++ ":") # unit
+  input <- newInput # addTo li # set "value" def # setClass "var-value"
+  bind "livechange" input $ \(EventData (concat . catMaybes -> text)) ->
+    forM_ (filter ((==name).fst) refs) $ \(_,el) -> do
+      setText text el
+
+addPart wrap part = do
+  case part of
+    Text str -> do
+      new # addTo wrap # setClass "text" # setText str # unit
+      return Nothing
+    Ref var -> do
+      v <- new # addTo wrap
+               # setClass "var"
+               # maybe (setText ("{" ++ var ++ "}"))
+                       (either setHtml setText)
+                       (lookup var templatevars)
+      return (Just (var,v))
+
+fname = "wwwroot/and-then-haskell.txt"
+
+templatevars = map (second Right . snd) vars ++ map (second Left) exts
+vars = [("Favourite technology",("favourite-language","Haskell"))
+       ,("Technology used at work",("work-language","Python"))
+       ,("Cool forum",("bar","LtU"))
+       ,("Particular to technology",("particular-stuff","monads"))]
+exts = [("br","<br><br>")]
+
+data Part = Text String | Ref String deriving Show
+
+parts :: SourceName -> String -> Either ParseError [Part]
+parts = parse (many (ref <|> text)) where
+  text = Text <$> many1 (notFollowedBy (string "{") *> anyChar)
+  ref = Ref <$> (string "{" *> many1 (noneOf "}") <* (string "}"))

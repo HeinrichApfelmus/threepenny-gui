@@ -2,8 +2,8 @@ module Graphics.UI.Ji.JQuery where
 
 import Control.Arrow
 import Data.Default
-import Data.String.Extra
 import Graphics.UI.Ji
+import Data.Char
 import Text.JSON
 
 data Easing = Swing | Linear
@@ -17,7 +17,7 @@ animate :: MonadJi m => Element -> [(String,String)] -> Int -> Easing -> m () ->
 animate el props duration easing complete = do
   callDeferredFunction
     "jquery_animate"
-    [encode el,encode (makeObj (map (second showJSON) props)),show duration,lower (show easing)]
+    [encode el,encode (makeObj (map (second showJSON) props)),show duration,map toLower (show easing)]
     (const complete)
 
 -- | Fade in an element.
