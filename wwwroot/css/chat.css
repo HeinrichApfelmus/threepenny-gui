@@ -29,7 +29,7 @@ body {
   overflow: auto;
 }
 .gradient {
-  background: url(fade.png) #333 repeat-x;
+  background: url(fade.png) repeat-x;
   position:absolute;
   top:0;
   height: 150px;
