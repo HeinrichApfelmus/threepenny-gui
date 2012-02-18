@@ -12,7 +12,7 @@ module Graphics.UI.Ji.Types
   (Element
   ,MonadJi(..)
   ,Ji
-  ,Session
+  ,Session(sToken)
   ,EventData(..)
   ,Config(..))
   where

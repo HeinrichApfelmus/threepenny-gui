@@ -23,7 +23,7 @@ body {
   color: #fff;
   position: absolute;
   top: 1em;
-  right:0;
+  right:7em;
   left:0;
   bottom:10%;
   overflow: auto;
@@ -103,4 +103,10 @@ body {
   right: 20px;
   color: #555;
   top: 100px;
+}
+.nicklist { 
+  position: absolute;
+  z-index: 4;
+  top: 150px;
+  right: 20px;
 }

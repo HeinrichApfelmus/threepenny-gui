@@ -2,74 +2,102 @@
 
 module Main where
 
-import Control.Arrow
 import Control.Concurrent
 import Control.Exception
 import Control.Monad
+import Control.Monad.Fix
 import Control.Monad.IO
+import Data.List.Extra
+import Data.Map                (Map)
+import qualified Data.Map      as M
 import Data.Maybe
 import Data.Time
 import Graphics.UI.Ji
 import Graphics.UI.Ji.DOM
 import Graphics.UI.Ji.Elements
 import Graphics.UI.Ji.JQuery
-import Prelude                 hiding (catch)
-import Text.JSON
+import Prelude hiding (catch)
 
-type Msg = (UTCTime,String,String)
-
-main :: IO ()
 main = do
+  nicks <- newMVar M.empty
   messages <- newChan
   serve Config
     { jiPort = 10004
     , jiRun = runJi
-    , jiWorker = worker messages
+    , jiWorker = worker messages nicks
     , jiInitHTML = "chat.html"
     , jiStatic = "wwwroot"
     }
 
--- | The worker thread.
-worker :: Chan Msg -> Ji ()
-worker msgs = do
-  msgs <- io $ dupChan msgs
+-- Start thread.
+worker globalMsgs nicks = do
   body <- getBody
-  wrap <- new #. "wrap" #+ body
-  nickname <- getNickname
-  header <- new #. "header" #= "Ji Chat" #+ wrap
-  new #. "gradient" #+ wrap
-  codeLink wrap
-  messageArea <- new #. "message-area" #+ wrap
-  sendArea <- new #. "send-area" #+ wrap
+  addHeader
+  codeLink
+  nicklistUpdater <- nicklistDisplay nicks
+  nickname        <- getNickname nicks
+  messageArea     <- new #. "message-area" #+ body
+  msgs <- io $ dupChan globalMsgs
+  sendMessageArea nickname msgs
+  session <- askSession
+  messageReceiver <- receiveMessages msgs messageArea
+  io $ catch (runJi session handleEvents)
+             (\e -> do killThread messageReceiver
+                       killThread nicklistUpdater
+                       throw (e :: SomeException))
+                       
+  where addHeader = do
+          body <- getBody
+          new #. "header" #= "Ji Chat" #+ body # unit
+          new #. "gradient" #+ body # unit
+
+-- Receive messages from users (including myself).
+receiveMessages msgs messageArea = forkJi $ do
+  messages <- io $ getChanContents msgs
+  forM_ messages $ \ (time,user,content) -> do
+    atomic $ newMessage time user content # addMessage messageArea # unit
+
+-- Send message box, writes to the messages channel.
+sendMessageArea nickname msgs = do
+  body <- getBody
+  sendArea <- new #. "send-area" #+ body
   input <- newTextarea #. "send-textarea" #+ sendArea
   setFocus nickname
   onSendValue input $ \(trim -> content) -> do
     when (not (null content)) $ do
       now <- io $ getCurrentTime
       (trim -> nick) <- getValue nickname
-      set "value" "" input
+      set "value" "" input # unit
       when (not (null nick)) $ do
         io $ writeChan msgs (now,nick,content)
-  session <- askSession
-  messageReceiver <- io $ forkIO $ runJi session $ do
-    messages <- io $ getChanContents msgs
-    forM_ messages $ \ (time,user,content) -> do
-      atomic $ newMessage time user content # addMessage messageArea # unit
-  io $ catch (runJi session handleEvents)
-             (\e -> do killThread messageReceiver
-                       throw (e :: SomeException))
 
--- | Get the nickname as a little form.
-getNickname :: Ji Element
-getNickname = do
+-- Get the nickname as a little form.
+getNickname nicks = do
   body <- getBody
   myname <- new #. "name-area" #+ body
-  newLabel #= "Your name " #. "name-label" #+ myname
+  newLabel #= "Your name " #. "name-label" #+ myname # unit
   input <- newInput #+ myname #. "name-input"
+  session <- askSession
+  bind "livechange" input $ \(EventData (concat . catMaybes -> nick)) -> do
+    io $ modifyMVar_ nicks $ return . (M.insert (sToken session) nick)
   return input
 
--- | Make a new message.
-newMessage :: UTCTime -> String -> String -> Ji Element
+-- Display the nicks.
+nicklistDisplay nicks = do
+  body <- getBody
+  nicklist <- new #. "nicklist" #+ body
+  displayer <- forkJi $ do
+    flip fix [] $ \loop prev -> do
+      io $ threadDelay $ 1000 * 3000
+      nicknames <- liftM M.elems $ io $ readMVar nicks
+      when (nicknames /= prev) $ do
+        emptyEl nicklist # unit
+        forM_ nicknames $ \nick -> do
+          new #. "nick" #+ nicklist #= nick
+      loop nicknames
+  return displayer
+
+-- Make a new message.
 newMessage timestamp nick content = do
   msg <- new #. "message"
   new #. "timestamp" #= show timestamp #+ msg # unit
@@ -77,30 +105,16 @@ newMessage timestamp nick content = do
   new #. "content" #= content #+ msg # unit
   return msg
 
--- | Add the given message to the message area.
-addMessage :: Element -> Element -> Ji ()
+-- Add the given message to the message area.
 addMessage area message = do
   addTo area message # unit
-  runFunction "jquery_scrollToBottom" [encode area]
+  scrollToBottom area
 
--- | Do something on return.
-onSendValue :: (MonadJi m) => Element -> (String -> m ()) -> m ()
-onSendValue input m = do
-  bind "sendvalue" input $ \(EventData evdata) -> do
-    m (concat (catMaybes evdata))
-
--- | Focus an element.
-setFocus :: (MonadJi m) => Element -> m ()
-setFocus el = runFunction "jquery_setFocus" [encode el]
-
--- | Simple trim.
-trim :: String -> String
-trim = filter (/='\n') . unwords . words
-
-codeLink :: Element -> Ji ()
-codeLink wrap = do
+-- Link to the site's source.
+codeLink = do
+  body <- getBody
   newAnchor # set "href" "https://github.com/chrisdone/ji/blob/master/examples/Chat.hs"
             # setText "View source code"
             # setClass "code-link"
-            # addTo wrap
+            # addTo body
             # unit

@@ -1,9 +1,10 @@
 module Graphics.UI.Ji.JQuery where
 
 import Control.Arrow
-import Data.Default
-import Graphics.UI.Ji
 import Data.Char
+import Data.Default
+import Data.Maybe
+import Graphics.UI.Ji
 import Text.JSON
 
 data Easing = Swing | Linear
@@ -27,3 +28,17 @@ fadeIn el duration easing complete = animate el [("opacity","1")] duration easin
 -- | Fade out an element.
 fadeOut :: MonadJi m => Element -> Int -> Easing -> m () -> m ()
 fadeOut el duration easing complete = animate el [("opacity","0")] duration easing complete
+
+-- | Do something on return.
+onSendValue :: (MonadJi m) => Element -> (String -> m ()) -> m ()
+onSendValue input m = do
+  bind "sendvalue" input $ \(EventData evdata) -> do
+    m (concat (catMaybes evdata))
+
+-- | Focus an element.
+setFocus :: (MonadJi m) => Element -> m ()
+setFocus el = runFunction "jquery_setFocus" [encode el]
+
+-- | Scroll to the bottom of an element.
+scrollToBottom :: MonadJi m => Element -> m ()
+scrollToBottom area = runFunction "jquery_scrollToBottom" [encode area]

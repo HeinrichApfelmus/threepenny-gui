@@ -63,6 +63,7 @@ module Graphics.UI.Ji
   ,runFunction
   ,callDeferredFunction
   ,atomic
+  ,forkJi
   
   -- * Types
   ,module Graphics.UI.Ji.Types)
@@ -525,6 +526,12 @@ atomic m = do
   ret <- m
   io $ putMVar sMutex ()
   return ret
+
+-- | Fork the current Ji thread.
+forkJi :: Ji a -> Ji ThreadId
+forkJi x = do
+  session <- askSession
+  io . forkIO . runJi session $ x >> return ()
 
 -- Send an instruction and read the signal response.
 call :: MonadJi m => Instruction -> (Signal -> m (Maybe a)) -> m a
