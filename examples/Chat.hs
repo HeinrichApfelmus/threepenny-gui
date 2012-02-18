@@ -5,12 +5,8 @@ module Main where
 import Control.Concurrent
 import Control.Exception
 import Control.Monad
-import Control.Monad.Fix
 import Control.Monad.IO
 import Data.List.Extra
-import Data.Map                (Map)
-import qualified Data.Map      as M
-import Data.Maybe
 import Data.Time
 import Graphics.UI.Ji
 import Graphics.UI.Ji.DOM
@@ -19,23 +15,21 @@ import Graphics.UI.Ji.JQuery
 import Prelude hiding (catch)
 
 main = do
-  nicks <- newMVar M.empty
   messages <- newChan
   serve Config
     { jiPort = 10004
     , jiRun = runJi
-    , jiWorker = worker messages nicks
+    , jiWorker = worker messages
     , jiInitHTML = "chat.html"
     , jiStatic = "wwwroot"
     }
 
 -- Start thread.
-worker globalMsgs nicks = do
+worker globalMsgs = do
   body <- getBody
   addHeader
   codeLink
-  nicklistUpdater <- nicklistDisplay nicks
-  nickname        <- getNickname nicks
+  nickname        <- getNickname
   messageArea     <- new #. "message-area" #+ body
   msgs <- io $ dupChan globalMsgs
   sendMessageArea nickname msgs
@@ -43,8 +37,6 @@ worker globalMsgs nicks = do
   messageReceiver <- receiveMessages msgs messageArea
   io $ catch (runJi session handleEvents)
              (\e -> do killThread messageReceiver
-                       killThread nicklistUpdater
-                       modifyMVar_ nicks $ return . M.delete (sToken session)
                        throw (e :: SomeException))
                        
   where addHeader = do
@@ -73,30 +65,12 @@ sendMessageArea nickname msgs = do
         io $ writeChan msgs (now,nick,content)
 
 -- Get the nickname as a little form.
-getNickname nicks = do
+getNickname = do
   body <- getBody
   myname <- new #. "name-area" #+ body
   newLabel #= "Your name " #. "name-label" #+ myname # unit
   input <- newInput #+ myname #. "name-input"
-  session <- askSession
-  bind "livechange" input $ \(EventData (concat . catMaybes -> nick)) -> do
-    io $ modifyMVar_ nicks $ return . (M.insert (sToken session) nick)
   return input
-
--- Display the nicks.
-nicklistDisplay nicks = do
-  body <- getBody
-  nicklist <- new #. "nicklist" #+ body
-  displayer <- forkJi $ do
-    flip fix [] $ \loop prev -> do
-      io $ threadDelay $ 1000 * 3000
-      nicknames <- liftM M.elems $ io $ readMVar nicks
-      when (nicknames /= prev) $ do
-        emptyEl nicklist # unit
-        forM_ nicknames $ \nick -> do
-          new #. "nick" #+ nicklist #= nick
-      loop nicknames
-  return displayer
 
 -- Make a new message.
 newMessage timestamp nick content = do
