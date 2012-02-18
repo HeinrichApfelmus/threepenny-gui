@@ -36,8 +36,8 @@ onSendValue input m = do
     m (concat (catMaybes evdata))
 
 -- | Focus an element.
-setFocus :: (MonadJi m) => Element -> m ()
-setFocus el = runFunction "jquery_setFocus" [encode el]
+setFocus :: (MonadJi m) => Element -> m Element
+setFocus el = runFunction "jquery_setFocus" [encode el] >> return el
 
 -- | Scroll to the bottom of an element.
 scrollToBottom :: MonadJi m => Element -> m ()
