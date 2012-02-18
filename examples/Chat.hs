@@ -43,8 +43,7 @@ worker msgs = do
   sendArea <- new #. "send-area" #+ wrap
   input <- newTextarea #. "send-textarea" #+ sendArea
   setFocus nickname
-  onReturn input $ do
-    content <- getValue input
+  onSendValue input $ \content -> do
     when (not (null content)) $ do
       now <- io $ getCurrentTime
       (trim -> nick) <- getValue nickname
@@ -85,11 +84,10 @@ addMessage area message = do
   runFunction "jquery_scrollToBottom" [encode area]
 
 -- | Do something on return.
-onReturn :: (MonadJi m) => Element -> m () -> m ()
-onReturn input m = do
-  bind "keypress" input $ \(EventData evdata) -> do
-    when (evdata == [Just "13"]) $ do
-      m
+onSendValue :: (MonadJi m) => Element -> (String -> m ()) -> m ()
+onSendValue input m = do
+  bind "sendvalue" input $ \(EventData evdata) -> do
+    m (concat (catMaybes evdata))
 
 -- | Focus an element.
 setFocus :: (MonadJi m) => Element -> m ()
@@ -97,7 +95,7 @@ setFocus el = runFunction "jquery_setFocus" [encode el]
 
 -- | Simple trim.
 trim :: String -> String
-trim = unwords . words
+trim = filter (/='\n') . unwords . words
 
 codeLink :: Element -> Ji ()
 codeLink wrap = do
