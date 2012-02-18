@@ -44,6 +44,7 @@ worker globalMsgs nicks = do
   io $ catch (runJi session handleEvents)
              (\e -> do killThread messageReceiver
                        killThread nicklistUpdater
+                       modifyMVar_ nicks $ return . M.delete (sToken session)
                        throw (e :: SomeException))
                        
   where addHeader = do
