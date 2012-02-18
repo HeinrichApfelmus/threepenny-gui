@@ -52,6 +52,18 @@ $.fn.livechange = function(ms,trigger){
                   easing * 1,
                   complete);
   }
+
+  window.jquery_scrollToBottom = function(el_id,cont){
+    var el = lookupElementTable(JSON.parse(el_id));
+    $(el).scrollTop(el.scrollHeight);
+    cont();
+  };
+
+  window.jquery_setFocus = function(el_id,cont){
+    var el = lookupElementTable(JSON.parse(el_id));
+    $(el).focus();
+    cont();
+  };
   
   function waitForEvents(){
     console_log("Polling… (%d signals so far)",signal_count);
@@ -267,7 +279,7 @@ $.fn.livechange = function(ms,trigger){
         else {
           $(el).bind(eventType,function(e){
             signal({
-              Event: handlerGuid.concat([[]])
+              Event: handlerGuid.concat([e.which?[e.which.toString()]:[]])
             },function(){
               // no action
             });

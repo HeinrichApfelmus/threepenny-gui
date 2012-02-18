@@ -60,7 +60,9 @@ module Graphics.UI.Ji
   ,debug
   ,clear
   ,callFunction
+  ,runFunction
   ,callDeferredFunction
+  ,atomic
   
   -- * Types
   ,module Graphics.UI.Ji.Types)
@@ -514,7 +516,16 @@ readValuesList :: (MonadJi m,Read a)
                => [Element]     -- ^ The element to read a value from.
                -> m (Maybe [a]) -- ^ Maybe the read values. All or none.
 readValuesList = liftM (sequence . map readMay) . getValuesList
-   
+
+-- | Atomically execute the given Ji computation.
+atomic :: MonadJi m => m a -> m a
+atomic m = do
+  Session {..} <- askSession
+  io $ takeMVar sMutex
+  ret <- m
+  io $ putMVar sMutex ()
+  return ret
+
 -- Send an instruction and read the signal response.
 call :: MonadJi m => Instruction -> (Signal -> m (Maybe a)) -> m a
 call instruction withSignal = do
@@ -585,6 +596,15 @@ callFunction func params =
     case signal of
       FunctionCallValues vs -> return (Just vs)
       _                     -> return Nothing
+
+-- | Call the given function. Blocks.
+runFunction
+  :: MonadJi m
+  => String            -- ^ The function name.
+  -> [String]          -- ^ Parameters.
+  -> m ()
+runFunction func params =
+  run (CallFunction (func,params))
 
 -- | Call the given function with the given continuation. Doesn't block.
 callDeferredFunction

@@ -1,0 +1,106 @@
+body {
+  background: #333;
+  color: #ccc;
+  font-family: 'Annie Use Your Telescope';
+  font-size: 26px;
+  text-shadow: #000 3px 1px 3px;
+  padding:0;
+  margin:0;
+  background: url(wood-bg.png);
+}
+.header {
+  font-family: 'Fredericka the Great', cursive;
+  font-size: 50px;
+  color: #ad1c43;
+  float: left;
+  padding: 10px 20px;
+  position:absolute;
+  z-index:2;
+}
+.message-area {
+  clear:both;
+  padding: 20px;
+  color: #fff;
+  position: absolute;
+  top: 1em;
+  right:0;
+  left:0;
+  bottom:10%;
+  overflow: auto;
+}
+.gradient {
+  background: url(fade.png) repeat-x;
+  position:absolute;
+  top:0;
+  height: 150px;
+  left:0;
+  right:0;
+  z-index:1;
+}
+.send-area {
+  z-index:0;
+  position:fixed;
+  top:90%;
+  left:0;
+  right:0;
+  bottom:0;
+  background:#fff;
+}
+.send-textarea {
+  padding: 0.25em;
+  border:0;
+  position: absolute;
+  left:0;
+  width:100%;
+  bottom:0;
+  top:-1px;
+  font-family: 'Annie Use Your Telescope';
+  font-size: 25px;
+  background: #111;
+  color: #999;
+}
+.message {
+  margin-top: 1em;
+  border-top: 0.1em dotted #333;
+}
+.message .timestamp {
+  color: #888;
+  font-size: 15px;
+  display: inline;
+  float: right;
+}
+.message .name {
+  display: inline-block;
+  font-size: 18px;
+  font-style: italic;
+  float:left;
+}
+.message .content {
+  display:block;
+  clear:both;
+}
+.name-area {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 3;
+}
+.name-input {
+  background: #111;
+  border: 0;
+  border-radius: 0.3em;
+  font-family: 'Annie Use Your Telescope';
+  color: #777;
+  font-size: 20px;
+  padding-left: 0.2em;
+}
+.name-input:focus,.send-textarea:focus {
+  background: #333;
+}
+.code-link {
+  position: absolute;
+  z-index: 4;
+  right: 20px;
+  color: #555;
+  top: 100px;
+}
