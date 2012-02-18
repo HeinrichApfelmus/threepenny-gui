@@ -6,7 +6,7 @@ body {
   text-shadow: #000 3px 1px 3px;
   padding:0;
   margin:0;
-  background: url(wood-bg.png);
+  background: url(wood-bg.png) #333;
 }
 .header {
   font-family: 'Fredericka the Great', cursive;
@@ -29,7 +29,7 @@ body {
   overflow: auto;
 }
 .gradient {
-  background: url(fade.png) repeat-x;
+  background: url(fade.png) #333 repeat-x;
   position:absolute;
   top:0;
   height: 150px;
