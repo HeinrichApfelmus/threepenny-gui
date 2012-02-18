@@ -9,53 +9,38 @@ import Control.Monad.IO
 import Data.List.Extra
 import Data.Time
 import Graphics.UI.Ji
-import Graphics.UI.Ji.DOM
-import Graphics.UI.Ji.Elements
-import Graphics.UI.Ji.JQuery
+import Graphics.UI.Ji.Browser
 import Prelude hiding (catch)
 
 main = do
   messages <- newChan
-  serve Config
-    { jiPort = 10004
-    , jiRun = runJi
-    , jiWorker = worker messages
-    , jiInitHTML = "chat.html"
-    , jiStatic = "wwwroot"
-    }
+  serve $ Config 10004 runJi (worker messages) "chat.html" "wwwroot"
 
--- Start thread.
 worker globalMsgs = do
   body <- getBody
-  addHeader
-  codeLink
-  nickname        <- getNickname
-  messageArea     <- new #. "message-area" #+ body
+  new #. "header" #= "Ji Chat" #+ body # unit
+  new #. "gradient" #+ body # unit
+  codeLink body
+  nickname <- getNickname body
+  messageArea <- new #. "message-area" #+ body
   msgs <- io $ dupChan globalMsgs
-  sendMessageArea nickname msgs
-  session <- askSession
+  sendMessageArea body nickname msgs
   messageReceiver <- receiveMessages msgs messageArea
+  session <- askSession
   io $ catch (runJi session handleEvents)
              (\e -> do killThread messageReceiver
                        throw (e :: SomeException))
-                       
-  where addHeader = do
-          body <- getBody
-          new #. "header" #= "Ji Chat" #+ body # unit
-          new #. "gradient" #+ body # unit
 
--- Receive messages from users (including myself).
 receiveMessages msgs messageArea = forkJi $ do
   messages <- io $ getChanContents msgs
   forM_ messages $ \ (time,user,content) -> do
-    atomic $ newMessage time user content # addMessage messageArea # unit
+    atomic $ do
+      newMessage time user content # addTo messageArea # unit
+      scrollToBottom messageArea
 
--- Send message box, writes to the messages channel.
-sendMessageArea nickname msgs = do
-  body <- getBody
-  sendArea <- new #. "send-area" #+ body
+sendMessageArea parent nickname msgs = do
+  sendArea <- new #. "send-area" #+ parent
   input <- newTextarea #. "send-textarea" #+ sendArea
-  setFocus nickname
   onSendValue input $ \(trim -> content) -> do
     when (not (null content)) $ do
       now <- io $ getCurrentTime
@@ -64,15 +49,12 @@ sendMessageArea nickname msgs = do
       when (not (null nick)) $ do
         io $ writeChan msgs (now,nick,content)
 
--- Get the nickname as a little form.
-getNickname = do
-  body <- getBody
-  myname <- new #. "name-area" #+ body
+getNickname parent = do
+  myname <- new #. "name-area" #+ parent
   newLabel #= "Your name " #. "name-label" #+ myname # unit
-  input <- newInput #+ myname #. "name-input"
+  input <- newInput #+ myname #. "name-input" # setFocus
   return input
 
--- Make a new message.
 newMessage timestamp nick content = do
   msg <- new #. "message"
   new #. "timestamp" #= show timestamp #+ msg # unit
@@ -80,16 +62,7 @@ newMessage timestamp nick content = do
   new #. "content" #= content #+ msg # unit
   return msg
 
--- Add the given message to the message area.
-addMessage area message = do
-  addTo area message # unit
-  scrollToBottom area
-
--- Link to the site's source.
-codeLink = do
-  body <- getBody
-  newAnchor # set "href" "https://github.com/chrisdone/ji/blob/master/examples/Chat.hs"
-            # setText "View source code"
-            # setClass "code-link"
-            # addTo body
-            # unit
+codeLink parent = do
+  newAnchor # set "href" url # setText label # setClass "code-link" # addTo parent # unit
+  where url = "https://github.com/chrisdone/ji/blob/master/examples/Chat.hs"
+        label = "View source code"
