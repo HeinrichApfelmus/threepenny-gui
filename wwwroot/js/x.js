@@ -3,8 +3,10 @@ $.fn.sendvalue = function(trigger){
     var self = this;
     var el = $(self);
     el.keydown(function(e){
-      if(e.which == 13)
-        return trigger.call(self,el.val());
+      if(e.which == 13) {
+        trigger.call(self,el.val());
+        return false;
+      }
       else
         return true;
     });
