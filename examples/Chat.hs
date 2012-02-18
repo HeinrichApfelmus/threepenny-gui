@@ -43,7 +43,7 @@ worker msgs = do
   sendArea <- new #. "send-area" #+ wrap
   input <- newTextarea #. "send-textarea" #+ sendArea
   setFocus nickname
-  onSendValue input $ \content -> do
+  onSendValue input $ \(trim -> content) -> do
     when (not (null content)) $ do
       now <- io $ getCurrentTime
       (trim -> nick) <- getValue nickname
