@@ -1,3 +1,16 @@
+$.fn.sendvalue = function(trigger){
+  $(this).each(function(){
+    var self = this;
+    var el = $(self);
+    el.keydown(function(e){
+      if(e.which == 13)
+        return trigger.call(self,el.val());
+      else
+        return true;
+    });
+  });
+};
+
 $.fn.livechange = function(ms,trigger){
   $(this).each(function(){
     var self = this;
@@ -274,6 +287,12 @@ $.fn.livechange = function(ms,trigger){
               // no action
             });
             return true;
+          });
+        } else if(eventType == 'sendvalue') {
+          $(el).sendvalue(function(x){
+            signal({
+              Event: handlerGuid.concat([[x]])
+            },function(){});
           });
         }
         else {
