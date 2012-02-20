@@ -26,12 +26,12 @@ semantics.
 
 So for the above in Ji you might write:
 
-   let x = 10
-   alert (max (10 * x) 45)
-   user <- getUser 10 Admin
-   udiv <- new
-   setText (show user) udiv
-   append body udiv
+    let x = 10
+    alert (max (10 * x) 45)
+    user <- getUser 10 Admin
+    udiv <- new
+    setText (show user) udiv
+    append body udiv
 
 Although the HJScript can be abstracted somewhat to look more like the
 below, by using Haskell like a macro language for JavaScript, it's
@@ -43,11 +43,11 @@ Ji transparently runs on the server or the client depending on what
 needs to be done, but most time is spent on the server. In this sense
 one could write code like this:
 
-    body <- getBody
-    ul <- new ## addTo body
-    forM_ [1..10] $ \i -> do
-      new ## addTo ul ## setText (show i)
-      threadDelay (1000*1000)
+     body <- getBody
+     ul <- new ## addTo body
+     forM_ [1..10] $ \i -> do
+       new ## addTo ul ## setText (show i)
+       threadDelay (1000*1000)
 
 Which would add a new line with each number to the browser's body at
 least every second, network latency allowing.
