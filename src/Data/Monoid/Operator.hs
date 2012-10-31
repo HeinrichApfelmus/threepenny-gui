@@ -2,6 +2,7 @@
 
 module Data.Monoid.Operator where
 
+import Prelude hiding ((++))
 import Data.Monoid (Monoid)
 import Data.Monoid (mappend)
 

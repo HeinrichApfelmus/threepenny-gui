@@ -1,5 +1,5 @@
 Name:                ji
-Version:             0.1
+Version:             0.1.0.1
 Synopsis:            Haskell-web browser interface (ji: “JavaScript Interface”).
 Description:         Manipulate the DOM and handle events of the browser from Haskell.
                      To build, might need --constraint=base16-bytestring==0.1.0.* on GHC 6.12.3.
@@ -24,7 +24,7 @@ Library
                     ,safe
                     ,containers
                     ,bytestring
-                    ,json == 0.4.4
+                    ,json >= 0.4.4 && < 0.6
                     ,time
                     ,utf8-string
                     ,network
@@ -43,7 +43,7 @@ Executable ji-examples-buttons
                     ,safe
                     ,containers
                     ,bytestring
-                    ,json == 0.4.4
+                    ,json
                     ,time
                     ,ji
 
@@ -59,7 +59,7 @@ Executable ji-examples-missing-dollars
                     ,safe
                     ,containers
                     ,bytestring
-                    ,json == 0.4.4
+                    ,json
                     ,ji
 
 Executable ji-examples-use-words
@@ -74,7 +74,7 @@ Executable ji-examples-use-words
                     ,safe
                     ,containers
                     ,bytestring
-                    ,json == 0.4.4
+                    ,json
                     ,time
                     ,ji
                     ,parsec
@@ -91,7 +91,7 @@ Executable ji-examples-chat
                     ,safe
                     ,containers
                     ,bytestring
-                    ,json == 0.4.4
+                    ,json
                     ,time
                     ,ji
                     ,parsec
