@@ -11,6 +11,9 @@ Category:            Web
 Build-type:          Simple
 Cabal-version:       >=1.8
 
+Extra-Source-Files:  src/Graphics/UI/*.html
+                    ,src/Graphics/UI/*.js
+
 Library
   Hs-source-dirs:    src
   Exposed-modules:   Graphics.UI.Ji
@@ -40,6 +43,7 @@ Library
                     ,network
                     ,filepath
                     ,data-default
+                    ,template-haskell
 
 Executable ji-examples-buttons
   Main-is:           Buttons.hs
