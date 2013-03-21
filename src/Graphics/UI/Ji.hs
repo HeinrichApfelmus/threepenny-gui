@@ -1,6 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS -fno-warn-name-shadowing #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 -- | The main Ji module.
 
@@ -76,6 +77,7 @@ module Graphics.UI.Ji
 
 import           Graphics.UI.Ji.Types
 import           Graphics.UI.Ji.Internal.Types
+import           Graphics.UI.Ji.Internal.Include
 
 import           Control.Concurrent
 import           Control.Concurrent.Chan.Extra
@@ -90,7 +92,8 @@ import           Data.Map                      (Map)
 import qualified Data.Map                      as M
 import           Data.Maybe
 import           Data.Monoid.Operator
-import           Data.Text                     (pack,unpack)
+import           Data.Text                     (Text,pack,unpack)
+import qualified Data.Text                     as Text
 import           Data.Text.Encoding
 import           Data.Time
 import           Network.URI
@@ -171,13 +174,28 @@ runJi :: Session Ji  -- ^ The browser session.
 runJi session m = runReaderT (getJi m) session
 
 -- Route requests.
-router :: FilePath -> FilePath -> (Session m -> IO a) -> MVar (Map Integer (Session m)) -> Snap ()
-router initFile wwwroot worker sessions = do
-   route [("/static",serveDirectory wwwroot)
-         ,("/",serveFile (wwwroot </> initFile))
-         ,("/init",init worker sessions)
-         ,("/poll",poll sessions)
-         ,("/signal",signal sessions)]
+router
+    :: Maybe FilePath -> FilePath -> (Session m -> IO a)
+    -> MVar (Map Integer (Session m)) -> Snap ()
+router initFile wwwroot worker sessions =
+        route [("/static"   , serveDirectory wwwroot)
+              ,("/"         , root)
+              ,("/js/ji.js" , writeText jsDriverCode)
+              ,("/init"     , init worker sessions)
+              ,("/poll"     , poll sessions)
+              ,("/signal"   , signal sessions)]
+    where
+    root = case initFile of
+        Just file -> serveFile (wwwroot </> file)
+        Nothing   -> writeText defaultHtmlFile
+
+jsDriverCode :: Text
+jsDriverCode = Text.unlines $ map Text.pack
+    [[include|jquery.js|], [include|jquery.cookie.js|], [include|ji.js|]]
+
+defaultHtmlFile :: Text
+defaultHtmlFile = Text.pack [include|index.html|]
+
 
 -- Initialize the session.
 init :: (Session m -> IO void) -> MVar (Map Integer (Session m)) -> Snap ()
