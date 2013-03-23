@@ -17,6 +17,11 @@ infixl 1 #+
 m #. cls = m # setClass cls
 infixl 1 #.
 
+-- | Set the id of an element.
+(##) :: (MonadJi m) => m Element -> String -> m Element
+m ## id = m # setId id
+infixl 1 ##
+
 -- | Set the text of an element.
 (#=) :: (MonadJi m) => m Element -> String -> m Element
 m #= txt = m # setText txt
@@ -43,6 +48,12 @@ unit =  \_ -> return ()
 -- | Set the class of an element.
 setClass :: (MonadJi m) => String -> Element -> m Element
 setClass = set "class"
+
+-- | Set the id of an element.
+setId :: (MonadJi m) => String -> Element -> m Element
+setId = set "id"
+
+
   
 -- | Make a new div.
 new :: MonadJi m => m Element
