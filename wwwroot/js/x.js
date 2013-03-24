@@ -197,6 +197,17 @@ $.fn.livechange = function(ms,trigger){
         });
         break;
       }
+      case "GetElementById": {
+        var element = document.getElementById(event.GetElementById);
+		var guid = getElementGuid(element)
+        var els = [{Element: guid}];
+        signal({
+          Elements: els
+        },function(){
+          continuation();
+        });
+        break;
+      }
       case "SetStyle": {
         var set = event.SetStyle;
         var id = set[0];
@@ -367,7 +378,10 @@ $.fn.livechange = function(ms,trigger){
   
   // Get/generate a guid for an element
   function getElementGuid(element){
-    if(element.id) return element.id;
+    if(element.id) {
+      el_table[element.id] = element;
+      return element.id;
+	}
     else {
       if(global_ids.length > 0) {
         var id = global_ids.pop();
@@ -375,7 +389,7 @@ $.fn.livechange = function(ms,trigger){
         el_table[id] = element;
         return id;
       } else {
-        var id = element_count.toString();
+        var id = "JiAutoId " + element_count.toString();
         element.id = id;
         el_table[id] = element;
         element_count++;
