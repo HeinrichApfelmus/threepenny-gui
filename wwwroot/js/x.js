@@ -197,6 +197,18 @@ $.fn.livechange = function(ms,trigger){
         });
         break;
       }
+      case "GetElementById": {
+        // Note that this is the html ID, not the elid that is the key of the el_table.
+        var element = document.getElementById(event.GetElementById);
+        var guid = getElementGuid(element);
+        var els = [{Element: guid}];
+        signal({
+          Elements: els
+        },function(){
+          continuation();
+        });
+        break;
+      }
       case "SetStyle": {
         var set = event.SetStyle;
         var id = set[0];
@@ -343,6 +355,10 @@ $.fn.livechange = function(ms,trigger){
     });
   }
 
+  // When the server creates elements in the Ji monad, it assigns them a string "elid".  
+  // This lookupElementTable function is used to sync the elids on the server with the 
+  // elids on this client code.  Lookups on elids that do not already exist in the client
+  // table are created and added automatically.
   function lookupElementTable(elid){
     if(elid == 'body')
       return document.body;
@@ -365,21 +381,27 @@ $.fn.livechange = function(ms,trigger){
     delete el_table[elid];
   }
   
-  // Get/generate a guid for an element
+  // Get/generate a elid for an element.  This function is used for cases in which the
+  // element is accessed without knowing an elid from the server, such as when the 
+  // element is retrieved by type or html ID attribute.  The element is then added to 
+  // elid lookup table using the new elid.  It doesn't matter if the element already 
+  // exists in a table under a different elid since it can now be access through either.
   function getElementGuid(element){
-    if(element.id) return element.id;
+    if(element.elid) {
+      return element.elid;
+	}
     else {
       if(global_ids.length > 0) {
-        var id = global_ids.pop();
-        element.id = id;
-        el_table[id] = element;
-        return id;
+        var elid = global_ids.pop();
+        element.elid = elid;
+        el_table[elid] = element;
+        return elid;
       } else {
-        var id = element_count.toString();
-        element.id = id;
-        el_table[id] = element;
+        var elid = "ClientGenId " + element_count.toString();
+        element.elid = elid;
+        el_table[elid] = element;
         element_count++;
-        return id;
+        return elid;
       }
     }
   }

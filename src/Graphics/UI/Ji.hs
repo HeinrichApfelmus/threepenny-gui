@@ -48,6 +48,7 @@ module Graphics.UI.Ji
   ,getBody
   ,getElementsByTagName
   ,getElementByTagName
+  ,getElementById
   ,getValue
   ,getValuesList
   ,readValue
@@ -390,7 +391,7 @@ setStyle props el = do
 -- | Set the attribute of the given element.
 setAttr :: (MonadJi m)
         => String  -- ^ The attribute name.
-        -> String  -- ^ The attribute value.p
+        -> String  -- ^ The attribute value.
         -> Element -- ^ The element to update.
         -> m Element
 setAttr key value el = do
@@ -485,7 +486,18 @@ getElementsByTagName tagName =
     case signal of
       Elements els -> return (Just els)
       _            -> return Nothing
-
+  
+-- | Get an element by a particular ID.  Blocks.
+getElementById
+  :: MonadJi m
+  => String             -- ^ The ID string.
+  -> m (Maybe Element)  -- ^ Element (if any) with given ID.
+getElementById id =
+  call (GetElementById id) $ \signal ->
+    case signal of 
+      Elements els -> return (Just $ listToMaybe els)
+      _            -> return Nothing
+     
 -- | Get the value of an input. Blocks.
 getValue :: MonadJi m
          => Element  -- ^ The element to get the value of.
