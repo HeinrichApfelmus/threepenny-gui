@@ -1,5 +1,5 @@
 Name:                ji
-Version:             0.1.0.1
+Version:             0.2
 Synopsis:            Haskell-web browser interface (ji: “JavaScript Interface”).
 Description:         Manipulate the DOM and handle events of the browser from Haskell.
                      To build, might need --constraint=base16-bytestring==0.1.0.* on GHC 6.12.3.
@@ -11,11 +11,24 @@ Category:            Web
 Build-type:          Simple
 Cabal-version:       >=1.8
 
+Extra-Source-Files:  src/Graphics/UI/*.html
+                    ,src/Graphics/UI/*.js
+
 Library
   Hs-source-dirs:    src
-  Exposed-modules:   Graphics.UI.Ji, Graphics.UI.Ji.Types, Graphics.UI.Ji.Internal.Types, Graphics.UI.Ji.DOM, Graphics.UI.Ji.Elements, Graphics.UI.Ji.JQuery, Graphics.UI.Ji.Browser
-  Other-modules:     Control.Concurrent.Chan.Extra, Control.Monad.Extra, Data.Monoid.Operator, Control.Monad.IO, Control.Concurrent.Delay, Data.List.Extra
-  Ghc-options:       -threaded -O2
+  Exposed-modules:   Graphics.UI.Ji
+                    ,Graphics.UI.Ji.Types
+                    ,Graphics.UI.Ji.Internal.Types
+                    ,Graphics.UI.Ji.DOM
+                    ,Graphics.UI.Ji.Elements
+                    ,Graphics.UI.Ji.JQuery
+                    ,Graphics.UI.Ji.Browser
+  Other-modules:     Control.Concurrent.Chan.Extra
+                    ,Control.Monad.Extra
+                    ,Data.Monoid.Operator
+                    ,Control.Monad.IO
+                    ,Control.Concurrent.Delay
+                    ,Data.List.Extra
   Build-depends:     base                      >= 4     && < 5
                     ,snap-server
                     ,snap-core
@@ -30,6 +43,7 @@ Library
                     ,network
                     ,filepath
                     ,data-default
+                    ,template-haskell
 
 Executable ji-examples-buttons
   Main-is:           Buttons.hs

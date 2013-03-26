@@ -143,6 +143,6 @@ data Config m a = Config
   { jiPort     :: Int                        -- ^ Port.
   , jiRun      :: (Session m -> m a -> IO a) -- ^ How to run the worker monad.
   , jiWorker   :: m a                        -- ^ The worker.
-  , jiInitHTML :: FilePath                   -- ^ Init file.
+  , jiInitHTML :: Maybe FilePath             -- ^ Init file.
   , jiStatic   :: FilePath                   -- ^ Static files path.
   }
