@@ -86,17 +86,15 @@ import           Control.Monad.IO
 import           Control.Monad.Reader
 import           Data.ByteString               (ByteString)
 import           Data.ByteString.UTF8          (toString,fromString)
-import           Data.List.Extra
 import           Data.Map                      (Map)
 import qualified Data.Map                      as M
 import           Data.Maybe
-import           Data.Monoid.Operator
 import           Data.Text                     (Text,pack,unpack)
 import qualified Data.Text                     as Text
 import           Data.Text.Encoding
 import           Data.Time
 import           Network.URI
-import           Prelude                       hiding ((++),init)
+import           Prelude                       hiding (init)
 import           Safe
 import           Snap.Core
 import           Snap.Http.Server              hiding (Config)
@@ -190,10 +188,13 @@ router initFile wwwroot worker sessions =
 
 jsDriverCode :: Text
 jsDriverCode = Text.unlines $ map Text.pack
-    [[include|jquery.js|], [include|jquery.cookie.js|], [include|ji.js|]]
+    [ [include|Graphics/UI/jquery.js|]
+    , [include|Graphics/UI/jquery.cookie.js|]
+    , [include|Graphics/UI/ji.js|]
+    ]
 
 defaultHtmlFile :: Text
-defaultHtmlFile = Text.pack [include|index.html|]
+defaultHtmlFile = Text.pack [include|Graphics/UI/index.html|]
 
 
 -- Initialize the session.
@@ -214,7 +215,7 @@ init sessionThread sessions = do
           maybe (error ("Unable to parse request URI: " ++ show uri)) return (uri >>= parseURI)
         getRequestCookies = do
           cookies <- getsRequest rqCookies
-          return $ for cookies $ \Cookie{..} -> (toString cookieName,toString cookieValue)
+          return $ flip map cookies $ \Cookie{..} -> (toString cookieName,toString cookieValue)
 
 -- Make a new session.
 newSession :: (URI,[(String, String)]) -> Integer -> IO (Session m)

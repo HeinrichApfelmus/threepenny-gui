@@ -25,10 +25,9 @@ Library
                     ,Graphics.UI.Ji.Browser
   Other-modules:     Control.Concurrent.Chan.Extra
                     ,Control.Monad.Extra
-                    ,Data.Monoid.Operator
                     ,Control.Monad.IO
                     ,Control.Concurrent.Delay
-                    ,Data.List.Extra
+  CPP-Options:      -DCABAL
   Build-depends:     base                      >= 4     && < 5
                     ,snap-server
                     ,snap-core
@@ -47,7 +46,7 @@ Library
 
 Executable ji-examples-buttons
   Main-is:           Buttons.hs
-  Hs-source-dirs:    examples/
+  Hs-source-dirs:    src/
   Ghc-options:       -threaded -O2
   Build-depends:     base                      >= 4     && < 5
                     ,snap-server
@@ -63,7 +62,7 @@ Executable ji-examples-buttons
 
 Executable ji-examples-missing-dollars
   Main-is:           MissingDollars.hs
-  Hs-source-dirs:    examples/
+  Hs-source-dirs:    src/
   Ghc-options:       -threaded -O2
   Build-depends:     base                      >= 4     && < 5
                     ,snap-server
@@ -78,7 +77,7 @@ Executable ji-examples-missing-dollars
 
 Executable ji-examples-use-words
   Main-is:           UseWords.hs
-  Hs-source-dirs:    examples/
+  Hs-source-dirs:    src/
   Ghc-options:       -threaded -O2
   Build-depends:     base                      >= 4     && < 5
                     ,snap-server
@@ -95,7 +94,7 @@ Executable ji-examples-use-words
 
 Executable ji-examples-chat
   Main-is:           Chat.hs
-  Hs-source-dirs:    examples/
+  Hs-source-dirs:    src/
   Ghc-options:       -threaded -O2
   Build-depends:     base                      >= 4     && < 5
                     ,snap-server

@@ -4,3 +4,4 @@ cabal-dev
 dist
 TAGS
 log
+*.DS_Store
