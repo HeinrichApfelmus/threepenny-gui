@@ -1,10 +1,10 @@
 -- | Important DOM elements, for convenience.
 
-module Graphics.UI.Ji.Elements where
+module Graphics.UI.Threepenny.Elements where
 
 import Prelude hiding (head)
-import Graphics.UI.Ji
-import Graphics.UI.Ji.DOM
+import Graphics.UI.Threepenny
+import Graphics.UI.Threepenny.DOM
 
 -- | Make a new anchor.
 newAnchor :: MonadJi m => m Element

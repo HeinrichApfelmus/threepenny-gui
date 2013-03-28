@@ -1,0 +1,91 @@
+Name:                threepenny-gui
+Version:             0.1.0.0
+Synopsis:            Small GUI framework that uses the web browser as a display.
+Description:
+    Threepenny-GUI is a small GUI framework that uses the web browser as a display.
+    .
+    It's cheap and easy to install because everyone has a web browser installed.
+    .
+    
+    You can freely manipulate the HTML DOM and handle browser events
+    from Haskell.
+    .
+    Stability forecast: Significant API changes are likely in future versions.
+    .
+    To build, might need --constraint=base16-bytestring==0.1.0.* on GHC 6.12.3.
+License:             BSD3
+Author:              Chris Done <chrisdone@gmail.com>
+Maintainer:          Heinrich Apfelmus <apfelmus at quantentunnel dot de>
+Homepage:            http://www.haskell.org/haskellwiki/threepenny-gui
+Copyright:           2011 by Chris Done
+Category:            Web, GUI
+Build-type:          Simple
+Cabal-version:       >=1.8
+
+Extra-Source-Files:  src/Graphics/UI/*.html
+                    ,src/Graphics/UI/*.js
+
+Source-repository head
+    type:               git
+    location:           git://github.com/HeinrichApfelmus/threepenny-gui.git
+
+
+Library
+  Hs-source-dirs:    src
+  Exposed-modules:   Graphics.UI.Threepenny
+                    ,Graphics.UI.Threepenny.Types
+                    ,Graphics.UI.Threepenny.Internal.Types
+                    ,Graphics.UI.Threepenny.DOM
+                    ,Graphics.UI.Threepenny.Elements
+                    ,Graphics.UI.Threepenny.JQuery
+                    ,Graphics.UI.Threepenny.Browser
+  Other-modules:     Control.Concurrent.Chan.Extra
+                    ,Control.Monad.Extra
+                    ,Control.Monad.IO
+                    ,Control.Concurrent.Delay
+  CPP-Options:      -DCABAL
+  Build-depends:     base                      >= 4     && < 5
+                    ,snap-server
+                    ,snap-core
+                    ,mtl
+                    ,text
+                    ,safe
+                    ,containers
+                    ,bytestring
+                    ,json >= 0.4.4 && < 0.6
+                    ,time
+                    ,utf8-string
+                    ,network
+                    ,filepath
+                    ,data-default
+                    ,template-haskell
+
+Executable threepenny-examples-buttons
+  Main-is:           Buttons.hs
+  Hs-source-dirs:    src
+  Ghc-options:       -threaded -O2
+  Build-depends:     base                      >= 4     && < 5
+                    ,threepenny-gui
+
+Executable threepenny-examples-missing-dollars
+  Main-is:           MissingDollars.hs
+  Hs-source-dirs:    src
+  Ghc-options:       -threaded -O2
+  Build-depends:     base                      >= 4     && < 5
+                    ,threepenny-gui
+
+Executable threepenny-examples-use-words
+  Main-is:           UseWords.hs
+  Hs-source-dirs:    src
+  Ghc-options:       -threaded -O2
+  Build-depends:     base                      >= 4     && < 5
+                    ,threepenny-gui
+
+Executable threepenny-examples-chat
+  Main-is:           Chat.hs
+  Hs-source-dirs:    src
+  Ghc-options:       -threaded -O2
+  Build-depends:     base                      >= 4     && < 5
+                    ,threepenny-gui
+                    ,time
+                    ,parsec

@@ -8,8 +8,8 @@ import Control.Monad
 import Control.Monad.IO
 import Data.List.Extra
 import Data.Time
-import Graphics.UI.Ji
-import Graphics.UI.Ji.Browser
+import Graphics.UI.Threepenny
+import Graphics.UI.Threepenny.Browser
 import Prelude hiding (catch)
 
 main = do

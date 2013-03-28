@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-module Graphics.UI.Ji.Internal.Include (include) where
+module Graphics.UI.Threepenny.Internal.Include (include) where
  
 import Data.Functor
 import qualified Language.Haskell.TH as TH

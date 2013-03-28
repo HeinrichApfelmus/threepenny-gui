@@ -1,10 +1,10 @@
-module Graphics.UI.Ji.JQuery where
+module Graphics.UI.Threepenny.JQuery where
 
 import Control.Arrow
 import Data.Char
 import Data.Default
 import Data.Maybe
-import Graphics.UI.Ji
+import Graphics.UI.Threepenny
 import Text.JSON
 
 data Easing = Swing | Linear

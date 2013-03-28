@@ -8,10 +8,10 @@ import Control.Monad
 import Control.Arrow
 import Control.Monad.IO
 import Data.Maybe
-import Graphics.UI.Ji
-import Graphics.UI.Ji.DOM
-import Graphics.UI.Ji.Elements
-import Graphics.UI.Ji.JQuery
+import Graphics.UI.Threepenny
+import Graphics.UI.Threepenny.DOM
+import Graphics.UI.Threepenny.Elements
+import Graphics.UI.Threepenny.JQuery
 import Text.Parsec
 
 main :: IO ()

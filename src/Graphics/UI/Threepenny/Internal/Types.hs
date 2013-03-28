@@ -7,7 +7,7 @@
 --   know what you're doing and you want to add something that the
 --   library doesn't do.
 
-module Graphics.UI.Ji.Internal.Types
+module Graphics.UI.Threepenny.Internal.Types
   where
 
 import Control.Applicative

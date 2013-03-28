@@ -2,13 +2,13 @@
 
 -- | Forms.
 
-module Graphics.UI.Ji.Forms where
+module Graphics.UI.Threepenny.Forms where
 
 import Control.Monad
 import Data.List.Extra
-import Graphics.UI.Ji
-import Graphics.UI.Ji.DOM
-import Graphics.UI.Ji.Elements
+import Graphics.UI.Threepenny
+import Graphics.UI.Threepenny.DOM
+import Graphics.UI.Threepenny.Elements
 
 -- | Make a form and do stuff with it.
 withForm :: MonadJi m

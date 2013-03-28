@@ -9,7 +9,7 @@
 --------------------------------------------------------------------------------
 -- Exports
 
-module Graphics.UI.Ji
+module Graphics.UI.Threepenny
   (
   -- * Guide
   -- $guide
@@ -67,16 +67,16 @@ module Graphics.UI.Ji
   ,forkJi
   
   -- * Types
-  ,module Graphics.UI.Ji.Types)
+  ,module Graphics.UI.Threepenny.Types)
   where
 
 
 --------------------------------------------------------------------------------
 -- Imports
 
-import           Graphics.UI.Ji.Types
-import           Graphics.UI.Ji.Internal.Types
-import           Graphics.UI.Ji.Internal.Include
+import           Graphics.UI.Threepenny.Types
+import           Graphics.UI.Threepenny.Internal.Types
+import           Graphics.UI.Threepenny.Internal.Include
 
 import           Control.Concurrent
 import           Control.Concurrent.Chan.Extra
@@ -190,7 +190,7 @@ jsDriverCode :: Text
 jsDriverCode = Text.unlines $ map Text.pack
     [ [include|Graphics/UI/jquery.js|]
     , [include|Graphics/UI/jquery.cookie.js|]
-    , [include|Graphics/UI/ji.js|]
+    , [include|Graphics/UI/driver.js|]
     ]
 
 defaultHtmlFile :: Text

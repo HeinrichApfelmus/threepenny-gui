@@ -6,7 +6,7 @@
 module Main where
 
 import Control.Monad.Extra
-import Graphics.UI.Ji
+import Graphics.UI.Threepenny
 
 -- | Main entry point. Starts a ji server.
 main :: IO ()

@@ -1,6 +1,6 @@
-module Graphics.UI.Ji.DOM where
+module Graphics.UI.Threepenny.DOM where
 
-import Graphics.UI.Ji
+import Graphics.UI.Threepenny
 
 -- | A prettier bind.
 (#) :: (Monad m) => m a -> (a -> m b) -> m b

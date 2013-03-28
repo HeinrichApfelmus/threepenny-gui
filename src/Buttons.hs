@@ -5,8 +5,8 @@ module Main where
 
 import Control.Concurrent
 import Control.Monad.Extra
-import Control.Monad.IO
-import Graphics.UI.Ji
+import Control.Monad.IO.Class
+import Graphics.UI.Threepenny
 
 -- | Main entry point. Starts a ji server.
 main :: IO ()
@@ -61,7 +61,7 @@ makeButtons body = do
   onBlur button1  $ \_ -> do setText button1Title button1; return ()
   onClick button1 $ \_ -> do
     li <- newElement "li"
-    io $ threadDelay $ 1000 * 1000 * 1
+    liftIO $ threadDelay $ 1000 * 1000 * 1
     setText (button1Title ++ " [pressed]")  button1
     setHtml "<b>Delayed</b> result!" li
     appendTo list li

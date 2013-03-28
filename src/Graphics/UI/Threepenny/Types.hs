@@ -8,7 +8,7 @@
 
 -- | Ji's public types. See "Graphics.UI.Ji.Internal.Types" for internal types.
 
-module Graphics.UI.Ji.Types
+module Graphics.UI.Threepenny.Types
   (Element
   ,MonadJi(..)
   ,Ji
@@ -17,4 +17,4 @@ module Graphics.UI.Ji.Types
   ,Config(..))
   where
   
-import Graphics.UI.Ji.Internal.Types
+import Graphics.UI.Threepenny.Internal.Types
