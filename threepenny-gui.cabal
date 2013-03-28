@@ -6,9 +6,10 @@ Description:
     .
     It's cheap and easy to install because everyone has a web browser installed.
     .
-    
+    Internally, the library implements a small web server
+    that serves a HTML/JavaScript page with the GUI elements.
     You can freely manipulate the HTML DOM and handle browser events
-    from Haskell.
+    from your Haskell code.
     .
     Stability forecast: Significant API changes are likely in future versions.
     .

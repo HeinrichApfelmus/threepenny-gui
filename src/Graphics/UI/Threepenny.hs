@@ -175,12 +175,13 @@ router
     :: Maybe FilePath -> FilePath -> (Session m -> IO a)
     -> MVar (Map Integer (Session m)) -> Snap ()
 router initFile wwwroot worker sessions =
-        route [("/static"   , serveDirectory wwwroot)
-              ,("/"         , root)
-              ,("/js/ji.js" , writeText jsDriverCode)
-              ,("/init"     , init worker sessions)
-              ,("/poll"     , poll sessions)
-              ,("/signal"   , signal sessions)]
+        route [("/static"               , serveDirectory wwwroot)
+              ,("/"                     , root)
+              ,("/js/threepenny-gui.js" , writeText jsDriverCode)
+              ,("/init"                 , init worker sessions)
+              ,("/poll"                 , poll sessions)
+              ,("/signal"               , signal sessions)
+              ]
     where
     root = case initFile of
         Just file -> serveFile (wwwroot </> file)
