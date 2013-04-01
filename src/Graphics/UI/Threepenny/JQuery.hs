@@ -14,7 +14,7 @@ instance Default Easing where
   def = Linear
 
 -- | Animate property changes of a function.
-animate :: MonadJi m => Element -> [(String,String)] -> Int -> Easing -> m () -> m ()
+animate :: MonadTP m => Element -> [(String,String)] -> Int -> Easing -> m () -> m ()
 animate el props duration easing complete = do
   callDeferredFunction
     "jquery_animate"
@@ -22,23 +22,23 @@ animate el props duration easing complete = do
     (const complete)
 
 -- | Fade in an element.
-fadeIn :: MonadJi m => Element -> Int -> Easing -> m () -> m ()
+fadeIn :: MonadTP m => Element -> Int -> Easing -> m () -> m ()
 fadeIn el duration easing complete = animate el [("opacity","1")] duration easing complete
 
 -- | Fade out an element.
-fadeOut :: MonadJi m => Element -> Int -> Easing -> m () -> m ()
+fadeOut :: MonadTP m => Element -> Int -> Easing -> m () -> m ()
 fadeOut el duration easing complete = animate el [("opacity","0")] duration easing complete
 
 -- | Do something on return.
-onSendValue :: (MonadJi m) => Element -> (String -> m ()) -> m ()
+onSendValue :: (MonadTP m) => Element -> (String -> m ()) -> m ()
 onSendValue input m = do
   bind "sendvalue" input $ \(EventData evdata) -> do
     m (concat (catMaybes evdata))
 
 -- | Focus an element.
-setFocus :: (MonadJi m) => Element -> m Element
+setFocus :: (MonadTP m) => Element -> m Element
 setFocus el = runFunction "jquery_setFocus" [encode el] >> return el
 
 -- | Scroll to the bottom of an element.
-scrollToBottom :: MonadJi m => Element -> m ()
+scrollToBottom :: MonadTP m => Element -> m ()
 scrollToBottom area = runFunction "jquery_scrollToBottom" [encode area]

@@ -8,18 +8,18 @@ module Main where
 import Control.Monad.Extra
 import Graphics.UI.Threepenny
 
--- | Main entry point. Starts a ji server.
+-- | Main entry point. Starts a TP server.
 main :: IO ()
 main = serve Config
-    { jiPort = 10002
-    , jiRun = runJi
-    , jiWorker = worker
-    , jiInitHTML = "missing-dollars.html"
-    , jiStatic = "wwwroot"
+    { tpPort = 10002
+    , tpRun = runTP
+    , tpWorker = worker
+    , tpInitHTML = Just "missing-dollars.html"
+    , tpStatic = "wwwroot"
     }
 
 -- | A per-user worker thread. Each user session has a thread.
-worker :: MonadJi m => m ()
+worker :: MonadTP m => m ()
 worker = do
   setTitle "Missing Dollars"
   body <- getBody
@@ -29,14 +29,14 @@ worker = do
   attributionsource wrap
   handleEvents
 
-doheader :: MonadJi m => Element -> m Element
+doheader :: MonadTP m => Element -> m Element
 doheader body = do
   header <- newElementText body "h1" "The "
   headerMe <- newElementText header "span" "…"
   newElementText' header "span" " Dollars"  
   return headerMe
 
-attributionsource :: MonadJi m => Element -> m ()
+attributionsource :: MonadTP m => Element -> m ()
 attributionsource body = do
   p <- newElementText body "p" ""
   vex <- link "https://github.com/chrisdone/ji/blob/master/examples/MissingDollars.hs"
@@ -48,7 +48,7 @@ attributionsource body = do
   appendTo author vex
   return ()
 
-missingDollarRiddle :: MonadJi m => Element -> Element -> m ()
+missingDollarRiddle :: MonadTP m => Element -> Element -> m ()
 missingDollarRiddle body headerMe = do
   newElementText' body "h2" "The Guests, The Bellhop, And The Pizza"
   -- User input area.
@@ -125,20 +125,20 @@ missingDollarRiddle body headerMe = do
           appendTo parent el
           return el
 
-link :: MonadJi m => String -> String -> m Element
+link :: MonadTP m => String -> String -> m Element
 link url text = do
   el <- newElement "a"
   setAttr "href" url el
   setText text el
   return el
 
-newElementText :: MonadJi m => Element -> String -> String -> m Element
+newElementText :: MonadTP m => Element -> String -> String -> m Element
 newElementText parent tagName text = do
   el <- newElement tagName
   appendTo parent el
   setText text el
   return el
 
-newElementText' :: MonadJi m => Element -> String -> String -> m ()
+newElementText' :: MonadTP m => Element -> String -> String -> m ()
 newElementText' parent tagName text =
   newElementText parent tagName text >> return ()
