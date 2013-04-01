@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
--- | All Ji's types. See "Graphics.UI.Ji.Types" for only public
+-- | All Threepenny's types. See "Graphics.UI.Threepenny.Types" for only public
 --   types. Non-public types can be manipulated at your own risk, if you
 --   know what you're doing and you want to add something that the
 --   library doesn't do.
@@ -32,22 +32,22 @@ instance JSON Element where
     obj <- readJSON obj
     Element <$> valFromObj "Element" obj
 
--- | A monad for running a Ji session. Please implement this if you
+-- | A monad for running a TP session. Please implement this if you
 --   need to run your own monad. It merely needs to access a 'Session'
 --   data type which contains its events and things like that.
-class MonadIO m => MonadJi m where
+class MonadIO m => MonadTP m where
   askSession :: m (Session m)
 
--- | A simple monad implementing 'MonadJi' for reading the 'Session' state.
-newtype Ji a = Ji { getJi :: ReaderT (Session Ji) IO a }
-  deriving (Monad,MonadIO,MonadReader (Session Ji))
+-- | A simple monad implementing 'MonadTP' for reading the 'Session' state.
+newtype TP a = TP { getTP :: ReaderT (Session TP) IO a }
+  deriving (Monad,MonadIO,MonadReader (Session TP))
 
 -- | Simple reader implementation.
-instance MonadJi Ji where
+instance MonadTP TP where
   askSession = ask
   
--- | A Ji session. This type is opaque, you don't need to inspect it,
---   just be able to carry it in the 'MonadJi' monad.
+-- | A TP session. This type is opaque, you don't need to inspect it,
+--   just be able to carry it in the 'MonadTP' monad.
 data Session m = Session
   { sSignals :: Chan Signal
   , sInstructions :: Chan Instruction
@@ -140,9 +140,9 @@ data Closure = Closure (String,String)
   deriving (Typeable,Data,Show)
 
 data Config m a = Config
-  { jiPort     :: Int                        -- ^ Port.
-  , jiRun      :: (Session m -> m a -> IO a) -- ^ How to run the worker monad.
-  , jiWorker   :: m a                        -- ^ The worker.
-  , jiInitHTML :: Maybe FilePath             -- ^ Init file.
-  , jiStatic   :: FilePath                   -- ^ Static files path.
+  { tpPort     :: Int                        -- ^ Port.
+  , tpRun      :: (Session m -> m a -> IO a) -- ^ How to run the worker monad.
+  , tpWorker   :: m a                        -- ^ The worker.
+  , tpInitHTML :: Maybe FilePath             -- ^ Init file.
+  , tpStatic   :: FilePath                   -- ^ Static files path.
   }

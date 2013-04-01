@@ -16,14 +16,14 @@ import Text.Parsec
 
 main :: IO ()
 main = serve Config
-    { jiPort = 10003
-    , jiRun = runJi
-    , jiWorker = worker
-    , jiInitHTML = "use-words.html"
-    , jiStatic = "wwwroot"
+    { tpPort = 10003
+    , tpRun = runTP
+    , tpWorker = worker
+    , tpInitHTML = "use-words.html"
+    , tpStatic = "wwwroot"
     }
 
-worker :: Ji ()
+worker :: TP ()
 worker = do
   andthen <- io (readFile fname)
   case parts fname andthen of

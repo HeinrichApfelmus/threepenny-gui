@@ -40,7 +40,7 @@ $.fn.livechange = function(ms,trigger){
   // State
   var sessionToken = null;
   var global_ids = [], element_count = 0, el_table = [];
-  var ji_enable_log = $.cookie('ji_log') == "true";
+  var tp_enable_log = $.cookie('tp_log') == "true";
   var signal_count = 0;
 
   document.head = document.head || document.getElementsByTagName('head')[0];
@@ -57,7 +57,7 @@ $.fn.livechange = function(ms,trigger){
   // Running instructions
 
   window.do_logging = function(x){
-    $.cookie('ji_log',x.toString());
+    $.cookie('tp_log',x.toString());
   };
   
   window.jquery_animate = function(el_id,props,duration,easing,complete){
@@ -355,7 +355,7 @@ $.fn.livechange = function(ms,trigger){
     });
   }
 
-  // When the server creates elements in the Ji monad, it assigns them a string "elid".  
+  // When the server creates elements in the TP monad, it assigns them a string "elid".  
   // This lookupElementTable function is used to sync the elids on the server with the 
   // elids on this client code.  Lookups on elids that do not already exist in the client
   // table are created and added automatically.
@@ -408,7 +408,7 @@ $.fn.livechange = function(ms,trigger){
 
   // A log
   function console_log(){
-    if (ji_enable_log) {
+    if (tp_enable_log) {
       window.console.log.apply(window.console,arguments);
     }
   };

@@ -11,7 +11,7 @@ import Graphics.UI.Threepenny.DOM
 import Graphics.UI.Threepenny.Elements
 
 -- | Make a form and do stuff with it.
-withForm :: MonadJi m
+withForm :: MonadTP m
          => String -> (Element -> Element -> Element -> (m () -> m ()) -> m ()) -> m Element
 withForm buttonTitle cont = do
   form <- newForm #. "review-form"
@@ -28,7 +28,7 @@ withForm buttonTitle cont = do
   return form
 
 -- | Make a labelled input.
-labelled :: (MonadJi m) => Element -> String -> String -> (Element -> m (a,Element)) -> m a
+labelled :: (MonadTP m) => Element -> String -> String -> (Element -> m (a,Element)) -> m a
 labelled inputs text name input = do
   li <- new #. "form-input" #+ inputs
   newLabel #. "form-label" #+ li #= text # set "for" name # unit
@@ -37,7 +37,7 @@ labelled inputs text name input = do
   return a
 
 -- | Make a suggestions box.
-suggestionsBox :: (Show a,MonadJi m)
+suggestionsBox :: (Show a,MonadTP m)
                => Element
                -> Element
                -> String
