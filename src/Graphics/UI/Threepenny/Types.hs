@@ -6,12 +6,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--- | Ji's public types. See "Graphics.UI.Ji.Internal.Types" for internal types.
+-- | Threepennys's public types. See "Graphics.UI.Threepenny.Internal.Types" for internal types.
 
 module Graphics.UI.Threepenny.Types
   (Element
-  ,MonadJi(..)
-  ,Ji
+  ,MonadTP(..)
+  ,TP
   ,Session(sToken)
   ,EventData(..)
   ,Config(..))

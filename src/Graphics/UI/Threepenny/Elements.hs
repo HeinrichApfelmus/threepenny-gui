@@ -7,43 +7,43 @@ import Graphics.UI.Threepenny
 import Graphics.UI.Threepenny.DOM
 
 -- | Make a new anchor.
-newAnchor :: MonadJi m => m Element
+newAnchor :: MonadTP m => m Element
 newAnchor = newElement "a"
 
 -- | Make a new form.
-newForm :: MonadJi m => m Element
+newForm :: MonadTP m => m Element
 newForm = newElement "form"
 
 -- | Make a new label.
-newLabel :: MonadJi m => m Element
+newLabel :: MonadTP m => m Element
 newLabel = newElement "label"
 
 -- | Make a new input.
-newInput :: MonadJi m => m Element
+newInput :: MonadTP m => m Element
 newInput = newElement "input"
 
 -- | Make a new textarea.
-newTextarea :: MonadJi m => m Element
+newTextarea :: MonadTP m => m Element
 newTextarea = newElement "textarea"
 
 -- | Make a new table.
-newTable :: MonadJi m => m Element
+newTable :: MonadTP m => m Element
 newTable = newElement "table"
 
 -- | Make a new row.
-newRow :: MonadJi m => m Element
+newRow :: MonadTP m => m Element
 newRow = newElement "tr"
 
 -- | Make a new data.
-newData :: MonadJi m => m Element
+newData :: MonadTP m => m Element
 newData = newElement "td"
 
 -- | Make a new img.
-newImg :: MonadJi m => m Element
+newImg :: MonadTP m => m Element
 newImg = newElement "img"
 
 -- | Add a stylesheet to the head.
-addStyleSheet :: MonadJi m => FilePath -> m ()
+addStyleSheet :: MonadTP m => FilePath -> m ()
 addStyleSheet filename = do
   head <- getHead
   newElement "link"
@@ -54,6 +54,6 @@ addStyleSheet filename = do
     # unit
 
 -- | Add a clear.
-addClear :: MonadJi m => Element -> m ()
+addClear :: MonadTP m => Element -> m ()
 addClear el = do
   new #. "clear" #+ el # unit

@@ -14,11 +14,11 @@ import Prelude hiding (catch)
 
 main = do
   messages <- newChan
-  serve $ Config 10004 runJi (worker messages) "chat.html" "wwwroot"
+  serve $ Config 10004 runTP (worker messages) (Just "chat.html") "wwwroot"
 
 worker globalMsgs = do
   body <- getBody
-  new #. "header" #= "Ji Chat" #+ body # unit
+  new #. "header" #= "Threepenny Chat" #+ body # unit
   new #. "gradient" #+ body # unit
   codeLink body
   nickname <- getNickname body
@@ -27,11 +27,11 @@ worker globalMsgs = do
   sendMessageArea body nickname msgs
   messageReceiver <- receiveMessages msgs messageArea
   session <- askSession
-  io $ catch (runJi session handleEvents)
+  io $ catch (runTP session handleEvents)
              (\e -> do killThread messageReceiver
                        throw (e :: SomeException))
 
-receiveMessages msgs messageArea = forkJi $ do
+receiveMessages msgs messageArea = forkTP $ do
   messages <- io $ getChanContents msgs
   forM_ messages $ \ (time,user,content) -> do
     atomic $ do

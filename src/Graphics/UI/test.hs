@@ -6,20 +6,20 @@ module Main where
 import Control.Concurrent
 import Control.Monad.Extra
 import Control.Monad.IO
-import Graphics.UI.Ji
+import Graphics.UI.Threepenny
 
--- | Main entry point. Starts a ji server.
+-- | Main entry point. Starts a Threepenny server.
 main :: IO ()
 main = serve Config
-    { jiPort = 10001
-    , jiRun = runJi
-    , jiWorker = worker
-    , jiInitHTML = Nothing
-    , jiStatic = "wwwroot"
+    { tpPort = 10001
+    , tpRun = runTP
+    , tpWorker = worker
+    , tpInitHTML = Nothing
+    , tpStatic = "wwwroot"
     }
 
 -- | A per-user worker thread. Each user session has a thread.
-worker :: MonadJi m => m ()
+worker :: MonadTP m => m ()
 worker = do
   setTitle "Buttons"
   body <- getBody
@@ -29,7 +29,7 @@ worker = do
   linkage wrap
   handleEvents
 
-greet :: MonadJi m => Element -> m ()
+greet :: MonadTP m => Element -> m ()
 greet body = do
   header <- newElement "h1"
   appendTo body header
@@ -40,7 +40,7 @@ greet body = do
   appendTo body greeting
   return ()
 
-linkage :: MonadJi m => Element -> m ()
+linkage :: MonadTP m => Element -> m ()
 linkage body = do
   p <- newElementText body "p" ""
   vex <- link "https://github.com/chrisdone/ji/blob/master/examples/Buttons.hs"
@@ -48,7 +48,7 @@ linkage body = do
   appendTo p vex
   return ()
 
-makeButtons :: MonadJi m => Element -> m ()
+makeButtons :: MonadTP m => Element -> m ()
 makeButtons body = do
   list <- newElement "ul"
   setAttr "class" "buttons-list" list
@@ -79,7 +79,7 @@ makeButtons body = do
   where button1Title = "Click me, I delay a bit"
         button2Title = "Click me, I work immediately"
 
-appendToButton :: MonadJi m => Element -> String -> m Element
+appendToButton :: MonadTP m => Element -> String -> m Element
 appendToButton body caption = do
   p <- newElement "p"
   button <- newElement "a"
@@ -89,14 +89,14 @@ appendToButton body caption = do
   setAttr "class" "button" button
   return button
 
-link :: MonadJi m => String -> String -> m Element
+link :: MonadTP m => String -> String -> m Element
 link url text = do
   el <- newElement "a"
   setAttr "href" url el
   setText text el
   return el
 
-newElementText :: MonadJi m => Element -> String -> String -> m Element
+newElementText :: MonadTP m => Element -> String -> String -> m Element
 newElementText parent tagName text = do
   el <- newElement tagName
   appendTo parent el

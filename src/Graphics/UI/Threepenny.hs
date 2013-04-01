@@ -3,7 +3,7 @@
 {-# OPTIONS -fno-warn-name-shadowing #-}
 {-# LANGUAGE QuasiQuotes #-}
 
--- | The main Ji module.
+-- | The main Threepenny module.
 
 
 --------------------------------------------------------------------------------
@@ -17,7 +17,7 @@ module Graphics.UI.Threepenny
   -- * Server running
   -- $serverrunning
    serve
-  ,runJi
+  ,runTP
   
   -- * Event handling
   -- $eventhandling
@@ -65,7 +65,7 @@ module Graphics.UI.Threepenny
   ,runFunction
   ,callDeferredFunction
   ,atomic
-  ,forkJi
+  ,forkTP
   
   -- * Types
   ,module Graphics.UI.Threepenny.Types)
@@ -109,11 +109,11 @@ import           Text.JSON.Generic
 --
 -- $guide
 --
--- Ji consists of a bit of JavaScript that you can find in the
--- wwwroot/js directory in this package, and a server. See the next
+-- Threepenny consists of a bit of JavaScript that you can find in the
+-- Graphics directory in this package, and a server. See the next
 -- section for how to run the server.
 --
--- Applications written in Ji are multithreaded. Each client (user)
+-- Applications written in TP are multithreaded. Each client (user)
 -- has a separate thread which runs with no awareness of the asynchronous
 -- protocol below. Each session should only be accessed from one
 -- thread. There is not yet any clever architecture for accessing the
@@ -125,7 +125,8 @@ import           Text.JSON.Generic
 -- The DOM is accessed much in the same way it is accessed from
 -- JavaScript; elements can be created, searched, updated, moved and
 -- inspected. Events can be bound to DOM elements and handled.
-
+--
+-- This project was originally called Ji.
 
 --------------------------------------------------------------------------------
 -- Server running
@@ -135,16 +136,16 @@ import           Text.JSON.Generic
 -- The server runs using Snap (for now), run it using 'serve' and you
 -- must provide it a function to run the session monad. The session
 -- monad is any monad with access to the current session. You can just
--- use 'runJi' if you don't need to subclass 'MonadJi'.
+-- use 'runTP' if you don't need to subclass 'MonadTP'.
 
--- | Run a Ji server with Snap on the specified port and the given
+-- | Run a TP server with Snap on the specified port and the given
 --   worker action.
-serve :: MonadJi m => Config m a -> IO () -- ^ A Ji server.
+serve :: MonadTP m => Config m a -> IO () -- ^ A TP server.
 serve Config{..} = do
   sessions <- newMVar M.empty
   _ <- forkIO $ custodian 30 sessions
-  httpServe server (router jiInitHTML jiStatic (\session -> jiRun session jiWorker) sessions)
- where server = setPort jiPort defaultConfig
+  httpServe server (router tpInitHTML tpStatic (\session -> tpRun session tpWorker) sessions)
+ where server = setPort tpPort defaultConfig
 
 -- | Kill sessions after at least n seconds of disconnectedness.
 custodian :: Integer -> MVar (Map Integer (Session m)) -> IO ()
@@ -166,12 +167,13 @@ custodian seconds sessions = forever $ do
     return (M.filterWithKey (\k _ -> not (k `elem` killed)) sessions)
 
 -- | Convenient way to a run a worker with a session.
-runJi :: Session Ji  -- ^ The browser session.
-      -> Ji a       -- ^ The worker.
+runTP :: Session TP  -- ^ The browser session.
+      -> TP a       -- ^ The worker.
       -> IO a       -- ^ A worker runner.
-runJi session m = runReaderT (getJi m) session
+runTP session m = runReaderT (getTP m) session
 
--- Route requests.
+-- Route requests.  If the initFile is Nothing, then a default
+-- file will be served at /.
 router
     :: Maybe FilePath -> FilePath -> (Session m -> IO a)
     -> MVar (Map Integer (Session m)) -> Snap ()
@@ -327,11 +329,11 @@ readInput = fmap (>>= readMay) . getInput
 -- common binding, such as clicks, hovers, etc.
 
 -- | Handle events signalled from the client.
-handleEvents :: MonadJi m => m ()
+handleEvents :: MonadTP m => m ()
 handleEvents = forever handleEvent
 
 -- | Handle one event.
-handleEvent :: MonadJi m => m ()
+handleEvent :: MonadTP m => m ()
 handleEvent = do
   signal <- get
   case signal of
@@ -344,13 +346,13 @@ handleEvent = do
     _ -> return ()
 
 -- Get the latest signal sent from the client.
-get :: MonadJi m => m Signal
+get :: MonadTP m => m Signal
 get = do
   Session{..} <- askSession
   io $ readChan sSignals
 
 -- | Bind an event handler to the given event of the given element.
-bind :: MonadJi m
+bind :: MonadTP m
      => String              -- ^ The eventType, see any DOM documentation for a list of these.
      -> Element             -- ^ The element to bind to.
      -> (EventData -> m ()) -- ^ The event handler.
@@ -360,7 +362,7 @@ bind eventType (Element el) handler = do
   run $ Bind eventType el closure
 
 -- Make a uniquely numbered event handler.
-newClosure :: MonadJi m => String -> String -> ([Maybe String] -> m ()) -> m Closure
+newClosure :: MonadTP m => String -> String -> ([Maybe String] -> m ()) -> m Closure
 newClosure eventType elid thunk = do
   Session{..} <- askSession
   io $ modifyMVar_ sEventHandlers $ \handlers -> do
@@ -370,21 +372,21 @@ newClosure eventType elid thunk = do
   where key = (elid,eventType)
 
 -- | Bind an event handler to the click event of the given element.
-onClick :: MonadJi m
+onClick :: MonadTP m
         => Element             -- ^ The element to bind to.
         -> (EventData -> m ()) -- ^ The event handler.
         -> m ()
 onClick = bind "click"
 
 -- | Bind an event handler to the hover event of the given element.
-onHover :: MonadJi m
+onHover :: MonadTP m
         => Element             -- ^ The element to bind to.
         -> (EventData -> m ()) -- ^ The event handler.
         -> m ()
 onHover = bind "mouseenter"
 
 -- | Bind an event handler to the blur event of the given element.
-onBlur :: MonadJi m
+onBlur :: MonadTP m
        => Element             -- ^ The element to bind to.
        -> (EventData -> m ()) -- ^ The event handler.
        -> m ()
@@ -400,7 +402,7 @@ onBlur = bind "mouseleave"
 -- functions in this section. 
 
 -- | Set the style of the given element.
-setStyle :: (MonadJi m)
+setStyle :: (MonadTP m)
          => [(String, String)] -- ^ Pairs of CSS (property,value).
          -> Element            -- ^ The element to update.
          -> m Element
@@ -409,7 +411,7 @@ setStyle props el = do
   return el
 
 -- | Set the attribute of the given element.
-setAttr :: (MonadJi m)
+setAttr :: (MonadTP m)
         => String  -- ^ The attribute name.
         -> String  -- ^ The attribute value.
         -> Element -- ^ The element to update.
@@ -419,7 +421,7 @@ setAttr key value el = do
   return el
 
 -- | Set the text of the given element.
-setText :: (MonadJi m)
+setText :: (MonadTP m)
         => String  -- ^ The plain text.
         -> Element -- ^ The element to update.
         -> m Element
@@ -428,7 +430,7 @@ setText props el = do
   return el
 
 -- | Set the HTML of the given element.
-setHtml :: (MonadJi m)
+setHtml :: (MonadTP m)
         => String  -- ^ The HTML.
         -> Element -- ^ The element to update.
         -> m Element
@@ -437,19 +439,19 @@ setHtml props el = do
   return el
 
 -- | Set the title of the document.
-setTitle :: (MonadJi m)
+setTitle :: (MonadTP m)
         => String  -- ^ The title.
         -> m ()
 setTitle title = run $ SetTitle title
 
 -- | Empty the given element.
-emptyEl :: MonadJi m => Element -> m Element
+emptyEl :: MonadTP m => Element -> m Element
 emptyEl el = do
   run $ EmptyEl el
   return el
 
 -- | Delete the given element.
-delete :: MonadJi m => Element -> m ()
+delete :: MonadTP m => Element -> m ()
 delete el = do
   run $ Delete el
 
@@ -462,7 +464,7 @@ delete el = do
 -- Functions for creating, deleting, moving, appending, prepending, DOM nodes.
 
 -- | Create a new element of the given tag name.
-newElement :: MonadJi m
+newElement :: MonadTP m
            => String     -- ^ The tag name.
            -> m Element  -- ^ A tag reference. Non-blocking.
 newElement tagName = do
@@ -472,7 +474,7 @@ newElement tagName = do
   return (Element elid)
 
 -- | Append one element to another. Non-blocking.
-appendTo :: (MonadJi m)
+appendTo :: (MonadTP m)
        => Element -- ^ The parent.
        -> Element -- ^ The resulting child.
        -> m Element
@@ -491,14 +493,14 @@ appendTo parent child = do
 
 -- | Get an element by its tag name.  Blocks.
 getElementByTagName
-  :: MonadJi m
+  :: MonadTP m
   => String            -- ^ The tag name.
   -> m (Maybe Element) -- ^ An element (if any) with that tag name.
 getElementByTagName = liftM listToMaybe . getElementsByTagName
 
 -- | Get all elements of the given tag name.  Blocks.
 getElementsByTagName
-  :: MonadJi m
+  :: MonadTP m
   => String       -- ^ The tag name.
   -> m [Element]  -- ^ All elements with that tag name.
 getElementsByTagName tagName =
@@ -509,7 +511,7 @@ getElementsByTagName tagName =
   
 -- | Get an element by a particular ID.  Blocks.
 getElementById
-  :: MonadJi m
+  :: MonadTP m
   => String             -- ^ The ID string.
   -> m (Maybe Element)  -- ^ Element (if any) with given ID.
 getElementById id =
@@ -519,7 +521,7 @@ getElementById id =
       _            -> return Nothing
      
 -- | Get the value of an input. Blocks.
-getValue :: MonadJi m
+getValue :: MonadTP m
          => Element  -- ^ The element to get the value of.
          -> m String -- ^ The plain text value.
 getValue el =
@@ -529,7 +531,7 @@ getValue el =
       _         -> return Nothing
 
 -- | Get values from inputs. Blocks. This is faster than many 'getValue' invocations.
-getValuesList :: MonadJi m
+getValuesList :: MonadTP m
               => [Element]  -- ^ A list of elements to get the values of.
               -> m [String] -- ^ The list of plain text values.
 getValuesList el =
@@ -539,19 +541,19 @@ getValuesList el =
       _           -> return Nothing
 
 -- | Read a value from an input. Blocks.
-readValue :: (MonadJi m,Read a)
+readValue :: (MonadTP m,Read a)
           => Element     -- ^ The element to read a value from.
           -> m (Maybe a) -- ^ Maybe the read value.
 readValue = liftM readMay . getValue
 
 -- | Read values from inputs. Blocks. This is faster than many 'readValue' invocations.
-readValuesList :: (MonadJi m,Read a)
+readValuesList :: (MonadTP m,Read a)
                => [Element]     -- ^ The element to read a value from.
                -> m (Maybe [a]) -- ^ Maybe the read values. All or none.
 readValuesList = liftM (sequence . map readMay) . getValuesList
 
--- | Atomically execute the given Ji computation.
-atomic :: MonadJi m => m a -> m a
+-- | Atomically execute the given TP computation.
+atomic :: MonadTP m => m a -> m a
 atomic m = do
   Session {..} <- askSession
   io $ takeMVar sMutex
@@ -559,14 +561,14 @@ atomic m = do
   io $ putMVar sMutex ()
   return ret
 
--- | Fork the current Ji thread.
-forkJi :: Ji a -> Ji ThreadId
-forkJi x = do
+-- | Fork the current TP thread.
+forkTP :: TP a -> TP ThreadId
+forkTP x = do
   session <- askSession
-  io . forkIO . runJi session $ x >> return ()
+  io . forkIO . runTP session $ x >> return ()
 
 -- Send an instruction and read the signal response.
-call :: MonadJi m => Instruction -> (Signal -> m (Maybe a)) -> m a
+call :: MonadTP m => Instruction -> (Signal -> m (Maybe a)) -> m a
 call instruction withSignal = do
   Session{..} <- askSession
   io $ takeMVar sMutex
@@ -584,25 +586,25 @@ call instruction withSignal = do
         Nothing     -> go mutex newChan
 
 -- Run the given instruction.
-run :: MonadJi m => Instruction -> m ()
+run :: MonadTP m => Instruction -> m ()
 run i = do
   Session{..} <- askSession
   io $ writeChan sInstructions i
 
 -- | Get the head of the page.
-getHead :: MonadJi m => m Element
+getHead :: MonadTP m => m Element
 getHead = return (Element "head")
 
 -- | Get the body of the page.
-getBody :: MonadJi m => m Element
+getBody :: MonadTP m => m Element
 getBody = return (Element "body")
 
 -- | Get the request location.
-getRequestLocation :: MonadJi m => m URI
+getRequestLocation :: MonadTP m => m URI
 getRequestLocation = liftM (fst . sStartInfo) askSession
 
 -- | Get the request cookies.
-getRequestCookies :: MonadJi m => m [(String,String)]
+getRequestCookies :: MonadTP m => m [(String,String)]
 getRequestCookies = liftM (snd . sStartInfo) askSession
 
 
@@ -615,18 +617,18 @@ getRequestCookies = liftM (snd . sStartInfo) askSession
 
 -- | Send a debug message to the client. The behaviour of the client
 --   is unspecified.
-debug :: MonadJi m
+debug :: MonadTP m
       => String -- ^ Some plain text to send to the client.
       -> m ()
 debug = run . Debug
 
 -- | Clear the client's DOM.
-clear :: MonadJi m => m ()
+clear :: MonadTP m => m ()
 clear = run $ Clear ()
 
 -- | Call the given function. Blocks.
 callFunction
-  :: MonadJi m
+  :: MonadTP m
   => String            -- ^ The function name.
   -> [String]          -- ^ Parameters.
   -> m [Maybe String]  -- ^ Return tuple.
@@ -638,7 +640,7 @@ callFunction func params =
 
 -- | Call the given function. Blocks.
 runFunction
-  :: MonadJi m
+  :: MonadTP m
   => String            -- ^ The function name.
   -> [String]          -- ^ Parameters.
   -> m ()
@@ -647,7 +649,7 @@ runFunction func params =
 
 -- | Call the given function with the given continuation. Doesn't block.
 callDeferredFunction
-  :: MonadJi m
+  :: MonadTP m
   => String                   -- ^ The function name.
   -> [String]                 -- ^ Parameters.
   -> ([Maybe String] -> m ()) -- ^ The continuation to call if/when the function completes.
