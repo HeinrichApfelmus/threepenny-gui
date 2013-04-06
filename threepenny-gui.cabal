@@ -40,6 +40,7 @@ Library
                     ,Graphics.UI.Threepenny.Elements
                     ,Graphics.UI.Threepenny.JQuery
                     ,Graphics.UI.Threepenny.Browser
+                    ,Graphics.UI.Threepenny.Events
   Other-modules:     Control.Concurrent.Chan.Extra
                     ,Control.Monad.Extra
                     ,Control.Monad.IO
