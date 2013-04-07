@@ -24,9 +24,6 @@ module Graphics.UI.Threepenny
   ,bind
   ,handleEvent
   ,handleEvents
-  ,onClick
-  ,onHover
-  ,onBlur
   
   -- * Setting attributes
   -- $settingattributes
@@ -370,27 +367,6 @@ newClosure eventType elid thunk = do
   return (Closure key)
     
   where key = (elid,eventType)
-
--- | Bind an event handler to the click event of the given element.
-onClick :: MonadTP m
-        => Element             -- ^ The element to bind to.
-        -> (EventData -> m ()) -- ^ The event handler.
-        -> m ()
-onClick = bind "click"
-
--- | Bind an event handler to the hover event of the given element.
-onHover :: MonadTP m
-        => Element             -- ^ The element to bind to.
-        -> (EventData -> m ()) -- ^ The event handler.
-        -> m ()
-onHover = bind "mouseenter"
-
--- | Bind an event handler to the blur event of the given element.
-onBlur :: MonadTP m
-       => Element             -- ^ The element to bind to.
-       -> (EventData -> m ()) -- ^ The event handler.
-       -> m ()
-onBlur = bind "mouseleave"
 
 
 --------------------------------------------------------------------------------

@@ -308,8 +308,19 @@ $.fn.livechange = function(ms,trigger){
               Event: handlerGuid.concat([[x]])
             },function(){});
           });
-        }
-        else {
+        } else if(eventType.match('dragstart|dragenter|dragover|dragleave|drag|drop|dragend')) {
+          $(el).bind(eventType,function(e){
+            signal({
+              Event: handlerGuid.concat([
+                e.originalEvent.dataTransfer
+                    ?[e.originalEvent.dataTransfer.getData("dragData")]
+                    :[]])
+            },function(){
+              // no action
+            });
+            return true;
+          });
+        } else {
           $(el).bind(eventType,function(e){
             signal({
               Event: handlerGuid.concat([e.which?[e.which.toString()]:[]])
