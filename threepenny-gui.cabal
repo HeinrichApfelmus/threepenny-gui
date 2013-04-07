@@ -40,10 +40,12 @@ Library
                     ,Graphics.UI.Threepenny.Elements
                     ,Graphics.UI.Threepenny.JQuery
                     ,Graphics.UI.Threepenny.Browser
-  Other-modules:     Control.Concurrent.Chan.Extra
+  Other-modules:
+                     Control.Concurrent.Chan.Extra
                     ,Control.Monad.Extra
                     ,Control.Monad.IO
                     ,Control.Concurrent.Delay
+                    ,Graphics.UI.Threepenny.Internal.Include
   CPP-Options:      -DCABAL
   Build-depends:     base                      >= 4     && < 5
                     ,snap-server
