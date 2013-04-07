@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ViewPatterns, PackageImports #-}
 
 module Main where
 
@@ -8,8 +8,13 @@ import Control.Monad
 import Control.Monad.IO
 import Data.List.Extra
 import Data.Time
+#ifdef CABAL
+import "threepenny-gui" Graphics.UI.Threepenny
+import "threepenny-gui" Graphics.UI.Threepenny.Browser
+#else
 import Graphics.UI.Threepenny
 import Graphics.UI.Threepenny.Browser
+#endif
 import Prelude hiding (catch)
 
 main = do

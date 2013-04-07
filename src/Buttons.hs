@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, CPP, PackageImports #-}
 {-# OPTIONS -fno-warn-name-shadowing #-}
 
 module Main where
@@ -6,7 +6,11 @@ module Main where
 import Control.Concurrent
 import Control.Monad.Extra
 import Control.Monad.IO.Class
+#ifdef CABAL
+import "threepenny-gui" Graphics.UI.Threepenny
+#else
 import Graphics.UI.Threepenny
+#endif
 
 -- | Main entry point. Starts a TP server.
 main :: IO ()

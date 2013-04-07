@@ -1,12 +1,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, PackageImports #-}
 {-# OPTIONS -fno-warn-name-shadowing #-}
 {-# OPTIONS -fno-warn-type-defaults #-}
 
 module Main where
 
 import Control.Monad.Extra
+#ifdef CABAL
+import "threepenny-gui" Graphics.UI.Threepenny
+#else
 import Graphics.UI.Threepenny
+#endif
 
 -- | Main entry point. Starts a TP server.
 main :: IO ()

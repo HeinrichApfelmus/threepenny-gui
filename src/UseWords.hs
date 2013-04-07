@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ViewPatterns, PackageImports #-}
 
 module Main where
 
@@ -8,10 +8,17 @@ import Control.Monad
 import Control.Arrow
 import Control.Monad.IO
 import Data.Maybe
+#ifdef CABAL
+import "threepenny-gui" Graphics.UI.Threepenny
+import "threepenny-gui" Graphics.UI.Threepenny.DOM
+import "threepenny-gui" Graphics.UI.Threepenny.Elements
+import "threepenny-gui" Graphics.UI.Threepenny.JQuery
+#else
 import Graphics.UI.Threepenny
 import Graphics.UI.Threepenny.DOM
 import Graphics.UI.Threepenny.Elements
 import Graphics.UI.Threepenny.JQuery
+#endif
 import Text.Parsec
 
 main :: IO ()
