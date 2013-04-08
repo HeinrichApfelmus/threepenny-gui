@@ -26,6 +26,10 @@ Cabal-version:       >=1.8
 Extra-Source-Files:  src/Graphics/UI/*.html
                     ,src/Graphics/UI/*.js
 
+Data-dir:            src/Graphics/UI
+Data-files:          *.js, *.html
+
+
 Source-repository head
     type:               git
     location:           git://github.com/HeinrichApfelmus/threepenny-gui.git
@@ -47,6 +51,7 @@ Library
                     ,Control.Monad.IO
                     ,Control.Concurrent.Delay
                     ,Graphics.UI.Threepenny.Internal.Include
+                    ,Graphics.UI.Threepenny.Internal.Resources
   CPP-Options:      -DCABAL
   Build-depends:     base                      >= 4     && < 5
                     ,snap-server

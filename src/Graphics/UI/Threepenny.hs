@@ -1,7 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS -fno-warn-name-shadowing #-}
-{-# LANGUAGE QuasiQuotes #-}
 
 -- | The main Threepenny module.
 
@@ -74,7 +73,7 @@ module Graphics.UI.Threepenny
 
 import           Graphics.UI.Threepenny.Types
 import           Graphics.UI.Threepenny.Internal.Types
-import           Graphics.UI.Threepenny.Internal.Include
+import           Graphics.UI.Threepenny.Internal.Resources
 
 import           Control.Concurrent
 import           Control.Concurrent.Chan.Extra
@@ -186,16 +185,6 @@ router initFile wwwroot worker sessions =
     root = case initFile of
         Just file -> serveFile (wwwroot </> file)
         Nothing   -> writeText defaultHtmlFile
-
-jsDriverCode :: Text
-jsDriverCode = Text.unlines $ map Text.pack
-    [ [include|Graphics/UI/jquery.js|]
-    , [include|Graphics/UI/jquery.cookie.js|]
-    , [include|Graphics/UI/driver.js|]
-    ]
-
-defaultHtmlFile :: Text
-defaultHtmlFile = Text.pack [include|Graphics/UI/index.html|]
 
 
 -- Initialize the session.
