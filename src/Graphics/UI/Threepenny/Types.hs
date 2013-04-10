@@ -10,8 +10,7 @@
 
 module Graphics.UI.Threepenny.Types
   (Element
-  ,MonadTP(..)
-  ,TP
+  ,Window
   ,Session(sToken)
   ,EventData(..)
   ,Config(..))

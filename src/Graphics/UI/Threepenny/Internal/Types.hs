@@ -22,44 +22,42 @@ import Network.URI
 --------------------------------------------------------------------------------
 -- Public types
 
+-- | An opaque reference to an element in the DOM of a particular session / browser window.
+data Element = Element
+    { elId      :: ElementId
+    , elSession :: Session
+    }
+
+instance Show Element where
+    show = show . elId
+
 -- | An opaque reference to an element in the DOM.
-data Element = Element String
+data ElementId = ElementId String
   deriving (Data,Typeable,Show)
 
-instance JSON Element where
-  showJSON (Element o) = showJSON o
+instance JSON ElementId where
+  showJSON (ElementId o) = showJSON o
   readJSON obj = do
     obj <- readJSON obj
-    Element <$> valFromObj "Element" obj
+    ElementId <$> valFromObj "Element" obj
 
--- | A monad for running a TP session. Please implement this if you
---   need to run your own monad. It merely needs to access a 'Session'
---   data type which contains its events and things like that.
-class MonadIO m => MonadTP m where
-  askSession :: m (Session m)
-
--- | A simple monad implementing 'MonadTP' for reading the 'Session' state.
-newtype TP a = TP { getTP :: ReaderT (Session TP) IO a }
-  deriving (Monad,MonadIO,MonadReader (Session TP))
-
--- | Simple reader implementation.
-instance MonadTP TP where
-  askSession = ask
   
--- | A TP session. This type is opaque, you don't need to inspect it,
---   just be able to carry it in the 'MonadTP' monad.
-data Session m = Session
-  { sSignals :: Chan Signal
-  , sInstructions :: Chan Instruction
-  , sEventHandlers :: MVar (Map (String,String) ([Maybe String] -> m ()))
-  , sClosures :: MVar [Integer]
-  , sElementIds :: MVar [Integer]
-  , sToken :: Integer
-  , sMutex :: MVar ()
+-- | A client session. This type is opaque, you don't need to inspect it.
+data Session = Session
+  { sSignals        :: Chan Signal
+  , sInstructions   :: Chan Instruction
+  , sEventHandlers  :: MVar (Map (String,String) ([Maybe String] -> IO ()))
+  , sClosures       :: MVar [Integer]
+  , sElementIds     :: MVar [Integer]
+  , sToken          :: Integer
+  , sMutex          :: MVar ()
   , sConnectedState :: MVar ConnectedState
-  , sThreadId :: ThreadId
-  , sStartInfo :: (URI,[(String,String)])
+  , sThreadId       :: ThreadId
+  , sStartInfo      :: (URI,[(String,String)])
   }
+
+-- | The client browser window. It's equivalent to a client session.
+type Window = Session
 
 data ConnectedState
   = Disconnected UTCTime -- ^ The time that the poll disconnected, or
@@ -83,28 +81,26 @@ data Instruction
   | Clear ()
   | GetElementById String
   | GetElementsByTagName String
-  | SetStyle Element [(String,String)]
-  | SetAttr Element String String
-  | Append Element Element
-  | SetText Element String
-  | SetHtml Element String
-  | Bind String String Closure
-  | GetValue Element
-  | GetValues [Element]
+  | SetStyle ElementId [(String,String)]
+  | SetAttr ElementId String String
+  | Append ElementId ElementId
+  | SetText ElementId String
+  | SetHtml ElementId String
+  | Bind String ElementId Closure
+  | GetValue ElementId
+  | GetValues [ElementId]
   | SetTitle String
   | GetLocation ()
   | CallFunction (String,[String])
   | CallDeferredFunction (Closure,String,[String])
-  | EmptyEl Element
-  | Delete Element
+  | EmptyEl ElementId
+  | Delete ElementId
   deriving (Typeable,Data,Show)
 
--- | A signal (mostly events) that are sent from the client to the
--- server.
-
+-- | A signal (mostly events) that are sent from the client to the server.
 data Signal
   = Init ()
-  | Elements [Element]
+  | Elements [ElementId]
   | Event (String,String,[Maybe String])
   | Value String
   | Values [String]
@@ -139,10 +135,9 @@ nullable v      = Just <$> readJSON v
 data Closure = Closure (String,String)
   deriving (Typeable,Data,Show)
 
-data Config m a = Config
+data Config a = Config
   { tpPort     :: Int                        -- ^ Port.
-  , tpRun      :: (Session m -> m a -> IO a) -- ^ How to run the worker monad.
-  , tpWorker   :: m a                        -- ^ The worker.
+  , tpWorker   :: Window -> IO a             -- ^ The worker.
   , tpInitHTML :: Maybe FilePath             -- ^ Init file.
   , tpStatic   :: FilePath                   -- ^ Static files path.
   }

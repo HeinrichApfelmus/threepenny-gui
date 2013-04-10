@@ -16,7 +16,6 @@ module Graphics.UI.Threepenny
   -- * Server running
   -- $serverrunning
    serve
-  ,runTP
   
   -- * Event handling
   -- $eventhandling
@@ -61,7 +60,6 @@ module Graphics.UI.Threepenny
   ,runFunction
   ,callDeferredFunction
   ,atomic
-  ,forkTP
   
   -- * Types
   ,module Graphics.UI.Threepenny.Types)
@@ -130,21 +128,19 @@ import           Text.JSON.Generic
 -- $serverrunning
 -- 
 -- The server runs using Snap (for now), run it using 'serve' and you
--- must provide it a function to run the session monad. The session
--- monad is any monad with access to the current session. You can just
--- use 'runTP' if you don't need to subclass 'MonadTP'.
+-- must provide it a function to run for every client session.
 
 -- | Run a TP server with Snap on the specified port and the given
 --   worker action.
-serve :: MonadTP m => Config m a -> IO () -- ^ A TP server.
+serve :: Config a -> IO () -- ^ A TP server.
 serve Config{..} = do
   sessions <- newMVar M.empty
   _ <- forkIO $ custodian 30 sessions
-  httpServe server (router tpInitHTML tpStatic (\session -> tpRun session tpWorker) sessions)
+  httpServe server (router tpInitHTML tpStatic tpWorker sessions)
  where server = setPort tpPort defaultConfig
 
 -- | Kill sessions after at least n seconds of disconnectedness.
-custodian :: Integer -> MVar (Map Integer (Session m)) -> IO ()
+custodian :: Integer -> MVar (Map Integer Session) -> IO ()
 custodian seconds sessions = forever $ do
   delaySeconds seconds
   modifyMVar_ sessions $ \sessions -> do
@@ -162,17 +158,13 @@ custodian seconds sessions = forever $ do
             
     return (M.filterWithKey (\k _ -> not (k `elem` killed)) sessions)
 
--- | Convenient way to a run a worker with a session.
-runTP :: Session TP  -- ^ The browser session.
-      -> TP a       -- ^ The worker.
-      -> IO a       -- ^ A worker runner.
-runTP session m = runReaderT (getTP m) session
-
 -- Route requests.  If the initFile is Nothing, then a default
 -- file will be served at /.
 router
-    :: Maybe FilePath -> FilePath -> (Session m -> IO a)
-    -> MVar (Map Integer (Session m)) -> Snap ()
+    :: Maybe FilePath -> FilePath
+    -> (Session -> IO a)
+    -> MVar (Map Integer Session)
+    -> Snap ()
 router initFile wwwroot worker sessions =
         route [("/static"               , serveDirectory wwwroot)
               ,("/"                     , root)
@@ -188,7 +180,7 @@ router initFile wwwroot worker sessions =
 
 
 -- Initialize the session.
-init :: (Session m -> IO void) -> MVar (Map Integer (Session m)) -> Snap ()
+init :: (Session -> IO void) -> MVar (Map Integer Session) -> Snap ()
 init sessionThread sessions = do
   uri <- getRequestURI
   params <- getRequestCookies
@@ -208,7 +200,7 @@ init sessionThread sessions = do
           return $ flip map cookies $ \Cookie{..} -> (toString cookieName,toString cookieValue)
 
 -- Make a new session.
-newSession :: (URI,[(String, String)]) -> Integer -> IO (Session m)
+newSession :: (URI,[(String, String)]) -> Integer -> IO Session
 newSession info token = do
   signals <- newChan
   instructions <- newChan
@@ -233,11 +225,11 @@ newSession info token = do
     }
 
 -- Respond to poll requests.
-poll :: MVar (Map Integer (Session m)) -> Snap ()
+poll :: MVar (Map Integer Session) -> Snap ()
 poll sessions = withSession sessions pollWithSession
   
 -- Poll for the given session.
-pollWithSession :: Session m -> Snap ()
+pollWithSession :: Session -> Snap ()
 pollWithSession Session{..} = do
   let setDisconnected = do
         now <- getCurrentTime
@@ -264,7 +256,7 @@ writeString :: (MonadSnap m) => String -> m ()
 writeString = writeText . pack
 
 -- Handle signals sent from the client.
-signal :: MVar (Map Integer (Session m)) -> Snap ()
+signal :: MVar (Map Integer Session) -> Snap ()
 signal sessions = do
   withSession sessions $ \Session{..} -> do
     input <- getInput "signal"
@@ -315,47 +307,42 @@ readInput = fmap (>>= readMay) . getInput
 -- common binding, such as clicks, hovers, etc.
 
 -- | Handle events signalled from the client.
-handleEvents :: MonadTP m => m ()
-handleEvents = forever handleEvent
+handleEvents :: Window -> IO ()
+handleEvents window = forever $ handleEvent window
 
 -- | Handle one event.
-handleEvent :: MonadTP m => m ()
-handleEvent = do
-  signal <- get
-  case signal of
-    Event (elid,eventType,params) -> do
-      Session{..} <- askSession
-      handlers <- io $ withMVar sEventHandlers return
-      case M.lookup (elid,eventType) handlers of
-        Nothing -> return ()
-        Just handler -> handler params
-    _ -> return ()
+handleEvent :: Window -> IO ()
+handleEvent window@(Session{..}) = do
+    signal <- getSignal window
+    case signal of
+        Event (elid,eventType,params) -> do
+            handlers <- withMVar sEventHandlers return
+            case M.lookup (elid,eventType) handlers of
+                Nothing      -> return ()
+                Just handler -> handler params
+        _ -> return ()
 
 -- Get the latest signal sent from the client.
-get :: MonadTP m => m Signal
-get = do
-  Session{..} <- askSession
-  io $ readChan sSignals
+getSignal :: Window -> IO Signal
+getSignal (Session{..}) = readChan sSignals
 
 -- | Bind an event handler to the given event of the given element.
-bind :: MonadTP m
-     => String              -- ^ The eventType, see any DOM documentation for a list of these.
-     -> Element             -- ^ The element to bind to.
-     -> (EventData -> m ()) -- ^ The event handler.
-     -> m ()
-bind eventType (Element el) handler = do
-  closure <- newClosure eventType el (\xs -> handler (EventData xs))
-  run $ Bind eventType el closure
+bind
+    :: String               -- ^ The eventType, see any DOM documentation for a list of these.
+    -> Element              -- ^ The element to bind to.
+    -> (EventData -> IO ()) -- ^ The event handler.
+    -> IO ()
+bind eventType (Element el@(ElementId elid) session) handler = do
+    closure <- newClosure session eventType elid (\xs -> handler (EventData xs))
+    run session $ Bind eventType el closure
 
 -- Make a uniquely numbered event handler.
-newClosure :: MonadTP m => String -> String -> ([Maybe String] -> m ()) -> m Closure
-newClosure eventType elid thunk = do
-  Session{..} <- askSession
-  io $ modifyMVar_ sEventHandlers $ \handlers -> do
-    return (M.insert key thunk handlers)
-  return (Closure key)
-    
-  where key = (elid,eventType)
+newClosure :: Window -> String -> String -> ([Maybe String] -> IO ()) -> IO Closure
+newClosure window@(Session{..}) eventType elid thunk = do
+        modifyMVar_ sEventHandlers $ \handlers -> do
+            return (M.insert key thunk handlers)
+        return (Closure key)
+    where key = (elid,eventType)
 
 
 --------------------------------------------------------------------------------
@@ -367,58 +354,54 @@ newClosure eventType elid thunk = do
 -- functions in this section. 
 
 -- | Set the style of the given element.
-setStyle :: (MonadTP m)
-         => [(String, String)] -- ^ Pairs of CSS (property,value).
+setStyle :: [(String, String)] -- ^ Pairs of CSS (property,value).
          -> Element            -- ^ The element to update.
-         -> m Element
-setStyle props el = do
-  run $ SetStyle el props
-  return el
+         -> IO Element
+setStyle props e@(Element el session) = do
+    run session $ SetStyle el props
+    return e
 
 -- | Set the attribute of the given element.
-setAttr :: (MonadTP m)
-        => String  -- ^ The attribute name.
+setAttr :: String  -- ^ The attribute name.
         -> String  -- ^ The attribute value.
         -> Element -- ^ The element to update.
-        -> m Element
-setAttr key value el = do
-  run $ SetAttr el key value
-  return el
+        -> IO Element
+setAttr key value e@(Element el session) = do
+    run session $ SetAttr el key value
+    return e
 
 -- | Set the text of the given element.
-setText :: (MonadTP m)
-        => String  -- ^ The plain text.
+setText :: String  -- ^ The plain text.
         -> Element -- ^ The element to update.
-        -> m Element
-setText props el = do
-  run $ SetText el props
-  return el
+        -> IO Element
+setText props e@(Element el session) = do
+    run session $ SetText el props
+    return e
 
 -- | Set the HTML of the given element.
-setHtml :: (MonadTP m)
-        => String  -- ^ The HTML.
+setHtml :: String  -- ^ The HTML.
         -> Element -- ^ The element to update.
-        -> m Element
-setHtml props el = do
-  run $ SetHtml el props
-  return el
+        -> IO Element
+setHtml props e@(Element el session) = do
+    run session $ SetHtml el props
+    return e
 
 -- | Set the title of the document.
-setTitle :: (MonadTP m)
-        => String  -- ^ The title.
-        -> m ()
-setTitle title = run $ SetTitle title
+setTitle :: Window  -- ^ The document window
+         -> String  -- ^ The title.
+         -> IO ()
+setTitle session title = run session $ SetTitle title
 
 -- | Empty the given element.
-emptyEl :: MonadTP m => Element -> m Element
-emptyEl el = do
-  run $ EmptyEl el
-  return el
+emptyEl :: Element -> IO Element
+emptyEl e@(Element el session) = do
+    run session $ EmptyEl el
+    return e
 
 -- | Delete the given element.
-delete :: MonadTP m => Element -> m ()
-delete el = do
-  run $ Delete el
+delete :: Element -> IO ()
+delete e@(Element el session) = do
+    run session $ Delete el
 
 
 --------------------------------------------------------------------------------
@@ -429,23 +412,24 @@ delete el = do
 -- Functions for creating, deleting, moving, appending, prepending, DOM nodes.
 
 -- | Create a new element of the given tag name.
-newElement :: MonadTP m
-           => String     -- ^ The tag name.
-           -> m Element  -- ^ A tag reference. Non-blocking.
-newElement tagName = do
-  Session{..} <- askSession
-  elid <- io $ modifyMVar sElementIds $ \elids ->
-    return (tail elids,"*" ++ show (head elids) ++ ":" ++ tagName)
-  return (Element elid)
+newElement :: Window      -- ^ Browser window in which context to create the element
+           -> String      -- ^ The tag name.
+           -> IO Element  -- ^ A tag reference. Non-blocking.
+newElement session@(Session{..}) tagName = do
+    -- TODO: Remove the need to specify in which browser window is to be created
+    elid <- modifyMVar sElementIds $ \elids ->
+        return (tail elids,"*" ++ show (head elids) ++ ":" ++ tagName)
+    return (Element (ElementId elid) session)
 
 -- | Append one element to another. Non-blocking.
-appendTo :: (MonadTP m)
-       => Element -- ^ The parent.
-       -> Element -- ^ The resulting child.
-       -> m Element
-appendTo parent child = do
-  run $ Append parent child
-  return child
+appendTo :: Element -- ^ The parent.
+         -> Element -- ^ The resulting child.
+         -> IO Element
+appendTo (Element parent session) e@(Element child _) = do
+    -- TODO: Right now, parent and child need to be from the same session/browser window
+    --       Implement transfer of elements across browser windows
+    run session $ Append parent child
+    return e
 
 
 --------------------------------------------------------------------------------
@@ -458,119 +442,114 @@ appendTo parent child = do
 
 -- | Get an element by its tag name.  Blocks.
 getElementByTagName
-  :: MonadTP m
-  => String            -- ^ The tag name.
-  -> m (Maybe Element) -- ^ An element (if any) with that tag name.
-getElementByTagName = liftM listToMaybe . getElementsByTagName
+    :: Window             -- ^ Browser window
+    -> String             -- ^ The tag name.
+    -> IO (Maybe Element) -- ^ An element (if any) with that tag name.
+getElementByTagName window = liftM listToMaybe . getElementsByTagName window
 
 -- | Get all elements of the given tag name.  Blocks.
 getElementsByTagName
-  :: MonadTP m
-  => String       -- ^ The tag name.
-  -> m [Element]  -- ^ All elements with that tag name.
-getElementsByTagName tagName =
-  call (GetElementsByTagName tagName) $ \signal ->
+    :: Window        -- ^ Browser window
+    -> String        -- ^ The tag name.
+    -> IO [Element]  -- ^ All elements with that tag name.
+getElementsByTagName window tagName =
+  call window (GetElementsByTagName tagName) $ \signal ->
     case signal of
-      Elements els -> return (Just els)
+      Elements els -> return $ Just $ [Element el window | el <- els]
       _            -> return Nothing
-  
+
 -- | Get an element by a particular ID.  Blocks.
 getElementById
-  :: MonadTP m
-  => String             -- ^ The ID string.
-  -> m (Maybe Element)  -- ^ Element (if any) with given ID.
-getElementById id =
-  call (GetElementById id) $ \signal ->
-    case signal of 
-      Elements els -> return (Just $ listToMaybe els)
+    :: Window              -- ^ Browser window
+    -> String              -- ^ The ID string.
+    -> IO (Maybe Element)  -- ^ Element (if any) with given ID.
+getElementById window id =
+  call window (GetElementById id) $ \signal ->
+    case signal of
+      Elements els -> return $ Just $ listToMaybe [Element el window | el <- els]
       _            -> return Nothing
-     
+
 -- | Get the value of an input. Blocks.
-getValue :: MonadTP m
-         => Element  -- ^ The element to get the value of.
-         -> m String -- ^ The plain text value.
-getValue el =
-  call (GetValue el) $ \signal ->
+getValue
+    :: Element   -- ^ The element to get the value of.
+    -> IO String -- ^ The plain text value.
+getValue e@(Element el window) =
+  call window (GetValue el) $ \signal ->
     case signal of
       Value str -> return (Just str)
       _         -> return Nothing
 
 -- | Get values from inputs. Blocks. This is faster than many 'getValue' invocations.
-getValuesList :: MonadTP m
-              => [Element]  -- ^ A list of elements to get the values of.
-              -> m [String] -- ^ The list of plain text values.
-getValuesList el =
-  call (GetValues el) $ \signal ->
-    case signal of
-      Values strs -> return (Just strs)
-      _           -> return Nothing
+getValuesList
+    :: [Element]   -- ^ A list of elements to get the values of.
+    -> IO [String] -- ^ The list of plain text values.
+getValuesList [] = return []
+getValuesList es@(Element _ window : _) =
+    let elids = [elid | Element elid _ <- es] in
+    call window (GetValues elids) $ \signal ->
+        case signal of
+            Values strs -> return $ Just strs
+            _           -> return Nothing
 
 -- | Read a value from an input. Blocks.
-readValue :: (MonadTP m,Read a)
-          => Element     -- ^ The element to read a value from.
-          -> m (Maybe a) -- ^ Maybe the read value.
+readValue
+    :: Read a
+    => Element      -- ^ The element to read a value from.
+    -> IO (Maybe a) -- ^ Maybe the read value.
 readValue = liftM readMay . getValue
 
 -- | Read values from inputs. Blocks. This is faster than many 'readValue' invocations.
-readValuesList :: (MonadTP m,Read a)
-               => [Element]     -- ^ The element to read a value from.
-               -> m (Maybe [a]) -- ^ Maybe the read values. All or none.
+readValuesList
+    :: Read a
+    => [Element]      -- ^ The element to read a value from.
+    -> IO (Maybe [a]) -- ^ Maybe the read values. All or none.
 readValuesList = liftM (sequence . map readMay) . getValuesList
 
--- | Atomically execute the given TP computation.
-atomic :: MonadTP m => m a -> m a
-atomic m = do
-  Session {..} <- askSession
-  io $ takeMVar sMutex
+-- | Atomically execute the given computation in the context of a browser window
+atomic :: Window -> IO a -> IO a
+atomic window@(Session{..}) m = do
+  takeMVar sMutex
   ret <- m
-  io $ putMVar sMutex ()
+  putMVar sMutex ()
   return ret
 
--- | Fork the current TP thread.
-forkTP :: TP a -> TP ThreadId
-forkTP x = do
-  session <- askSession
-  io . forkIO . runTP session $ x >> return ()
 
 -- Send an instruction and read the signal response.
-call :: MonadTP m => Instruction -> (Signal -> m (Maybe a)) -> m a
-call instruction withSignal = do
-  Session{..} <- askSession
-  io $ takeMVar sMutex
-  run $ instruction
-  newChan <- io $ dupChan sSignals
+call :: Session -> Instruction -> (Signal -> IO (Maybe a)) -> IO a
+call session@(Session{..}) instruction withSignal = do
+  takeMVar sMutex
+  run session $ instruction
+  newChan <- dupChan sSignals
   go sMutex newChan
 
   where
     go mutex newChan = do
-      signal <- io $ readChan newChan
+      signal <- readChan newChan
       result <- withSignal signal
       case result of
-        Just signal -> do io $ putMVar mutex ()
+        Just signal -> do putMVar mutex ()
                           return signal
         Nothing     -> go mutex newChan
 
 -- Run the given instruction.
-run :: MonadTP m => Instruction -> m ()
-run i = do
-  Session{..} <- askSession
-  io $ writeChan sInstructions i
+run :: Session -> Instruction -> IO ()
+run (Session{..}) i = writeChan sInstructions i
 
 -- | Get the head of the page.
-getHead :: MonadTP m => m Element
-getHead = return (Element "head")
+getHead :: Window -> IO Element
+getHead session = return $ Element (ElementId "head") session
 
 -- | Get the body of the page.
-getBody :: MonadTP m => m Element
-getBody = return (Element "body")
+getBody :: Window -> IO Element
+getBody session = return $ Element (ElementId "body") session
 
 -- | Get the request location.
-getRequestLocation :: MonadTP m => m URI
-getRequestLocation = liftM (fst . sStartInfo) askSession
+getRequestLocation :: Window -> IO URI
+getRequestLocation = return . fst . sStartInfo
 
 -- | Get the request cookies.
-getRequestCookies :: MonadTP m => m [(String,String)]
-getRequestCookies = liftM (snd . sStartInfo) askSession
+getRequestCookies :: Window -> IO [(String,String)]
+getRequestCookies = return . snd . sStartInfo
 
 
 --------------------------------------------------------------------------------
@@ -582,45 +561,45 @@ getRequestCookies = liftM (snd . sStartInfo) askSession
 
 -- | Send a debug message to the client. The behaviour of the client
 --   is unspecified.
-debug :: MonadTP m
-      => String -- ^ Some plain text to send to the client.
-      -> m ()
-debug = run . Debug
+debug
+    :: Window -- ^ Client window
+    -> String -- ^ Some plain text to send to the client.
+    -> IO ()
+debug window = run window . Debug
 
 -- | Clear the client's DOM.
-clear :: MonadTP m => m ()
-clear = run $ Clear ()
+clear :: Window -> IO ()
+clear window = run window $ Clear ()
 
 -- | Call the given function. Blocks.
 callFunction
-  :: MonadTP m
-  => String            -- ^ The function name.
-  -> [String]          -- ^ Parameters.
-  -> m [Maybe String]  -- ^ Return tuple.
-callFunction func params =
-  call (CallFunction (func,params)) $ \signal ->
+  :: Window             -- ^ Browser window
+  -> String             -- ^ The function name.
+  -> [String]           -- ^ Parameters.
+  -> IO [Maybe String]  -- ^ Return tuple.
+callFunction window func params =
+  call window (CallFunction (func,params)) $ \signal ->
     case signal of
       FunctionCallValues vs -> return (Just vs)
       _                     -> return Nothing
 
 -- | Call the given function. Blocks.
 runFunction
-  :: MonadTP m
-  => String            -- ^ The function name.
+  :: Window            -- ^ Browser window
+  -> String            -- ^ The function name.
   -> [String]          -- ^ Parameters.
-  -> m ()
-runFunction func params =
-  run (CallFunction (func,params))
+  -> IO ()
+runFunction window func params =
+  run window $ CallFunction (func,params)
 
 -- | Call the given function with the given continuation. Doesn't block.
 callDeferredFunction
-  :: MonadTP m
-  => String                   -- ^ The function name.
-  -> [String]                 -- ^ Parameters.
-  -> ([Maybe String] -> m ()) -- ^ The continuation to call if/when the function completes.
-  -> m ()
-callDeferredFunction func params closure = do
-  Session{..} <- askSession
-  cid <- io $ modifyMVar sClosures (\(x:xs) -> return (xs,x))
-  closure' <- newClosure func (show cid) closure
-  run $ CallDeferredFunction (closure',func,params)
+  :: Window                    -- ^ Browser window
+  -> String                    -- ^ The function name.
+  -> [String]                  -- ^ Parameters.
+  -> ([Maybe String] -> IO ()) -- ^ The continuation to call if/when the function completes.
+  -> IO ()
+callDeferredFunction session@(Session{..}) func params closure = do
+  cid      <- modifyMVar sClosures (\(x:xs) -> return (xs,x))
+  closure' <- newClosure session func (show cid) closure
+  run session $ CallDeferredFunction (closure',func,params)
