@@ -8,37 +8,37 @@ import Graphics.UI.Threepenny
 infixl 1 #
 
 -- | Append the element to a parent.
-(#+) :: (MonadTP m) => m Element -> Element -> m Element
+(#+) :: IO Element -> Element -> IO Element
 m #+ parent = m # addTo parent
 infixl 1 #+
 
 -- | Set the class of an element.
-(#.) :: (MonadTP m) => m Element -> String -> m Element
+(#.) :: IO Element -> String -> IO Element
 m #. cls = m # setClass cls
 infixl 1 #.
 
 -- | Set the id of an element.
-(##) :: (MonadTP m) => m Element -> String -> m Element
+(##) :: IO Element -> String -> IO Element
 m ## id = m # setId id
 infixl 1 ##
 
 -- | Set the text of an element.
-(#=) :: (MonadTP m) => m Element -> String -> m Element
+(#=) :: IO Element -> String -> IO Element
 m #= txt = m # setText txt
 infixl 1 #=
 
 -- | To this element, add this child.
-addTo :: MonadTP m => Element -> Element -> m Element
+addTo :: Element -> Element -> IO Element
 addTo = appendTo
 
 -- | Add this child, to that element.
-add :: MonadTP m => Element -> Element -> m Element
+add :: Element -> Element -> IO Element
 add child parent = do
   appendTo parent child # unit
   return parent
 
 -- | Set an attribute.
-set :: (MonadTP m) => String -> String -> Element -> m Element
+set :: String -> String -> Element -> IO Element
 set = setAttr
 
 -- | Discard the element chain.
@@ -46,23 +46,23 @@ unit :: Monad m => a -> m ()
 unit =  \_ -> return ()
 
 -- | Set the class of an element.
-setClass :: (MonadTP m) => String -> Element -> m Element
+setClass :: String -> Element -> IO Element
 setClass = set "class"
 
 -- | Set the id of an element.
-setId :: (MonadTP m) => String -> Element -> m Element
+setId :: String -> Element -> IO Element
 setId = set "id"
 
 
   
 -- | Make a new div.
-new :: MonadTP m => m Element
-new = newElement "div"
+new :: Window -> IO Element
+new w = newElement w "div"
 
 -- | Remove the element.
-remove :: MonadTP m => Element -> m ()
+remove :: Element -> IO ()
 remove = delete
 
 -- | Hide an element.
-hide :: MonadTP m => Element -> m ()
+hide :: Element -> IO ()
 hide el = setClass "hidden" el # unit

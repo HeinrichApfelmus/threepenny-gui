@@ -6,81 +6,72 @@ module Graphics.UI.Threepenny.Events where
 import Graphics.UI.Threepenny
 
 -- | Bind an event handler to the click event of the given element.
-onClick :: MonadTP m
-        => Element             -- ^ The element to bind to.
-        -> (EventData -> m ()) -- ^ The event handler.
-        -> m ()
+onClick :: Element -> (EventData -> IO ()) -> IO ()
 onClick = bind "click"
 
 -- | Bind an event handler to the hover event of the given element.
-onHover :: MonadTP m
-        => Element             -- ^ The element to bind to.
-        -> (EventData -> m ()) -- ^ The event handler.
-        -> m ()
+onHover :: Element -> (EventData -> IO ()) -> IO ()
 onHover = bind "mouseenter"
 
 -- | Bind an event handler to the blur event of the given element.
-onBlur :: MonadTP m
-       => Element             -- ^ The element to bind to.
-       -> (EventData -> m ()) -- ^ The event handler.
-       -> m ()
+onBlur :: Element -> (EventData -> IO ()) -> IO ()
 onBlur = bind "mouseleave"
 
 -- Drag events and support functions
 
 -- | Enables drag on an element.
-allowDrag :: MonadTP m => Element -> m Element
+allowDrag :: Element -> IO Element
 allowDrag = setDraggable True
 
 -- | Disables drag on an element.
-blockDrag :: MonadTP m => Element -> m Element
+blockDrag :: Element -> IO Element
 blockDrag = setDraggable False
 
 -- | Enables or disables drag based on boolean argument.
-setDraggable :: MonadTP m => Bool -> Element -> m Element
+setDraggable :: Bool -> Element -> IO Element
 setDraggable t = setAttr "draggable" (if t then "true" else "false")
 
 -- | Set the drag data for an element.  This data becomes the EventData for all drag-related events.
-setDragData :: MonadTP m => String -> Element -> m Element
+setDragData :: String -> Element -> IO Element
 setDragData d = setAttr "ondragstart" $ "event.dataTransfer.setData('dragData', '" ++ d ++ "')"
 
 -- | Enables an element to accept drops.
-allowDrop :: MonadTP m => Element -> m Element
+allowDrop :: Element -> IO Element
 allowDrop e =
     setAttr "ondragover" "event.preventDefault()" e >>= setAttr "ondrop" "event.preventDefault()"
 
 -- | Disables an element from accepting drops.
-blockDrop :: MonadTP m => Element -> m Element
+blockDrop :: Element -> IO Element
 blockDrop e = setAttr "ondragover" "" e >>= setAttr "ondrop" ""
 
 -- | Enables or disables an element from accepting drops based on boolean argument.
-setDroppable :: MonadTP m => Bool -> Element -> m Element
+setDroppable :: Bool -> Element -> IO Element
 setDroppable t = if t then allowDrop else blockDrop
 
 -- | Bind an event handler to the drag start event.
-onDragStart :: MonadTP m => Element -> (EventData -> m ()) -> m ()
+onDragStart :: Element -> (EventData -> IO ()) -> IO ()
 onDragStart = bind "dragstart"
 
 -- | Bind an event handler to the drag enter event.
-onDragEnter :: MonadTP m => Element -> (EventData -> m ()) -> m ()
+onDragEnter :: Element -> (EventData -> IO ()) -> IO ()
 onDragEnter = bind "dragenter"
 
 -- | Bind an event handler to the drag over event.
-onDragOver :: MonadTP m => Element -> (EventData -> m ()) -> m ()
+onDragOver :: Element -> (EventData -> IO ()) -> IO ()
 onDragOver = bind "dragover"
 
 -- | Bind an event handler to the drag leave event.
-onDragLeave :: MonadTP m => Element -> (EventData -> m ()) -> m ()
+onDragLeave :: Element -> (EventData -> IO ()) -> IO ()
 onDragLeave = bind "dragleave"
 
 -- | Bind an event handler to the drag event.
-onDrag :: MonadTP m => Element -> (EventData -> m ()) -> m ()
+onDrag :: Element -> (EventData -> IO ()) -> IO ()
 onDrag = bind "drag"
 
 -- | Bind an event handler to the drop event.
-onDrop :: MonadTP m => Element -> (EventData -> m ()) -> m ()
+onDrop :: Element -> (EventData -> IO ()) -> IO ()
 onDrop = bind "drop"
 
 -- | Bind an event handler to the drag end event.
-onDragEnd :: MonadTP m => Element -> (EventData -> m ()) -> m ()
+onDragEnd :: Element -> (EventData -> IO ()) -> IO ()
 onDragEnd = bind "dragend"

@@ -7,46 +7,46 @@ import Graphics.UI.Threepenny
 import Graphics.UI.Threepenny.DOM
 
 -- | Make a new anchor.
-newAnchor :: MonadTP m => m Element
-newAnchor = newElement "a"
+newAnchor :: Window -> IO Element
+newAnchor w = newElement w "a"
 
 -- | Make a new form.
-newForm :: MonadTP m => m Element
-newForm = newElement "form"
+newForm :: Window -> IO Element
+newForm w = newElement w "form"
 
 -- | Make a new label.
-newLabel :: MonadTP m => m Element
-newLabel = newElement "label"
+newLabel :: Window -> IO Element
+newLabel w = newElement w "label"
 
 -- | Make a new input.
-newInput :: MonadTP m => m Element
-newInput = newElement "input"
+newInput :: Window -> IO Element
+newInput w = newElement w "input"
 
 -- | Make a new textarea.
-newTextarea :: MonadTP m => m Element
-newTextarea = newElement "textarea"
+newTextarea :: Window -> IO Element
+newTextarea w = newElement w "textarea"
 
 -- | Make a new table.
-newTable :: MonadTP m => m Element
-newTable = newElement "table"
+newTable :: Window -> IO Element
+newTable w = newElement w "table"
 
 -- | Make a new row.
-newRow :: MonadTP m => m Element
-newRow = newElement "tr"
+newRow :: Window -> IO Element
+newRow w = newElement w "tr"
 
 -- | Make a new data.
-newData :: MonadTP m => m Element
-newData = newElement "td"
+newData :: Window -> IO Element
+newData w = newElement w "td"
 
 -- | Make a new img.
-newImg :: MonadTP m => m Element
-newImg = newElement "img"
+newImg :: Window -> IO Element
+newImg w = newElement w "img"
 
 -- | Add a stylesheet to the head.
-addStyleSheet :: MonadTP m => FilePath -> m ()
-addStyleSheet filename = do
-  head <- getHead
-  newElement "link"
+addStyleSheet :: Window -> FilePath -> IO ()
+addStyleSheet w filename = do
+  head <- getHead w
+  newElement w "link"
     # setAttr "rel" "stylesheet"
     # setAttr "type" "text/css"
     # setAttr "href" ("/static/css/" ++ filename)
@@ -54,6 +54,6 @@ addStyleSheet filename = do
     # unit
 
 -- | Add a clear.
-addClear :: MonadTP m => Element -> m ()
-addClear el = do
-  new #. "clear" #+ el # unit
+addClear :: Window -> Element -> IO ()
+addClear w el = do
+  new w #. "clear" #+ el # unit
