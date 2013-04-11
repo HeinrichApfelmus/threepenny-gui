@@ -37,7 +37,9 @@ Source-repository head
 
 Library
   Hs-source-dirs:    src
-  Exposed-modules:   Graphics.UI.Threepenny
+  Exposed-modules:
+                     Control.AddHandler
+                    ,Graphics.UI.Threepenny
                     ,Graphics.UI.Threepenny.Types
                     ,Graphics.UI.Threepenny.Internal.Types
                     ,Graphics.UI.Threepenny.DOM
