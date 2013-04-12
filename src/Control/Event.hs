@@ -1,10 +1,11 @@
-module Control.AddHandler (
+module Control.Event (
     -- * Synopsis
-    -- | Event-driven programming, imperative style.
+    -- | Event-driven programming in the imperative style.
         
     -- * Documentation
-    Handler, AddHandler(..), newAddHandler,
+    Handler, Event(..),
     mapIO, filterIO, filterJust,
+    newEvent,
     ) where
 
 
@@ -18,43 +19,39 @@ type Map = Map.Map
 {-----------------------------------------------------------------------------
     Types
 ------------------------------------------------------------------------------}
--- | An /event handler/ of type @Handler a@ is a function that takes an
--- /event value/ of type @a@ and performs some computation.
+-- | An /event handler/is a function that takes an
+-- /event value/ and performs some computation.
 type Handler a = a -> IO ()
 
 
--- | A value of type @AddHandler a@ is a facility for registering
--- event handlers.
--- Put differently, an 'AddHandler' represents an /event/.
--- Registering an event handler means that the handler will be called
--- whenever the event occurs.
+-- | An /event/ is a facility for registering
+-- event handlers. These will be called whenever the event occurs.
 -- 
 -- When registering an event handler, you will also be given an action
 -- that unregisters this handler again.
 -- 
--- > do unregisterMyHandler <- register addHandler myHandler
+-- > do unregisterMyHandler <- register event myHandler
 --
-newtype AddHandler a = AddHandler { register :: Handler a -> IO (IO ()) }
+newtype Event a = Event { register :: Handler a -> IO (IO ()) }
 
 {-----------------------------------------------------------------------------
     Combinators
 ------------------------------------------------------------------------------}
-instance Functor AddHandler where
+instance Functor Event where
     fmap f = mapIO (return . f)
 
 -- | Map the event value with an 'IO' action.
-mapIO :: (a -> IO b) -> AddHandler a -> AddHandler b
-mapIO f addHandler = AddHandler $ \h -> register addHandler $ \x -> f x >>= h 
+mapIO :: (a -> IO b) -> Event a -> Event b
+mapIO f e = Event $ \h -> register e $ \x -> f x >>= h 
 
 -- | Filter event values that don't return 'True'.
-filterIO :: (a -> IO Bool) -> AddHandler a -> AddHandler a
-filterIO f addHandler = AddHandler $ \h ->
-    register addHandler $ \x -> f x >>= \b -> if b then h x else return ()
+filterIO :: (a -> IO Bool) -> Event a -> Event a
+filterIO f e = Event $ \h ->
+    register e $ \x -> f x >>= \b -> if b then h x else return ()
 
 -- | Keep only those event values that are of the form 'Just'.
-filterJust :: AddHandler (Maybe a) -> AddHandler a
-filterJust addHandler = AddHandler $ \g ->
-    register addHandler (maybe (return ()) g)
+filterJust :: Event (Maybe a) -> Event a
+filterJust e = Event $ \g -> register e (maybe (return ()) g)
 
 
 {-----------------------------------------------------------------------------
@@ -67,11 +64,11 @@ filterJust addHandler = AddHandler $ \g ->
 -- Example:
 --
 -- > do
--- >     (addHandler, fire) <- newAddHandler
--- >     register addHandler (putStrLn)
--- >     fire "Hello AddHandler!"
-newAddHandler :: IO (AddHandler a, a -> IO ())
-newAddHandler = do
+-- >     (event, fire) <- newEvent
+-- >     register event (putStrLn)
+-- >     fire "Hello!"
+newEvent :: IO (Event a, a -> IO ())
+newEvent = do
     handlers <- newIORef Map.empty
     let register k = do
             key <- Data.Unique.newUnique
@@ -79,4 +76,4 @@ newAddHandler = do
             return $ modifyIORef handlers $ Map.delete key
         runHandlers x =
             mapM_ ($ x) . map snd . Map.toList =<< readIORef handlers
-    return (AddHandler register, runHandlers)
+    return (Event register, runHandlers)
