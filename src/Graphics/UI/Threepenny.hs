@@ -571,7 +571,7 @@ debug window = run window . Debug
 clear :: Window -> IO ()
 clear window = run window $ Clear ()
 
--- | Call the given function. Blocks.
+-- | Call the given function and wait for results. Blocks.
 callFunction
   :: Window             -- ^ Browser window
   -> String             -- ^ The function name.
@@ -583,7 +583,7 @@ callFunction window func params =
       FunctionCallValues vs -> return (Just vs)
       _                     -> return Nothing
 
--- | Call the given function. Blocks.
+-- | Call the given function and carry on. Doesn't block.
 runFunction
   :: Window            -- ^ Browser window
   -> String            -- ^ The function name.

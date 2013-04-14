@@ -19,7 +19,7 @@ type Map = Map.Map
 {-----------------------------------------------------------------------------
     Types
 ------------------------------------------------------------------------------}
--- | An /event handler/is a function that takes an
+-- | An /event handler/ is a function that takes an
 -- /event value/ and performs some computation.
 type Handler a = a -> IO ()
 
