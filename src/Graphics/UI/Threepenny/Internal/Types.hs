@@ -12,6 +12,7 @@ module Graphics.UI.Threepenny.Internal.Types
 
 import Control.Applicative
 import Control.Concurrent
+import qualified Control.Event as E
 import Control.Monad.Reader
 import Data.Map             (Map)
 import Data.Time
@@ -46,7 +47,8 @@ instance JSON ElementId where
 data Session = Session
   { sSignals        :: Chan Signal
   , sInstructions   :: Chan Instruction
-  , sEventHandlers  :: MVar (Map (String,String) ([Maybe String] -> IO ()))
+  , sEvent          :: EventKey -> E.Event EventData
+  , sEventHandler   :: E.Handler (EventKey, EventData)
   , sClosures       :: MVar [Integer]
   , sElementIds     :: MVar [Integer]
   , sToken          :: Integer
@@ -55,6 +57,8 @@ data Session = Session
   , sThreadId       :: ThreadId
   , sStartInfo      :: (URI,[(String,String)])
   }
+
+type EventKey = (String, String)
 
 -- | The client browser window. It's equivalent to a client session.
 type Window = Session

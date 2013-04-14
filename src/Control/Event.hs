@@ -4,8 +4,8 @@ module Control.Event (
         
     -- * Documentation
     Handler, Event(..),
-    mapIO, filterIO, filterJust,
-    newEvent,
+    on, mapIO, filterIO, filterJust,
+    newEvent, newEventsTagged
     ) where
 
 
@@ -33,6 +33,10 @@ type Handler a = a -> IO ()
 -- > do unregisterMyHandler <- register event myHandler
 --
 newtype Event a = Event { register :: Handler a -> IO (IO ()) }
+
+-- | Register an event handler. Synonym for 'register'.
+on :: Event a -> Handler a -> IO (IO ())
+on = register
 
 {-----------------------------------------------------------------------------
     Combinators
@@ -70,10 +74,42 @@ filterJust e = Event $ \g -> register e (maybe (return ()) g)
 newEvent :: IO (Event a, a -> IO ())
 newEvent = do
     handlers <- newIORef Map.empty
-    let register k = do
+    let register handler = do
             key <- Data.Unique.newUnique
-            modifyIORef handlers $ Map.insert key k
-            return $ modifyIORef handlers $ Map.delete key
-        runHandlers x =
-            mapM_ ($ x) . map snd . Map.toList =<< readIORef handlers
+            atomicModifyIORef_ handlers $ Map.insert key handler
+            return $ atomicModifyIORef_ handlers $ Map.delete key
+        runHandlers a =
+            mapM_ ($ a) . map snd . Map.toList =<< readIORef handlers
     return (Event register, runHandlers)
+
+-- | Build several 'Event's from case analysis on a tag.
+-- Generalization of 'newEvent'.
+newEventsTagged :: Ord tag => IO (tag -> Event a, (tag, a) -> IO ())
+newEventsTagged = do
+    handlersRef <- newIORef Map.empty       -- :: Map key (Map Unique (Handler a))
+
+    let register tag handler = do
+            -- new identifier for this handler
+            uid <- Data.Unique.newUnique
+            -- add handler to map at  key
+            atomicModifyIORef_ handlersRef $
+                Map.alter (Just . Map.insert uid handler . maybe Map.empty id) tag
+            -- remove handler from map at  key
+            return $ atomicModifyIORef_ handlersRef $
+                Map.adjust (Map.delete uid) tag
+
+    let runHandlers (tag,a) = do
+            handlers <- readIORef handlersRef
+            case Map.lookup tag handlers of
+                Just hs -> mapM_ ($ a) (Map.elems hs)
+                Nothing -> return ()
+
+    return (\tag -> Event (register tag), runHandlers)
+            
+{-----------------------------------------------------------------------------
+    Utilities
+------------------------------------------------------------------------------}
+atomicModifyIORef_ ref f = atomicModifyIORef ref $ \x -> (f x, ())
+
+
+

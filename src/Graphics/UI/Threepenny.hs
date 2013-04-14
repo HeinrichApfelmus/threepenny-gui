@@ -70,13 +70,14 @@ module Graphics.UI.Threepenny
 -- Imports
 
 import           Graphics.UI.Threepenny.Types
-import           Graphics.UI.Threepenny.Internal.Types
+import           Graphics.UI.Threepenny.Internal.Types     as Threepenny
 import           Graphics.UI.Threepenny.Internal.Resources
 
 import           Control.Concurrent
 import           Control.Concurrent.Chan.Extra
 import           Control.Concurrent.Delay
 import qualified Control.Exception             as E
+import           Control.Event                 as E
 import           Control.Monad.IO
 import           Control.Monad.Reader
 import           Data.ByteString               (ByteString)
@@ -204,7 +205,7 @@ newSession :: (URI,[(String, String)]) -> Integer -> IO Session
 newSession info token = do
   signals <- newChan
   instructions <- newChan
-  handlers <- newMVar M.empty
+  (event, handler) <- newEventsTagged
   ids <- newMVar [0..]
   mutex <- newMVar ()
   now <- getCurrentTime
@@ -214,7 +215,8 @@ newSession info token = do
   return $ Session
     { sSignals = signals
     , sInstructions = instructions
-    , sEventHandlers = handlers
+    , sEvent        = event
+    , sEventHandler = handler
     , sElementIds = ids
     , sToken = token
     , sMutex = mutex
@@ -315,11 +317,8 @@ handleEvent :: Window -> IO ()
 handleEvent window@(Session{..}) = do
     signal <- getSignal window
     case signal of
-        Event (elid,eventType,params) -> do
-            handlers <- withMVar sEventHandlers return
-            case M.lookup (elid,eventType) handlers of
-                Nothing      -> return ()
-                Just handler -> handler params
+        Threepenny.Event (elid,eventType,params) -> do
+            sEventHandler ((elid,eventType), EventData params)
         _ -> return ()
 
 -- Get the latest signal sent from the client.
@@ -339,11 +338,9 @@ bind eventType (Element el@(ElementId elid) session) handler = do
 -- Make a uniquely numbered event handler.
 newClosure :: Window -> String -> String -> ([Maybe String] -> IO ()) -> IO Closure
 newClosure window@(Session{..}) eventType elid thunk = do
-        modifyMVar_ sEventHandlers $ \handlers -> do
-            return (M.insert key thunk handlers)
-        return (Closure key)
-    where key = (elid,eventType)
-
+    let key = (elid, eventType)
+    register (sEvent key) $ \(EventData xs) -> thunk xs
+    return (Closure key)
 
 --------------------------------------------------------------------------------
 -- Setting attributes
