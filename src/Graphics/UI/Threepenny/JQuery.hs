@@ -33,8 +33,9 @@ fadeOut el duration easing complete = animate el [("opacity","0")] duration easi
 -- | Do something on return.
 onSendValue :: Element -> (String -> IO ()) -> IO ()
 onSendValue input m = do
-  bind "sendvalue" input $ \(EventData evdata) -> do
-    m (concat (catMaybes evdata))
+    register (bind "sendvalue" input) $ \(EventData evdata) -> do
+        m (concat (catMaybes evdata))
+    return ()
 
 -- | Focus an element.
 setFocus :: Element -> IO Element

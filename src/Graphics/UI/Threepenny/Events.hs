@@ -1,21 +1,38 @@
 
 -- | Utility methods for handling particular events.
 
-module Graphics.UI.Threepenny.Events where
+module Graphics.UI.Threepenny.Events (
+    on,
+    click, hover, blur,
+    allowDrag, blockDrag, setDraggable, setDragData,
+    allowDrop, blockDrop, setDroppable,
+    dragStart, dragEnter, dragOver, dragLeave, drag, drop, dragEnd,
+    ) where
 
 import Graphics.UI.Threepenny
+import Prelude hiding (drop)
 
--- | Bind an event handler to the click event of the given element.
-onClick :: Element -> (EventData -> IO ()) -> IO ()
-onClick = bind "click"
+-- | Convenience function to register 'Event's for 'Element's.
+--
+-- Example:
+--
+-- > on click element $ \_ -> ...
+on :: (a -> Event b) -> a -> Handler b -> IO ()
+on f a h = register (f a) h >> return ()
 
--- | Bind an event handler to the hover event of the given element.
-onHover :: Element -> (EventData -> IO ()) -> IO ()
-onHover = bind "mouseenter"
+silence = fmap (const ())
 
--- | Bind an event handler to the blur event of the given element.
-onBlur :: Element -> (EventData -> IO ()) -> IO ()
-onBlur = bind "mouseleave"
+-- | Mouse click.
+click :: Element -> Event ()
+click = silence . bind "click"
+
+-- | Mouse hovering over an element.
+hover :: Element -> Event ()
+hover = silence . bind "mouseenter"
+
+-- | Mouse leaving an element.
+blur :: Element -> Event ()
+blur = silence . bind "mouseleave"
 
 -- Drag events and support functions
 
@@ -48,30 +65,30 @@ blockDrop e = setAttr "ondragover" "" e >>= setAttr "ondrop" ""
 setDroppable :: Bool -> Element -> IO Element
 setDroppable t = if t then allowDrop else blockDrop
 
--- | Bind an event handler to the drag start event.
-onDragStart :: Element -> (EventData -> IO ()) -> IO ()
-onDragStart = bind "dragstart"
+-- | Drag starts.
+dragStart :: Element -> Event ()
+dragStart = silence . bind "dragstart"
 
--- | Bind an event handler to the drag enter event.
-onDragEnter :: Element -> (EventData -> IO ()) -> IO ()
-onDragEnter = bind "dragenter"
+-- | Drag enter.
+dragEnter :: Element -> Event ()
+dragEnter = silence . bind "dragenter"
 
--- | Bind an event handler to the drag over event.
-onDragOver :: Element -> (EventData -> IO ()) -> IO ()
-onDragOver = bind "dragover"
+-- | Drag over event.
+dragOver :: Element -> Event ()
+dragOver = silence . bind "dragover"
 
--- | Bind an event handler to the drag leave event.
-onDragLeave :: Element -> (EventData -> IO ()) -> IO ()
-onDragLeave = bind "dragleave"
+-- | Drag leave event.
+dragLeave :: Element -> Event ()
+dragLeave = silence . bind "dragleave"
 
--- | Bind an event handler to the drag event.
-onDrag :: Element -> (EventData -> IO ()) -> IO ()
-onDrag = bind "drag"
+-- | Drag event.
+drag :: Element -> Event ()
+drag = silence . bind "drag"
 
--- | Bind an event handler to the drop event.
-onDrop :: Element -> (EventData -> IO ()) -> IO ()
-onDrop = bind "drop"
+-- | Drop event.
+drop :: Element -> Event ()
+drop = silence . bind "drop"
 
--- | Bind an event handler to the drag end event.
-onDragEnd :: Element -> (EventData -> IO ()) -> IO ()
-onDragEnd = bind "dragend"
+-- | Drag end event.
+dragEnd :: Element -> Event ()
+dragEnd = silence . bind "dragend"

@@ -4,7 +4,7 @@ module Control.Event (
         
     -- * Documentation
     Handler, Event(..),
-    on, mapIO, filterIO, filterJust,
+    mapIO, filterIO, filterJust,
     newEvent, newEventsTagged
     ) where
 
@@ -33,10 +33,6 @@ type Handler a = a -> IO ()
 -- > do unregisterMyHandler <- register event myHandler
 --
 newtype Event a = Event { register :: Handler a -> IO (IO ()) }
-
--- | Register an event handler. Synonym for 'register'.
-on :: Event a -> Handler a -> IO (IO ())
-on = register
 
 {-----------------------------------------------------------------------------
     Combinators

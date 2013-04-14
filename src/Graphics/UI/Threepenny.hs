@@ -22,6 +22,7 @@ module Graphics.UI.Threepenny
   ,bind
   ,handleEvent
   ,handleEvents
+  ,module Control.Event
   
   -- * Setting attributes
   -- $settingattributes
@@ -77,7 +78,7 @@ import           Control.Concurrent
 import           Control.Concurrent.Chan.Extra
 import           Control.Concurrent.Delay
 import qualified Control.Exception             as E
-import           Control.Event                 as E
+import           Control.Event
 import           Control.Monad.IO
 import           Control.Monad.Reader
 import           Data.ByteString               (ByteString)
@@ -325,21 +326,27 @@ handleEvent window@(Session{..}) = do
 getSignal :: Window -> IO Signal
 getSignal (Session{..}) = readChan sSignals
 
--- | Bind an event handler to the given event of the given element.
+-- | Return an 'Event' associated to an 'Element'.
 bind
     :: String               -- ^ The eventType, see any DOM documentation for a list of these.
     -> Element              -- ^ The element to bind to.
-    -> (EventData -> IO ()) -- ^ The event handler.
-    -> IO ()
-bind eventType (Element el@(ElementId elid) session) handler = do
-    closure <- newClosure session eventType elid (\xs -> handler (EventData xs))
-    run session $ Bind eventType el closure
+    -> Event EventData      -- ^ The event handler.
+bind eventType (Element el@(ElementId elid) session) =
+    Control.Event.Event register
+    where
+    key        = (elid, eventType)
+    register h = do
+        -- register with server
+        unregister <- Control.Event.register (sEvent session key) h
+        -- register with client
+        run session $ Bind eventType el (Closure key)
+        return unregister
 
 -- Make a uniquely numbered event handler.
 newClosure :: Window -> String -> String -> ([Maybe String] -> IO ()) -> IO Closure
 newClosure window@(Session{..}) eventType elid thunk = do
     let key = (elid, eventType)
-    register (sEvent key) $ \(EventData xs) -> thunk xs
+    _ <- register (sEvent key) $ \(EventData xs) -> thunk xs
     return (Closure key)
 
 --------------------------------------------------------------------------------

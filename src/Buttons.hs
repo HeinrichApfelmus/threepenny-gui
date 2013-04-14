@@ -61,9 +61,9 @@ makeButtons w body = do
   button2 <- appendToButton w body button2Title
   appendTo body list
     
-  onHover button1 $ \_ -> do setText (button1Title ++ " [hover]") button1; return ()
-  onBlur button1  $ \_ -> do setText button1Title button1; return ()
-  onClick button1 $ \_ -> do
+  on hover button1 $ \_ -> do setText (button1Title ++ " [hover]") button1; return ()
+  on blur  button1 $ \_ -> do setText button1Title button1; return ()
+  on click button1 $ \_ -> do
     li <- newElement w "li"
     threadDelay $ 1000 * 1000 * 1
     setText (button1Title ++ " [pressed]")  button1
@@ -71,9 +71,9 @@ makeButtons w body = do
     appendTo list li
     return ()
 
-  onHover button2 $ \_ -> do setText (button2Title ++ " [hover]") button2; return ()
-  onBlur button2  $ \_ -> do setText button2Title button2; return ()
-  onClick button2 $ \_ -> do
+  on hover button2 $ \_ -> do setText (button2Title ++ " [hover]") button2; return ()
+  on blur  button2 $ \_ -> do setText button2Title button2; return ()
+  on click button2 $ \_ -> do
     li <- newElement w "li"
     setText (button2Title ++ " [pressed]") button2
     setHtml "Zap! Quick result!" li
