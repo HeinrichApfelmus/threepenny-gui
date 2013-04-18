@@ -1,14 +1,18 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, RecursiveDo, TypeSynonymInstances, FlexibleInstances #-}
 module BarTab where
 
 import Prelude hiding (div,span)
+import Control.Applicative
 import Control.Monad
+import Data.IORef
+import Data.Maybe
 
 #ifdef CABAL
 import "threepenny-gui" Graphics.UI.Threepenny
 #else
 import Graphics.UI.Threepenny
 import Graphics.UI.Threepenny.Elements
+import Graphics.UI.Threepenny.Events
 import Graphics.UI.Threepenny.Internal.Types
 #endif
 
@@ -24,25 +28,70 @@ main = serve Config
 
 setup :: Window -> IO ()
 setup w = do
+    -- active elements
     return w # set title "BarTab"
 
     elAdd    <- button w "Add"
     elRemove <- button w "Remove"
-    elInput1 <- inputText w
     elResult <- span      w
 
+    inputs   <- newIORef []
+    elInputs <- new w
+    
+    -- functionality
+    let
+        displayTotal = do
+            is <- readIORef inputs
+            xs <- getValuesList is
+            setText (showNumber . sum $ map readNumber xs) elResult
+            return ()
+
+        mkInput :: IO Element
+        mkInput = do
+            input <- inputText w
+            on click input $ \_ -> displayTotal
+            is    <- readIORef inputs
+            writeIORef inputs $ input : is
+            appendTo elInputs input
+            return input
+    
+    elInput1 <- mkInput
+    
+    on click elAdd $ \_ -> mkInput >> return ()
+
+    -- layout
     layout <- column
             [row [element elAdd, element elRemove]
             ,hr w
-            ,element elInput1
+            ,element elInputs
             ,hr w
-            ,row [text w "Sum:", element elResult]
+            ,row [text w "Sum: ", element elResult]
             ]
-
     body w # set children [layout]
 
     return ()
 
+
+{-----------------------------------------------------------------------------
+    Functionality
+------------------------------------------------------------------------------}
+type Number = Maybe Double
+
+instance Num Number where
+    (+) = liftA2 (+)
+    (-) = liftA2 (-)
+    (*) = liftA2 (*)
+    abs = fmap abs
+    signum = fmap signum
+    fromInteger = pure . fromInteger
+
+readNumber :: String -> Number
+readNumber s = listToMaybe [x | (x,"") <- reads s]    
+showNumber   = maybe "--" show
+
+{-----------------------------------------------------------------------------
+    Layout utilities
+------------------------------------------------------------------------------}
 
 {- Questions:
 
@@ -52,9 +101,6 @@ setup w = do
 
 -}
 
-{-----------------------------------------------------------------------------
-    Layout utilities
-------------------------------------------------------------------------------}
 infixl 8 #
 
 -- reverse function application, from the diagrams library
@@ -101,7 +147,7 @@ text w s = span w >>= setText s
 
 new = flip newElement "div"
 
-button w s = newElement w "button" >>= setHtml s
+button w s = newElement w "button" >>= setText s
 
 {-----------------------------------------------------------------------------
     Properties
