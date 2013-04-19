@@ -19,10 +19,10 @@ import Graphics.UI.Threepenny.Internal.Types
 -- | Main entry point. Starts a TP server.
 main :: IO ()
 main = serve Config
-    { tpPort = 10001
-    , tpWorker = \window -> setup window >> handleEvents window
+    { tpPort     = 10001
+    , tpWorker   = \window -> setup window >> handleEvents window
     , tpInitHTML = Nothing
-    , tpStatic = "wwwroot"
+    , tpStatic   = "wwwroot"
     }
 
 
@@ -36,7 +36,6 @@ setup w = do
     elResult <- span      w
 
     inputs   <- newIORef []
-    elInputs <- new w
     
     -- functionality
     let
@@ -52,22 +51,27 @@ setup w = do
             on click input $ \_ -> displayTotal
             is    <- readIORef inputs
             writeIORef inputs $ input : is
-            appendTo elInputs input
+            redoLayout
             return input
-    
-    elInput1 <- mkInput
-    
-    on click elAdd $ \_ -> mkInput >> return ()
-
-    -- layout
-    layout <- column
+        
+        redoLayout :: IO ()
+        redoLayout = do
+            layout <- mkLayout =<< readIORef inputs
+            body w # set children [layout]
+            return ()
+        
+        mkLayout :: [Element] -> IO Element
+        mkLayout xs = column $
             [row [element elAdd, element elRemove]
-            ,hr w
-            ,element elInputs
-            ,hr w
+            ,hr w]
+            ++ map element xs ++
+            [hr w
             ,row [text w "Sum: ", element elResult]
             ]
-    body w # set children [layout]
+        
+    on click elAdd $ \_ -> mkInput >> return ()
+
+    mkInput
 
     return ()
 
@@ -167,7 +171,9 @@ mkProperty set' get' = Property
 children :: Property [Element] Element
 children = mkProperty set undefined
     where
-    set x = mapM_ (appendTo x)
+    set x xs = do
+        emptyEl x
+        mapM_ (appendTo x) xs
 
 -- TODO: get style
 style :: Property [(String,String)] Element
