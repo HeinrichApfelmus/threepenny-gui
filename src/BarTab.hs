@@ -48,7 +48,7 @@ setup w = do
         mkInput :: IO Element
         mkInput = do
             input <- inputText w
-            on click input $ \_ -> displayTotal
+            on blur input $ \_ -> displayTotal
             is    <- readIORef inputs
             writeIORef inputs $ input : is
             redoLayout

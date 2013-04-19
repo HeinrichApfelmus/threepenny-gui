@@ -31,8 +31,12 @@ hover :: Element -> Event ()
 hover = silence . bind "mouseenter"
 
 -- | Mouse leaving an element.
+leave :: Element -> Event ()
+leave = silence . bind "mouseleave"
+
+-- | Element loses focus.
 blur :: Element -> Event ()
-blur = silence . bind "mouseleave"
+blur = silence . bind "blur"
 
 -- Drag events and support functions
 
