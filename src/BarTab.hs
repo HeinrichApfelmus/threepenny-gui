@@ -19,10 +19,11 @@ import Graphics.UI.Threepenny.Internal.Types
 -- | Main entry point. Starts a TP server.
 main :: IO ()
 main = serve Config
-    { tpPort     = 10001
-    , tpWorker   = \window -> setup window >> handleEvents window
-    , tpInitHTML = Nothing
-    , tpStatic   = "wwwroot"
+    { tpPort      = 10001
+    , tpWorker    = \window -> setup window >> handleEvents window
+    , tpInitHTML  = Nothing
+    , tpStatic    = "wwwroot"
+    , tpCustomCSS = Nothing
     }
 
 
@@ -125,10 +126,10 @@ grid mrows = do
     
     rows  <- forM rows0 $ \row0 -> do
         row <- forM row0 $ \entry ->
-            wrap [entry] # set style [("display","table-cell")]
-        wrap row # set style [("display","table-row")]
+            wrap [entry] # set cssClass "table-cell"
+        wrap row # set cssClass "table-row"
 
-    wrap rows # set style [("display","table")]
+    wrap rows # set cssClass "table"
 
 element :: Element -> IO Element
 element = return
@@ -179,8 +180,12 @@ children = mkProperty set undefined
 style :: Property [(String,String)] Element
 style = mkProperty set undefined
     where
-    set x xs = setStyle xs x >> return ()
+    set a vs = setStyle vs a >> return ()
 
 title :: Property String Window
 title = mkProperty setTitle undefined
 
+cssClass :: Property String Element
+cssClass = mkProperty set undefined
+    where
+    set a v = setAttr "class" v a >> return ()

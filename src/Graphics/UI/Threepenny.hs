@@ -138,7 +138,7 @@ serve :: Config a -> IO () -- ^ A TP server.
 serve Config{..} = do
   sessions <- newMVar M.empty
   _ <- forkIO $ custodian 30 sessions
-  httpServe server (router tpInitHTML tpStatic tpWorker sessions)
+  httpServe server (router tpInitHTML tpStatic tpCustomCSS tpWorker sessions)
  where server = setPort tpPort defaultConfig
 
 -- | Kill sessions after at least n seconds of disconnectedness.
@@ -163,19 +163,25 @@ custodian seconds sessions = forever $ do
 -- Route requests.  If the initFile is Nothing, then a default
 -- file will be served at /.
 router
-    :: Maybe FilePath -> FilePath
+    :: Maybe FilePath
+    -> FilePath
+    -> Maybe FilePath
     -> (Session -> IO a)
     -> MVar (Map Integer Session)
     -> Snap ()
-router initFile wwwroot worker sessions =
-        route [("/static"               , serveDirectory wwwroot)
-              ,("/"                     , root)
-              ,("/js/threepenny-gui.js" , writeText jsDriverCode)
-              ,("/init"                 , init worker sessions)
-              ,("/poll"                 , poll sessions)
-              ,("/signal"               , signal sessions)
+router initFile wwwroot cssFile worker sessions =
+        route [("/static"                    , serveDirectory wwwroot)
+              ,("/"                          , root)
+              ,("/driver/threepenny-gui.js"  , writeText jsDriverCode)
+              ,("/driver/threepenny-gui.css" , css)
+              ,("/init"                      , init worker sessions)
+              ,("/poll"                      , poll sessions)
+              ,("/signal"                    , signal sessions)
               ]
     where
+    css  = case cssFile of
+        Just file -> serveFile (wwwroot </> file)
+        Nothing   -> writeText cssDriverCode
     root = case initFile of
         Just file -> serveFile (wwwroot </> file)
         Nothing   -> writeText defaultHtmlFile

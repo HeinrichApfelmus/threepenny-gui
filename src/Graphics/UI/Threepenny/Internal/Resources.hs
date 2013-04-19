@@ -15,13 +15,17 @@ import           Graphics.UI.Threepenny.Internal.Include
 
 
 jsDriverCode    :: Text
+cssDriverCode   :: Text
 defaultHtmlFile :: Text
 
 
 #ifdef CABAL
 
 jsDriverCode = unsafePerformIO $
-   readFiles $ words "jquery.js jquery.cookie.js driver.hs" 
+    readFiles $ words "jquery.js jquery.cookie.js driver.hs" 
+
+cssDriverCode = unsafePerformIO $
+    readFiles ["driver.css"]
 
 defaultHtmlFile = unsafePerformIO $
     readFiles ["index.html"]
@@ -40,6 +44,8 @@ jsDriverCode = Text.unlines $ map Text.pack
     , [include|Graphics/UI/jquery.cookie.js|]
     , [include|Graphics/UI/driver.js|]
     ]
+
+cssDriverCode = Text.pack [include|Graphics/UI/driver.css|]
 
 defaultHtmlFile = Text.pack [include|Graphics/UI/index.html|]
 

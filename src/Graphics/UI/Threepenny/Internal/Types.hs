@@ -140,8 +140,9 @@ data Closure = Closure (String,String)
   deriving (Typeable,Data,Show)
 
 data Config a = Config
-  { tpPort     :: Int                        -- ^ Port.
-  , tpWorker   :: Window -> IO a             -- ^ The worker.
-  , tpInitHTML :: Maybe FilePath             -- ^ Init file.
-  , tpStatic   :: FilePath                   -- ^ Static files path.
+  { tpPort      :: Int               -- ^ Port.
+  , tpWorker    :: Window -> IO a    -- ^ The worker.
+  , tpInitHTML  :: Maybe FilePath    -- ^ Init file.
+  , tpStatic    :: FilePath          -- ^ Static files path.
+  , tpCustomCSS :: Maybe FilePath    -- ^ Custom CSS to replace @driver/threepenny-gui.css@
   }
