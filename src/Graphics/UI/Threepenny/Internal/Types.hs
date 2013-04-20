@@ -23,7 +23,7 @@ import Network.URI
 --------------------------------------------------------------------------------
 -- Public types
 
--- | An opaque reference to an element in the DOM of a particular session / browser window.
+-- | Reference to an element in the DOM of the client window.
 data Element = Element
     { elId      :: ElementId
     , elSession :: Session
@@ -60,7 +60,7 @@ data Session = Session
 
 type EventKey = (String, String)
 
--- | The client browser window. It's equivalent to a client session.
+-- | The client browser window.
 type Window = Session
 
 data ConnectedState

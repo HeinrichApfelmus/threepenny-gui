@@ -23,7 +23,7 @@ module Graphics.UI.Threepenny.Core (
     module Control.Event,
     
     -- * Properties
-    -- | For a list of predefined events, see "Graphics.UI.Threepenny.Properties".
+    -- | For a list of predefined properties, see "Graphics.UI.Threepenny.Properties".
     (#), element,
     Property(..), WriteOnlyProperty, ReadOnlyProperty,
     mkProperty, set, get,
@@ -93,13 +93,15 @@ startGUI config handler =
 {-----------------------------------------------------------------------------
     DOM
 ------------------------------------------------------------------------------}
+-- | Title of the client window.
 title :: WriteOnlyProperty Window String
 title = mkProperty Core.setTitle undefined
 
+-- | Cookies on the client.
 cookies :: ReadOnlyProperty Window [(String,String)]
 cookies = mkProperty undefined Core.getRequestCookies
 
-
+-- | Child elements of a given element.
 children :: WriteOnlyProperty Element [Element]
 children = mkProperty set undefined
     where
@@ -107,24 +109,49 @@ children = mkProperty set undefined
         Core.emptyEl x
         mapM_ (Core.appendTo x) xs
 
+-- | Attributes of an element.
 attr :: String -> WriteOnlyProperty Element String
 attr name = mkProperty (\v a -> Core.setAttr name v a # void) undefined
 
+-- | Value attribute of an element.
+-- Particularly relevant for control widgets like 'input'.
 value :: Property Element String
 value = mkProperty (set' $ attr "value") getValue
 
+-- | Text content of an element.
 text :: WriteOnlyProperty Element String
 text = mkProperty (\v a -> Core.setText v a # void) undefined
 
 {-----------------------------------------------------------------------------
     Layout
 ------------------------------------------------------------------------------}
+-- | Align given elements in a row. Special case of 'grid'.
 row     :: [IO Element]   -> IO Element
 row xs = grid [xs]
 
+-- | Align given elements in a column. Special case of 'grid'.
 column  :: [IO Element]   -> IO Element
 column = grid . map (:[])
 
+-- | Align given elements in a rectangular grid.
+--
+-- Layout is achieved by using the CSS @display:table@ property.
+-- The following element tree will be generated
+--
+-- >  <div class="table">
+-- >    <div class="table-row">
+-- >      <div class="table-cell> ... </div>
+-- >      <div class="table-cell> ... </div>
+-- >    </div>
+-- >    <div class="table-row">
+-- >      ...
+-- >    </div>
+-- >   ...
+-- >   </div>
+--
+-- You can customatize the actual layout by assigning an @id@ to the element
+-- and changing the @.table@, @.table-row@ and @table-column@
+-- classes in a custom CSS file.
 grid    :: [[IO Element]] -> IO Element
 grid mrows = do
     rows0 <- mapM (sequence) mrows
@@ -141,8 +168,15 @@ grid mrows = do
 {-----------------------------------------------------------------------------
     Events
 ------------------------------------------------------------------------------}
+-- | Obtain DOM event for a given element.
 domEvent
-    :: String -> Element -> Event EventData
+    :: String
+        -- ^ Event name. A full list can be found at
+        --   <http://www.w3schools.com/jsref/dom_obj_event.asp>.
+        --   Note that the @on@-prefix is not included,
+        --   the name is @click@ and so on.
+    -> Element          -- ^ Element where the event is to occur.
+    -> Event EventData
 domEvent = Core.bind
 
 -- | Convenience function to register 'Event's for 'Element's.
@@ -161,29 +195,50 @@ infixl 8 #
 
 -- | Reverse function application.
 -- Allows convenient notation for setting properties.
+--
+-- Example usage.
+--
+-- > newElement window "div"
+-- >     # set style     [("color","#CCAABB")]
+-- >     # set draggable True
+-- >     # set children  otherElements
 (#) :: a -> (a -> b) -> b
 (#) = flip ($)
 
+-- | Convience synonym for 'return' to make elements work well with 'set'.
+--
+-- Example usage.
+--
+-- > e <- newElement window "button"
+-- > e # set text "Ok"
 element :: Element -> IO Element
 element = return
 
+-- | Properties are things that you can set and get.
 data Property a value = Property
     { set' :: value -> a -> IO ()
     , get' :: a     -> IO value
     }
 
+-- | Properties that only support the 'get' operation.
 type ReadOnlyProperty  = Property
+
+-- | Properties that only support the 'set' operation.
 type WriteOnlyProperty = Property
 
+-- | Set value of a property in the 'IO' monad.
+-- Best used in conjunction with '#'.
 set :: Property a value -> value -> IO a -> IO a
 set prop value ma = do { a <- ma; set' prop value a; return a; }
 
+-- | Get property value.
 get :: Property a value -> a -> IO value
 get = get'
 
+-- | Build a property from a getter and a setter.
 mkProperty
-    :: (value -> a -> IO ())    -- ^ setter
-    -> (a -> IO value)          -- ^ getter
+    :: (value -> a -> IO ())    -- ^ Setter.
+    -> (a -> IO value)          -- ^ Getter.
     -> Property a value
 mkProperty = Property
 

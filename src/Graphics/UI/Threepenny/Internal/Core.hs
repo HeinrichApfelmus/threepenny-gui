@@ -396,10 +396,10 @@ newElement session@(Session{..}) tagName = do
         return (tail elids,"*" ++ show (head elids) ++ ":" ++ tagName)
     return (Element (ElementId elid) session)
 
--- | Append one element to another. Non-blocking.
-appendTo :: Element -- ^ The parent.
-         -> Element -- ^ The resulting child.
-         -> IO Element
+-- | Append a child element to a parent element. Non-blocking.
+appendTo :: Element     -- ^ Parent.
+         -> Element     -- ^ Child.
+         -> IO Element  -- ^ Returns a reference to the child element again.
 appendTo (Element parent session) e@(Element child _) = do
     -- TODO: Right now, parent and child need to be from the same session/browser window
     --       Implement transfer of elements across browser windows
