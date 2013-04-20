@@ -139,10 +139,9 @@ nullable v      = Just <$> readJSON v
 data Closure = Closure (String,String)
   deriving (Typeable,Data,Show)
 
-data Config a = Config
-  { tpPort      :: Int               -- ^ Port.
-  , tpWorker    :: Window -> IO a    -- ^ The worker.
-  , tpInitHTML  :: Maybe FilePath    -- ^ Init file.
-  , tpStatic    :: FilePath          -- ^ Static files path.
-  , tpCustomCSS :: Maybe FilePath    -- ^ Custom CSS to replace @driver/threepenny-gui.css@
+-- | Record for configuring the Threepenny GUI server.
+data Config = Config
+  { tpPort       :: Int               -- ^ Port number.
+  , tpCustomHTML :: Maybe FilePath    -- ^ Custom HTML file to replace the default one.
+  , tpStatic     :: FilePath          -- ^ Directory that is served under @/static@.
   }

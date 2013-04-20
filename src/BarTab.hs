@@ -16,12 +16,10 @@ import Graphics.UI.Threepenny
 -- | Main entry point. Starts a TP server.
 main :: IO ()
 main = startGUI Config
-    { tpPort      = 10001
-    , tpWorker    = setup
-    , tpInitHTML  = Nothing
-    , tpStatic    = "wwwroot"
-    , tpCustomCSS = Nothing
-    }
+    { tpPort       = 10000
+    , tpCustomHTML = Nothing
+    , tpStatic     = "wwwroot"
+    } setup
 
 
 setup :: Window -> IO ()

@@ -102,11 +102,11 @@ import           Text.JSON.Generic
 
 -- | Run a TP server with Snap on the specified port and the given
 --   worker action.
-serve :: Config a -> IO () -- ^ A TP server.
-serve Config{..} = do
+serve :: Config -> (Session -> IO ()) -> IO () -- ^ A TP server.
+serve Config{..} worker = do
   sessions <- newMVar M.empty
   _ <- forkIO $ custodian 30 sessions
-  httpServe server (router tpInitHTML tpStatic tpCustomCSS tpWorker sessions)
+  httpServe server (router tpCustomHTML tpStatic worker sessions)
  where server = setPort tpPort defaultConfig
 
 -- | Kill sessions after at least n seconds of disconnectedness.
@@ -133,24 +133,20 @@ custodian seconds sessions = forever $ do
 router
     :: Maybe FilePath
     -> FilePath
-    -> Maybe FilePath
     -> (Session -> IO a)
     -> MVar (Map Integer Session)
     -> Snap ()
-router initFile wwwroot cssFile worker sessions =
+router customHTML wwwroot worker sessions =
         route [("/static"                    , serveDirectory wwwroot)
               ,("/"                          , root)
-              ,("/driver/threepenny-gui.js"  , writeText jsDriverCode)
-              ,("/driver/threepenny-gui.css" , css)
+              ,("/driver/threepenny-gui.js"  , writeText jsDriverCode )
+              ,("/driver/threepenny-gui.css" , writeText cssDriverCode)
               ,("/init"                      , init worker sessions)
               ,("/poll"                      , poll sessions)
               ,("/signal"                    , signal sessions)
               ]
     where
-    css  = case cssFile of
-        Just file -> serveFile (wwwroot </> file)
-        Nothing   -> writeText cssDriverCode
-    root = case initFile of
+    root = case customHTML of
         Just file -> serveFile (wwwroot </> file)
         Nothing   -> writeText defaultHtmlFile
 

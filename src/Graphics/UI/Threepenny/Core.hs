@@ -75,15 +75,20 @@ This project was originally called Ji.
 ------------------------------------------------------------------------------}
 {- $server
 
-The server is built on the Snap web framework (for now).
-Run it with 'startGUI'. The field 'tpWorker' specifies the
-function to run whenever a client connects.
+To display the user interface, you have to start a server using 'startGUI'.
+Then, visit the URL <http://localhost:10000/> in your browser
+(assuming that you have set the port number to @tpPort=10000@
+in the server configuration).
 
 -}
 
-startGUI :: Config a -> IO ()
-startGUI config = Core.serve $
-    config { tpWorker = \w -> tpWorker config w >> Core.handleEvents w }
+-- | Start server for GUI sessions.
+startGUI
+    :: Config               -- ^ Server configuration.
+    -> (Window -> IO ())    -- ^ Action to run whenever a client browser connects.
+    -> IO ()
+startGUI config handler =
+    Core.serve config $ \w -> handler w >> Core.handleEvents w
 
 {-----------------------------------------------------------------------------
     DOM
