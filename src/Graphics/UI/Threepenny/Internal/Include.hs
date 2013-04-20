@@ -11,6 +11,11 @@ root = "src/"
 root = ""
 #endif
 
-include = QuasiQuoter { quoteExp = f }
+include = QuasiQuoter
+        { quoteExp  = f             -- only used as an expression,
+        , quotePat  = undefined     -- hence all other use cases undefined
+        , quoteType = undefined
+        , quoteDec  = undefined
+        }
     where
     f s = TH.LitE . TH.StringL <$> TH.runIO (readFile $ root ++ s)

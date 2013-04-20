@@ -1,3 +1,4 @@
+{-# OPTIONS -fno-warn-wrong-do-bind #-}
 module Graphics.UI.Threepenny.JQuery where
 
 import Control.Arrow

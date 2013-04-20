@@ -1,5 +1,5 @@
-{-# LANGUAGE CPP, RecursiveDo, TypeSynonymInstances, FlexibleInstances #-}
-module BarTab where
+{-# LANGUAGE CPP, PackageImports #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
 import Prelude hiding (div,span)
 import Control.Applicative

@@ -33,7 +33,7 @@ module Graphics.UI.Threepenny.Internal.Core
   -- * Manipulating tree structure
   -- $treestructure
   ,newElement
-  ,appendTo
+  ,appendElementTo
   
   -- * Querying
   -- $querying
@@ -397,10 +397,11 @@ newElement session@(Session{..}) tagName = do
     return (Element (ElementId elid) session)
 
 -- | Append a child element to a parent element. Non-blocking.
-appendTo :: Element     -- ^ Parent.
-         -> Element     -- ^ Child.
-         -> IO Element  -- ^ Returns a reference to the child element again.
-appendTo (Element parent session) e@(Element child _) = do
+appendElementTo
+    :: Element     -- ^ Parent.
+    -> Element     -- ^ Child.
+    -> IO Element  -- ^ Returns a reference to the child element again.
+appendElementTo (Element parent session) e@(Element child _) = do
     -- TODO: Right now, parent and child need to be from the same session/browser window
     --       Implement transfer of elements across browser windows
     run session $ Append parent child

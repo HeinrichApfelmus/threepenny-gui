@@ -9,7 +9,8 @@ module Graphics.UI.Threepenny.Core (
     -- * DOM manipulation
     Window, title, getHead, getBody, cookies, getRequestLocation,
     Element, newElement, delete, appendTo,
-        children, text, attr, value, getValuesList,
+        children, text, html, attr, value,
+        getValuesList,
     getElementsByTagName, getElementByTagName, getElementById,
     
     -- * Layout
@@ -107,7 +108,17 @@ children = mkProperty set undefined
     where
     set xs x = do
         Core.emptyEl x
-        mapM_ (Core.appendTo x) xs
+        mapM_ (Core.appendElementTo x) xs
+
+-- | Append a child element to a parent element. Non-blocking.
+appendTo :: Element     -- ^ Parent.
+         -> IO Element  -- ^ Child.
+         -> IO Element  -- ^ Returns a reference to the child element again.
+appendTo x my = do { y <- my; Core.appendElementTo x y; }
+
+-- | Child elements of a given element as a HTML string.
+html :: WriteOnlyProperty Element String
+html = mkProperty (\v a -> Core.setHtml v a # void) undefined
 
 -- | Attributes of an element.
 attr :: String -> WriteOnlyProperty Element String

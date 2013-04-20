@@ -3,7 +3,7 @@ module Graphics.UI.Threepenny.Events (
     -- | Predefined DOM events.
     
     -- * Documentation
-    click, hover, blur,
+    click, hover, blur, leave,
     
     -- * Drag and Drop
     dragStart, dragEnter, dragOver, dragLeave, drag, drop, dragEnd,
