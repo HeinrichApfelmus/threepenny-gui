@@ -4,7 +4,7 @@ import Control.Arrow
 import Data.Char
 import Data.Default
 import Data.Maybe
-import Graphics.UI.Threepenny
+import Graphics.UI.Threepenny.Core
 import Graphics.UI.Threepenny.Internal.Types
 import Text.JSON
 
@@ -33,7 +33,7 @@ fadeOut el duration easing complete = animate el [("opacity","0")] duration easi
 -- | Do something on return.
 onSendValue :: Element -> (String -> IO ()) -> IO ()
 onSendValue input m = do
-    register (bind "sendvalue" input) $ \(EventData evdata) -> do
+    register (domEvent "sendvalue" input) $ \(EventData evdata) -> do
         m (concat (catMaybes evdata))
     return ()
 

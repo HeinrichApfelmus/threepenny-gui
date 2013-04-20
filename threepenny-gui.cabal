@@ -40,20 +40,20 @@ Library
   Exposed-modules:
                      Control.Event
                     ,Graphics.UI.Threepenny
-                    ,Graphics.UI.Threepenny.Types
-                    ,Graphics.UI.Threepenny.Internal.Types
-                    ,Graphics.UI.Threepenny.DOM
+                    ,Graphics.UI.Threepenny.Core
                     ,Graphics.UI.Threepenny.Elements
-                    ,Graphics.UI.Threepenny.JQuery
-                    ,Graphics.UI.Threepenny.Browser
                     ,Graphics.UI.Threepenny.Events
+                    ,Graphics.UI.Threepenny.JQuery
+                    ,Graphics.UI.Threepenny.Properties
   Other-modules:
                      Control.Concurrent.Chan.Extra
                     ,Control.Monad.Extra
                     ,Control.Monad.IO
                     ,Control.Concurrent.Delay
+                    ,Graphics.UI.Threepenny.Internal.Core
                     ,Graphics.UI.Threepenny.Internal.Include
                     ,Graphics.UI.Threepenny.Internal.Resources
+                    ,Graphics.UI.Threepenny.Internal.Types
   CPP-Options:      -DCABAL
   Build-depends:     base                      >= 4     && < 5
                     ,snap-server
