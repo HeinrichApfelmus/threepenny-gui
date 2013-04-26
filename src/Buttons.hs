@@ -75,11 +75,11 @@ makeButtons w body = void $ do
     
     button2 <- appendToButton w body button2Title
 
-    on hover button2 $ \_ -> void $ do
+    on hover button2 $ \_ -> do
         element button2 # set text (button2Title ++ " [hover]")
-    on leave button2 $ \_ -> void $ do
+    on leave button2 $ \_ -> do
         element button2 # set text button2Title
-    on click button2 $ \_ -> void $ do
+    on click button2 $ \_ -> do
         element button1
             # set text (button1Title ++ " [pressed]")
         li w

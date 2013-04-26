@@ -195,8 +195,8 @@ domEvent = Core.bind
 -- Example:
 --
 -- > on click element $ \_ -> ...
-on :: (a -> Event b) -> a -> Handler b -> IO ()
-on f a h = register (f a) h >> return ()
+on :: (element -> Event a) -> element -> (a -> IO void) -> IO ()
+on f x h = void $ register (f x) (void . h)
 
 
 {-----------------------------------------------------------------------------
