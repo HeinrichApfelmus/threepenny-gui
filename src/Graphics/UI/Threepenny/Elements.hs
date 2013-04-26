@@ -4,10 +4,17 @@ module Graphics.UI.Threepenny.Elements where
 import Control.Monad
 import Prelude hiding (div)
 import Graphics.UI.Threepenny.Core
--- import Graphics.UI.Threepenny.Internal.Core
 
 -- | Add a stylesheet to the head.
-addStyleSheet :: Window -> FilePath -> IO ()
+--
+-- The second argument refers to the filename of the stylesheet,
+-- but not its complete filepath.
+-- Threepenny will prefix the 'css' subdirectory of the 'tpStatic' configuration field
+-- to construct the complete filepath.
+addStyleSheet
+    :: Window
+    -> FilePath
+    -> IO ()
 addStyleSheet w filename = void $ do
   head <- getHead w
   (newElement w "link"
