@@ -15,7 +15,7 @@ main :: IO ()
 main = startGUI Config
     { tpPort       = 10000
     , tpCustomHTML = Nothing
-    , tpStatic     = "wwwroot"
+    , tpStatic     = "../wwwroot"
     } setup
 
 -- | A per-user worker thread. Each user session has a thread.
@@ -24,13 +24,14 @@ setup w = do
     return w # set title "Buttons"
     
     body <- getBody w
+    addStyleSheet w "buttons.css"
     wrap <- new w
                 # set cssClass "wrap"
                 # appendTo body
     
     greet       w wrap
     makeButtons w wrap
-    linkage     w wrap
+    codeLink    w wrap
 
 greet :: Window -> Element -> IO ()
 greet w body = void $ do
@@ -41,8 +42,8 @@ greet w body = void $ do
         # set text "Try the buttons below, they hover and click."
         # appendTo body
 
-linkage :: Window -> Element -> IO ()
-linkage w body = void $ do
+codeLink :: Window -> Element -> IO ()
+codeLink w body = void $ do
     p <- paragraph w
         # set text ""
         # appendTo body
