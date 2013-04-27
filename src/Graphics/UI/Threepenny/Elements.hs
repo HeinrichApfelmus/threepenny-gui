@@ -43,6 +43,10 @@ form = flip newElement "form"
 h1 :: Window -> IO Element
 h1 = flip newElement "h1"
 
+-- | Make a new heading of second level, @h2@.
+h2 :: Window -> IO Element
+h2 = flip newElement "h2"
+
 -- | Make a new horizontal rule, @hr@.
 hr :: Window -> IO Element
 hr = flip newElement "hr"

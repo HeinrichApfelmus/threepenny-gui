@@ -92,6 +92,7 @@ Executable threepenny-examples-missing-dollars
   CPP-Options:       -DCABAL
   Build-depends:     base                      >= 4     && < 5
                     ,threepenny-gui
+                    ,safe
 
 Executable threepenny-examples-use-words
   Main-is:           UseWords.hs
