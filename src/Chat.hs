@@ -1,73 +1,91 @@
-{-# LANGUAGE ViewPatterns, PackageImports #-}
-
-module Main where
+{-# LANGUAGE CPP, PackageImports #-}
+{-# LANGUAGE ViewPatterns #-}
 
 import Control.Concurrent
+import qualified Control.Concurrent.Chan as Chan
 import Control.Exception
 import Control.Monad
 import Control.Monad.IO
 import Data.List.Extra
 import Data.Time
 #ifdef CABAL
-import "threepenny-gui" Graphics.UI.Threepenny
-import "threepenny-gui" Graphics.UI.Threepenny.Browser
+import "threepenny-gui" Graphics.UI.Threepenny as UI
 #else
-import Graphics.UI.Threepenny
-import Graphics.UI.Threepenny.Browser
+import Graphics.UI.Threepenny as UI
 #endif
 import Prelude hiding (catch)
 
+
+main :: IO ()
 main = do
-  messages <- newChan
-  serve $ Config 10004 runTP (worker messages) (Just "chat.html") "wwwroot"
+    messages <- Chan.newChan
+    startGUI Config
+        { tpPort       = 10000
+        , tpCustomHTML = Just "chat.html"
+        , tpStatic     = "../wwwroot"
+        } $ setup messages
 
-worker globalMsgs = do
-  body <- getBody
-  new #. "header" #= "Threepenny Chat" #+ body # unit
-  new #. "gradient" #+ body # unit
-  codeLink body
-  nickname <- getNickname body
-  messageArea <- new #. "message-area" #+ body
-  msgs <- io $ dupChan globalMsgs
-  sendMessageArea body nickname msgs
-  messageReceiver <- receiveMessages msgs messageArea
-  session <- askSession
-  io $ catch (runTP session handleEvents)
-             (\e -> do killThread messageReceiver
-                       throw (e :: SomeException))
+type Message = (UTCTime, String, String)
 
-receiveMessages msgs messageArea = forkTP $ do
-  messages <- io $ getChanContents msgs
-  forM_ messages $ \ (time,user,content) -> do
-    atomic $ do
-      newMessage time user content # addTo messageArea # unit
-      scrollToBottom messageArea
+setup :: Chan Message -> Window -> IO () 
+setup globalMsgs w = do
+    return w # set title "Chat"
 
-sendMessageArea parent nickname msgs = do
-  sendArea <- new #. "send-area" #+ parent
-  input <- newTextarea #. "send-textarea" #+ sendArea
-  onSendValue input $ \(trim -> content) -> do
-    when (not (null content)) $ do
-      now <- io $ getCurrentTime
-      (trim -> nick) <- getValue nickname
-      set "value" "" input # unit
-      when (not (null nick)) $ do
-        io $ writeChan msgs (now,nick,content)
+    body <- getBody w
+    
+    new w # set cssClass "header"   # set text "Threepenny Chat" # appendTo body
+    new w # set cssClass "gradient" # appendTo body
+    codeLink w body
+    
+    nickname    <- mkNickname w body
+    messageArea <- new w # set cssClass "message-area" # appendTo body
+    msgs        <- Chan.dupChan globalMsgs
+    sendMessageArea w body nickname msgs
+    void $ forkIO $ receiveMessages w msgs messageArea
+    
 
-getNickname parent = do
-  myname <- new #. "name-area" #+ parent
-  newLabel #= "Your name " #. "name-label" #+ myname # unit
-  input <- newInput #+ myname #. "name-input" # setFocus
-  return input
+--    io $ catch (runTP session handleEvents)
+--             (\e -> do killThread messageReceiver
+--                       throw (e :: SomeException))
 
-newMessage timestamp nick content = do
-  msg <- new #. "message"
-  new #. "timestamp" #= show timestamp #+ msg # unit
-  new #. "name" #= nick ++ " says:" #+ msg # unit
-  new #. "content" #= content #+ msg # unit
+receiveMessages w msgs messageArea = do
+    messages <- Chan.getChanContents msgs
+    forM_ messages $ \msg -> do
+        atomic w $ do
+          newMessage w msg # appendTo messageArea
+          scrollToBottom messageArea
+
+sendMessageArea w parent nickname msgs = do
+    sendArea <- new w      # set cssClass "send-area"     # appendTo parent
+    input    <- textarea w # set cssClass "send-textarea" # appendTo sendArea
+    onSendValue input $ \(trim -> content) -> do
+        when (not (null content)) $ do
+            now <- getCurrentTime
+            (trim -> nick) <- get value nickname
+            element input # set value ""
+            when (not (null nick)) $
+                Chan.writeChan msgs (now,nick,content)
+
+mkNickname w parent = do
+    myname <- new w # set cssClass "name-area" # appendTo parent
+    UI.span w # set cssClass "name-label"
+              # set text "Your name "
+              # appendTo myname
+    input <- UI.input w # set cssClass "name-input" # appendTo myname
+    setFocus input
+
+newMessage :: Window -> Message -> IO Element
+newMessage w (timestamp,nick,content) = do
+  msg <- new w # set cssClass "message"
+  new w # set cssClass "timestamp" # set text (show timestamp)   # appendTo msg
+  new w # set cssClass "name"      # set text (nick ++ " says:") # appendTo msg
+  new w # set cssClass "content"   # set text content            # appendTo msg
   return msg
 
-codeLink parent = do
-  newAnchor # set "href" url # setText label # setClass "code-link" # addTo parent # unit
-  where url = "https://github.com/chrisdone/ji/blob/master/examples/Chat.hs"
-        label = "View source code"
+codeLink w parent = void $ do
+    let url = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs"
+    anchor w
+        # set (attr "href") url
+        # set text "View source code"
+        # set cssClass "code-link"
+        # appendTo parent
