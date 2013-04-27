@@ -6,8 +6,7 @@ module Main where
 import Control.Applicative hiding ((<|>),many)
 
 import Control.Monad
-import Control.Arrow
-import Control.Monad.IO
+import Control.Arrow (second)
 import Data.Maybe
 #ifdef CABAL
 import "threepenny-gui" Graphics.UI.Threepenny

@@ -30,6 +30,10 @@ Data-dir:            src/Graphics/UI
 Data-files:          *.js, *.html
 
 
+flag buildExamples
+    description: Build example executables.
+    default:     True
+
 Source-repository head
     type:               git
     location:           git://github.com/HeinrichApfelmus/threepenny-gui.git
@@ -54,6 +58,7 @@ Library
                     ,Graphics.UI.Threepenny.Internal.Include
                     ,Graphics.UI.Threepenny.Internal.Resources
                     ,Graphics.UI.Threepenny.Internal.Types
+                    ,Paths_threepenny_gui
   CPP-Options:      -DCABAL
   Build-depends:     base                      >= 4     && < 5
                     ,snap-server
@@ -72,40 +77,55 @@ Library
                     ,template-haskell
 
 Executable threepenny-examples-bartab
-  Main-is:           BarTab.hs
-  Hs-source-dirs:    src
-  CPP-Options:       -DCABAL
-  Build-depends:     base                      >= 4     && < 5
-                    ,threepenny-gui
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,threepenny-gui
+    else
+        buildable: False
+    main-is:           BarTab.hs
+    hs-source-dirs:    src
 
 Executable threepenny-examples-buttons
-  Main-is:           Buttons.hs
-  Hs-source-dirs:    src
-  CPP-Options:       -DCABAL
-  Build-depends:     base                      >= 4     && < 5
-                    ,threepenny-gui
-                    ,transformers
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,threepenny-gui
+                          ,transformers
+    else
+        buildable: False
+    main-is:           Buttons.hs
+    hs-source-dirs:    src
 
 Executable threepenny-examples-missing-dollars
-  Main-is:           MissingDollars.hs
-  Hs-source-dirs:    src
-  CPP-Options:       -DCABAL
-  Build-depends:     base                      >= 4     && < 5
-                    ,threepenny-gui
-                    ,safe
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,threepenny-gui
+                          ,safe
+    else
+        buildable: False
+    main-is:           MissingDollars.hs
+    hs-source-dirs:    src
 
 Executable threepenny-examples-use-words
-  Main-is:           UseWords.hs
-  Hs-source-dirs:    src
-  CPP-Options:       -DCABAL
-  Build-depends:     base                      >= 4     && < 5
-                    ,threepenny-gui
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,threepenny-gui
+                          ,parsec
+    else
+        buildable: False
+    main-is:           UseWords.hs
+    hs-source-dirs:    src
 
 Executable threepenny-examples-chat
-  Main-is:           Chat.hs
-  Hs-source-dirs:    src
-  CPP-Options:       -DCABAL
-  Build-depends:     base                      >= 4     && < 5
-                    ,threepenny-gui
-                    ,time
-                    ,parsec
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,threepenny-gui
+                          ,time
+    else
+        buildable: False
+    main-is:           Chat.hs
+    hs-source-dirs:    src

@@ -5,7 +5,6 @@ import Control.Concurrent
 import qualified Control.Concurrent.Chan as Chan
 import Control.Exception
 import Control.Monad
-import Control.Monad.IO
 import Data.List.Extra
 import Data.Time
 #ifdef CABAL
