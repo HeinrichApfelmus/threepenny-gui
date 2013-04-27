@@ -7,6 +7,8 @@ import Control.Monad
 import Data.IORef
 import Data.Maybe
 
+import Paths
+
 #ifdef CABAL
 import "threepenny-gui" Graphics.UI.Threepenny
 #else
@@ -15,12 +17,13 @@ import Graphics.UI.Threepenny
 
 -- | Main entry point. Starts a TP server.
 main :: IO ()
-main = startGUI Config
-    { tpPort       = 10000
-    , tpCustomHTML = Nothing
-    , tpStatic     = "wwwroot"
-    } setup
-
+main = do
+    static <- getStaticDir
+    startGUI Config
+        { tpPort       = 10000
+        , tpCustomHTML = Nothing
+        , tpStatic     = static
+        } setup
 
 setup :: Window -> IO ()
 setup w = do

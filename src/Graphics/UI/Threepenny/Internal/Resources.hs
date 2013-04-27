@@ -22,7 +22,7 @@ defaultHtmlFile :: Text
 #ifdef CABAL
 
 jsDriverCode = unsafePerformIO $
-    readFiles $ words "jquery.js jquery.cookie.js driver.hs" 
+    readFiles $ words "jquery.js jquery-cookie.js driver.js" 
 
 cssDriverCode = unsafePerformIO $
     readFiles ["driver.css"]
@@ -34,14 +34,14 @@ readFiles files = do
     ys <- mapM (Text.readFile . getDataFile) files
     return $ Text.unlines ys
 
-getDataFile x = unsafePerformIO $ fmap (</> x) getDataDir
-
+getDataFile x = unsafePerformIO $
+    fmap (</> "src" </> "Graphics" </> "UI" </> x) getDataDir
 
 #else
 
 jsDriverCode = Text.unlines $ map Text.pack
     [ [include|Graphics/UI/jquery.js|]
-    , [include|Graphics/UI/jquery.cookie.js|]
+    , [include|Graphics/UI/jquery-cookie.js|]
     , [include|Graphics/UI/driver.js|]
     ]
 

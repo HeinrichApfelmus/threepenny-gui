@@ -26,8 +26,13 @@ Cabal-version:       >=1.8
 Extra-Source-Files:  src/Graphics/UI/*.html
                     ,src/Graphics/UI/*.js
 
-Data-dir:            src/Graphics/UI
-Data-files:          *.js, *.html
+Data-dir:            .
+Data-files:          src/Graphics/UI/*.js
+                    ,src/Graphics/UI/*.html
+                    ,src/Graphics/UI/*.css
+                    ,wwwroot/css/*.css
+                    ,wwwroot/*.html
+                    ,wwwroot/*.txt
 
 
 flag buildExamples
@@ -81,9 +86,11 @@ Executable threepenny-examples-bartab
         cpp-options:       -DCABAL
         build-depends:     base                      >= 4     && < 5
                           ,threepenny-gui
+                          ,filepath
     else
         buildable: False
     main-is:           BarTab.hs
+    other-modules:     Paths_threepenny_gui
     hs-source-dirs:    src
 
 Executable threepenny-examples-buttons
@@ -92,20 +99,24 @@ Executable threepenny-examples-buttons
         build-depends:     base                      >= 4     && < 5
                           ,threepenny-gui
                           ,transformers
+                          ,filepath
     else
         buildable: False
     main-is:           Buttons.hs
+    other-modules:     Paths_threepenny_gui
     hs-source-dirs:    src
 
 Executable threepenny-examples-missing-dollars
     if flag(buildExamples)
         cpp-options:       -DCABAL
         build-depends:     base                      >= 4     && < 5
+                          ,filepath
                           ,threepenny-gui
                           ,safe
     else
         buildable: False
     main-is:           MissingDollars.hs
+    other-modules:     Paths_threepenny_gui
     hs-source-dirs:    src
 
 Executable threepenny-examples-use-words
@@ -113,10 +124,12 @@ Executable threepenny-examples-use-words
         cpp-options:       -DCABAL
         build-depends:     base                      >= 4     && < 5
                           ,threepenny-gui
+                          ,filepath
                           ,parsec
     else
         buildable: False
     main-is:           UseWords.hs
+    other-modules:     Paths_threepenny_gui
     hs-source-dirs:    src
 
 Executable threepenny-examples-chat
@@ -124,8 +137,10 @@ Executable threepenny-examples-chat
         cpp-options:       -DCABAL
         build-depends:     base                      >= 4     && < 5
                           ,threepenny-gui
+                          ,filepath
                           ,time
     else
         buildable: False
     main-is:           Chat.hs
+    other-modules:     Paths_threepenny_gui
     hs-source-dirs:    src

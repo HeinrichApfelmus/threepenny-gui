@@ -7,21 +7,24 @@ import Control.Exception
 import Control.Monad
 import Data.List.Extra
 import Data.Time
+import Prelude hiding (catch)
+
 #ifdef CABAL
 import "threepenny-gui" Graphics.UI.Threepenny as UI
 #else
 import Graphics.UI.Threepenny as UI
 #endif
-import Prelude hiding (catch)
+import Paths
 
 
 main :: IO ()
 main = do
+    static   <- getStaticDir
     messages <- Chan.newChan
     startGUI Config
         { tpPort       = 10000
         , tpCustomHTML = Just "chat.html"
-        , tpStatic     = "../wwwroot"
+        , tpStatic     = static
         } $ setup messages
 
 type Message = (UTCTime, String, String)

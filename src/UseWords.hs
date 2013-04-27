@@ -4,10 +4,11 @@
 module Main where
 
 import Control.Applicative hiding ((<|>),many)
-
 import Control.Monad
 import Control.Arrow (second)
 import Data.Maybe
+import Text.Parsec
+
 #ifdef CABAL
 import "threepenny-gui" Graphics.UI.Threepenny
 import "threepenny-gui" Graphics.UI.Threepenny.Elements as H
@@ -15,15 +16,17 @@ import "threepenny-gui" Graphics.UI.Threepenny.Elements as H
 import Graphics.UI.Threepenny
 import Graphics.UI.Threepenny.Elements as H
 #endif
-import Text.Parsec
+import Paths
 
 
 main :: IO ()
-main = startGUI Config
-    { tpPort       = 10000
-    , tpCustomHTML = Nothing
-    , tpStatic     = "../wwwroot"
-    } setup
+main = do
+    static <- getStaticDir
+    startGUI Config
+        { tpPort       = 10000
+        , tpCustomHTML = Nothing
+        , tpStatic     = static
+        } setup
 
 
 filename = "../wwwroot/and-then-haskell.txt"

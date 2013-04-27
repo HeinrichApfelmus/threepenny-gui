@@ -9,14 +9,17 @@ import "threepenny-gui" Graphics.UI.Threepenny
 #else
 import Graphics.UI.Threepenny
 #endif
+import Paths
 
 -- | Main entry point. Starts a TP server.
 main :: IO ()
-main = startGUI Config
-    { tpPort       = 10000
-    , tpCustomHTML = Nothing
-    , tpStatic     = "../wwwroot"
-    } setup
+main = do
+    static <- getStaticDir
+    startGUI Config
+        { tpPort       = 10000
+        , tpCustomHTML = Nothing
+        , tpStatic     = static
+        } setup
 
 -- | A per-user worker thread. Each user session has a thread.
 setup :: Window -> IO ()
