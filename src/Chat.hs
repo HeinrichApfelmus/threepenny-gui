@@ -1,21 +1,98 @@
 {-# LANGUAGE CPP, PackageImports #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
 import Control.Concurrent
 import qualified Control.Concurrent.Chan as Chan
 import Control.Exception
 import Control.Monad
+import Data.Functor
 import Data.List.Extra
 import Data.Time
-import Prelude hiding (catch)
+import Prelude hiding (catch,div,span)
+
+import Control.Monad.Trans.Reader as Reader
+import Control.Monad.IO.Class
 
 #ifdef CABAL
 import "threepenny-gui" Graphics.UI.Threepenny as UI
 #else
-import Graphics.UI.Threepenny as UI
+import qualified Graphics.UI.Threepenny as UI
+import Graphics.UI.Threepenny.Core hiding (text,element)
+import qualified Graphics.UI.Threepenny.Internal.Types as UI
+import Graphics.UI.Threepenny.JQuery
+import Graphics.UI.Threepenny.Properties
 #endif
 import Paths
 
+
+{-----------------------------------------------------------------------------
+    HTML combinators
+------------------------------------------------------------------------------}
+-- | Monad 
+type Dom = ReaderT Window IO
+
+class Attributable h where
+    (!) :: h -> Attribute -> h
+
+instance Attributable (Dom Element) where
+    (!) m a = ReaderT $ \w -> do
+        el <- runReaderT m w
+        setAttribute a el
+        return el
+
+instance Attributable (b -> Dom Element) where
+    (!) f a = \x -> f x ! a
+
+-- | Set class of an element.
+(!.) :: Attributable h => h -> String -> h 
+x !. s = x ! class_ s
+
+-- | Build elements in a particular window
+withWindow :: Window -> Dom a -> IO a
+withWindow w m = runReaderT m w
+
+-- | Make an element
+mkElement :: String -> [Dom Element] -> Dom Element
+mkElement tag children = do
+    w  <- ask
+    el <- liftIO $ newElement w tag
+    liftIO $ addTo el children
+    return el
+
+
+element :: Monad m => Element -> m Element
+element = return
+
+div, span, anchor :: [Dom Element] -> Dom Element
+div  = mkElement "div"
+span = mkElement "span"
+anchor = mkElement "a"
+
+input, textarea :: Dom Element
+input    = mkElement "input" []
+textarea = mkElement "textarea" []
+
+text :: String -> Dom Element
+text s = mkElement "span" ! fromProperty UI.text s $ []
+
+newtype Attribute = Attribute { setAttribute :: Element -> IO () }
+
+fromProperty :: Property Element a -> a -> Attribute
+fromProperty prop a = Attribute $ set' prop a 
+
+href, class_ :: String -> Attribute
+href   = fromProperty (attr "href")
+class_ = fromProperty (attr "class")
+
+-- | Build dom elements and append them to a given element
+addTo :: Element -> [Dom Element] -> IO ()
+addTo el = mapM_ (appendTo el . withWindow (UI.elSession el))
+
+
+{-----------------------------------------------------------------------------
+    Main application
+------------------------------------------------------------------------------}
 
 main :: IO ()
 main = do
@@ -29,22 +106,25 @@ main = do
 
 type Message = (UTCTime, String, String)
 
-setup :: Chan Message -> Window -> IO () 
+setup :: Chan Message -> Window -> IO ()
 setup globalMsgs w = do
+    msgs <- Chan.dupChan globalMsgs
+
     return w # set title "Chat"
+    
+    (nick, nickname) <- withWindow w $ mkNickname
+    messageArea      <- withWindow w $ mkMessageArea msgs nick
 
     body <- getBody w
+    addTo body
+        [ div !. "header"   $ [text "Threepenny Chat"]
+        , div !. "gradient" $ []
+        , codeLink
+        , element nickname
+        , element messageArea
+        ]
     
-    new w # set cssClass "header"   # set text "Threepenny Chat" # appendTo body
-    new w # set cssClass "gradient" # appendTo body
-    codeLink w body
-    
-    nickname    <- mkNickname w body
-    messageArea <- new w # set cssClass "message-area" # appendTo body
-    msgs        <- Chan.dupChan globalMsgs
-    sendMessageArea w body nickname msgs
     void $ forkIO $ receiveMessages w msgs messageArea
-    
 
 --    io $ catch (runTP session handleEvents)
 --             (\e -> do killThread messageReceiver
@@ -54,40 +134,43 @@ receiveMessages w msgs messageArea = do
     messages <- Chan.getChanContents msgs
     forM_ messages $ \msg -> do
         atomic w $ do
-          newMessage w msg # appendTo messageArea
+          addTo messageArea [mkMessage msg]
           scrollToBottom messageArea
 
-sendMessageArea w parent nickname msgs = do
-    sendArea <- new w      # set cssClass "send-area"     # appendTo parent
-    input    <- textarea w # set cssClass "send-textarea" # appendTo sendArea
-    onSendValue input $ \(trim -> content) -> do
+mkMessageArea :: Chan Message -> Element -> Dom Element
+mkMessageArea msgs nickname = do
+    input <- textarea !. "send-textarea"
+    
+    liftIO $ onSendValue input $ (. trim) $ \content -> do
         when (not (null content)) $ do
-            now <- getCurrentTime
-            (trim -> nick) <- get value nickname
+            now  <- getCurrentTime
+            nick <- trim <$> get value nickname
             element input # set value ""
             when (not (null nick)) $
                 Chan.writeChan msgs (now,nick,content)
 
-mkNickname w parent = do
-    myname <- new w # set cssClass "name-area" # appendTo parent
-    UI.span w # set cssClass "name-label"
-              # set text "Your name "
-              # appendTo myname
-    input <- UI.input w # set cssClass "name-input" # appendTo myname
-    setFocus input
+    div !. "message-area" $ [div !. "send-area" $ [element input]]
 
-newMessage :: Window -> Message -> IO Element
-newMessage w (timestamp,nick,content) = do
-  msg <- new w # set cssClass "message"
-  new w # set cssClass "timestamp" # set text (show timestamp)   # appendTo msg
-  new w # set cssClass "name"      # set text (nick ++ " says:") # appendTo msg
-  new w # set cssClass "content"   # set text content            # appendTo msg
-  return msg
 
-codeLink w parent = void $ do
-    let url = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs"
-    anchor w
-        # set (attr "href") url
-        # set text "View source code"
-        # set cssClass "code-link"
-        # appendTo parent
+mkNickname :: Dom (Element, Element)
+mkNickname = do
+    i  <- input !. "name-input"
+    el <- div !. "name-area" $
+        [ span !. "name-label" $ [text "Your name "]
+        , element i
+        ]
+    liftIO $ setFocus i
+    return (i,el)
+
+mkMessage :: Message -> Dom Element
+mkMessage (timestamp, nick, content) =
+    div !. "message" $
+        [ div !. "timestamp" $ [text $ show timestamp]
+        , div !. "name"      $ [text $ nick ++ "says:"]
+        , div !. "content"   $ [text content]
+        ]
+
+codeLink :: Dom Element
+codeLink = anchor !. "code-link" ! href url $ [text "View source code"]
+    where
+    url = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs"
