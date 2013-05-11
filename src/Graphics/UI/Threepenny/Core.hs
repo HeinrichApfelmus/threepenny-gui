@@ -6,12 +6,15 @@ module Graphics.UI.Threepenny.Core (
     -- $server
     Config(..), startGUI,
     
-    -- * DOM manipulation
+    -- * Manipulate DOM elements
     Window, title, getHead, getBody, cookies, getRequestLocation,
     Element, newElement, delete, appendTo,
         children, text, html, attr, value,
         getValuesList,
     getElementsByTagName, getElementByTagName, getElementById,
+    
+    -- * Create DOM elements
+    Dom, withWindow, mkElement, addTo,
     
     -- * Layout
     -- | Combinators for quickly creating layouts.
@@ -39,6 +42,8 @@ module Graphics.UI.Threepenny.Core (
 
 import Control.Event
 import Control.Monad
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Reader as Reader
 
 import Graphics.UI.Threepenny.Internal.Core  as Core
 import Graphics.UI.Threepenny.Internal.Types as Core
@@ -53,9 +58,14 @@ Threepenny runs a small web server that displays the user interface
 as a web page to any browser that connects to it.
 To start the web server, use the 'startGUI' function.
 
-The DOM is accessed much in the same way it is accessed from
-JavaScript; elements can be created, searched, updated, moved and
+Existing DOM elements can be accessed much in the same way they are
+accessed from JavaScript; they can be searched, updated, moved and
 inspected. Events can be bound to DOM elements and handled.
+
+Creating DOM elements can be done by hand, but it is more convenient
+to use the 'Dom' monad which offers functionality similar
+to HTML combinator libaries.
+
 
 Applications written in Threepenny are multithreaded. Each client (user)
 has a separate thread which runs with no awareness of the asynchronous
@@ -92,7 +102,7 @@ startGUI config handler =
     Core.serve config $ \w -> handler w >> Core.handleEvents w
 
 {-----------------------------------------------------------------------------
-    DOM
+    Manipulate DOM
 ------------------------------------------------------------------------------}
 -- | Title of the client window.
 title :: WriteOnlyProperty Window String
@@ -134,14 +144,39 @@ text :: WriteOnlyProperty Element String
 text = mkProperty (\v a -> Core.setText v a # void) undefined
 
 {-----------------------------------------------------------------------------
+    Create DOM
+------------------------------------------------------------------------------}
+-- | Monad for creating 'Element' in a specific 'Window'
+type Dom = ReaderT Window IO
+
+-- | Build elements in a particular window
+withWindow :: Window -> Dom a -> IO a
+withWindow w m = runReaderT m w
+
+-- | Make an element with children.
+mkElement
+    :: String           -- ^ Tag name
+    -> [Dom Element]    -- ^ Actions that create the children
+    -> Dom Element
+mkElement tag children = do
+    w  <- ask
+    el <- liftIO $ newElement w tag
+    liftIO $ addTo el children
+    return el
+
+-- | Build dom elements and append them to a given element
+addTo :: Element -> [Dom Element] -> IO ()
+addTo el = mapM_ (appendTo el . withWindow (elSession el))
+
+{-----------------------------------------------------------------------------
     Layout
 ------------------------------------------------------------------------------}
 -- | Align given elements in a row. Special case of 'grid'.
-row     :: [IO Element]   -> IO Element
+row :: [Dom Element] -> Dom Element
 row xs = grid [xs]
 
 -- | Align given elements in a column. Special case of 'grid'.
-column  :: [IO Element]   -> IO Element
+column :: [Dom Element] -> Dom Element
 column = grid . map (:[])
 
 -- | Align given elements in a rectangular grid.
@@ -163,18 +198,21 @@ column = grid . map (:[])
 -- You can customatize the actual layout by assigning an @id@ to the element
 -- and changing the @.table@, @.table-row@ and @table-column@
 -- classes in a custom CSS file.
-grid    :: [[IO Element]] -> IO Element
+grid    :: [[Dom Element]] -> Dom Element
 grid mrows = do
-    rows0 <- mapM (sequence) mrows
-    let window = elSession $ head $ head rows0
-    let wrap xs = newElement window "div" # set children xs
+        rows0 <- mapM (sequence) mrows
     
-    rows  <- forM rows0 $ \row0 -> do
-        row <- forM row0 $ \entry ->
-            wrap [entry] # set (attr "class") "table-cell"
-        wrap row # set (attr "class") "table-row"
+        rows  <- forM rows0 $ \row0 -> do
+            row <- forM row0 $ \entry ->
+                wrap "table-cell" [entry]
+            wrap "table-row" row
+        wrap "table" rows
 
-    wrap rows # set (attr "class") "table"
+    where
+    wrap c xs = ReaderT $ \window -> do
+        newElement window "div"
+            # set (attr "class") c
+            # set children xs
 
 {-----------------------------------------------------------------------------
     Events
@@ -217,12 +255,13 @@ infixl 8 #
 (#) = flip ($)
 
 -- | Convience synonym for 'return' to make elements work well with 'set'.
+-- and with the 'Dom' monad.
 --
 -- Example usage.
 --
 -- > e <- newElement window "button"
--- > e # set text "Ok"
-element :: Element -> IO Element
+-- > element e # set text "Ok"
+element :: Monad m => Element -> m Element
 element = return
 
 -- | Properties are things that you can set and get.

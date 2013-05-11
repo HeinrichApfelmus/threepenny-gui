@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP, PackageImports #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
 import Control.Concurrent
@@ -18,8 +17,9 @@ import Control.Monad.IO.Class
 import "threepenny-gui" Graphics.UI.Threepenny as UI
 #else
 import qualified Graphics.UI.Threepenny as UI
-import Graphics.UI.Threepenny.Core hiding (text,element)
-import qualified Graphics.UI.Threepenny.Internal.Types as UI
+import Graphics.UI.Threepenny.Core hiding (text)
+-- import qualified Graphics.UI.Threepenny.Internal.Types as UI
+import Graphics.UI.Threepenny.Elements (span, div, textarea, input, anchor)
 import Graphics.UI.Threepenny.JQuery
 import Graphics.UI.Threepenny.Properties
 #endif
@@ -27,11 +27,8 @@ import Paths
 
 
 {-----------------------------------------------------------------------------
-    HTML combinators
+    Attributes for HTML combinators
 ------------------------------------------------------------------------------}
--- | Monad 
-type Dom = ReaderT Window IO
-
 class Attributable h where
     (!) :: h -> Attribute -> h
 
@@ -48,34 +45,6 @@ instance Attributable (b -> Dom Element) where
 (!.) :: Attributable h => h -> String -> h 
 x !. s = x ! class_ s
 
--- | Build elements in a particular window
-withWindow :: Window -> Dom a -> IO a
-withWindow w m = runReaderT m w
-
--- | Make an element
-mkElement :: String -> [Dom Element] -> Dom Element
-mkElement tag children = do
-    w  <- ask
-    el <- liftIO $ newElement w tag
-    liftIO $ addTo el children
-    return el
-
-
-element :: Monad m => Element -> m Element
-element = return
-
-div, span, anchor :: [Dom Element] -> Dom Element
-div  = mkElement "div"
-span = mkElement "span"
-anchor = mkElement "a"
-
-input, textarea :: Dom Element
-input    = mkElement "input" []
-textarea = mkElement "textarea" []
-
-text :: String -> Dom Element
-text s = mkElement "span" ! fromProperty UI.text s $ []
-
 newtype Attribute = Attribute { setAttribute :: Element -> IO () }
 
 fromProperty :: Property Element a -> a -> Attribute
@@ -85,10 +54,9 @@ href, class_ :: String -> Attribute
 href   = fromProperty (attr "href")
 class_ = fromProperty (attr "class")
 
--- | Build dom elements and append them to a given element
-addTo :: Element -> [Dom Element] -> IO ()
-addTo el = mapM_ (appendTo el . withWindow (UI.elSession el))
-
+-- Make a @span@ element with a given text content.
+text :: String -> Dom Element
+text s = ReaderT $ \w -> newElement w "span" # set UI.text s
 
 {-----------------------------------------------------------------------------
     Main application
@@ -139,7 +107,7 @@ receiveMessages w msgs messageArea = do
 
 mkMessageArea :: Chan Message -> Element -> Dom Element
 mkMessageArea msgs nickname = do
-    input <- textarea !. "send-textarea"
+    input <- textarea [] !. "send-textarea"
     
     liftIO $ onSendValue input $ (. trim) $ \content -> do
         when (not (null content)) $ do

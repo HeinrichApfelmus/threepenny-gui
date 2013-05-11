@@ -80,7 +80,8 @@ Library
                     ,filepath
                     ,data-default
                     ,template-haskell
-
+                    ,transformers
+                    
 Executable threepenny-examples-bartab
     if flag(buildExamples)
         cpp-options:       -DCABAL

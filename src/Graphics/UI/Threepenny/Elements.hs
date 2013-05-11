@@ -1,10 +1,30 @@
 -- | Predefined DOM elements, for convenience.
-module Graphics.UI.Threepenny.Elements where
+module Graphics.UI.Threepenny.Elements (
+    -- * Combinations and utilities
+    addStyleSheet,
+    -- text,
+    new,
+    
+    -- * Primitive HTML elements
+    address, a, anchor, applet, area, basefont, big, blockquote,
+    body, bold, br, caption, center, cite, ddef, define, div, dlist,
+    dterm, emphasize, fieldset, font, form, frame, frameset,
+    h1, h2, h3, h4, h5, h6, header, hr, img, image, input,
+    italics, keyboard, legend, li, meta, noframes, olist, option,
+    paragraph, param, pre, sample, select, small, span, strong,
+    sub, sup, table, td, textarea, th, thebase, thecode,
+    thehtml, thelink, themap, thetitle, tr, tt, ul,
+    underline, variable, 
+    ) where
 
 import Control.Monad
-import Prelude hiding (div)
+import Control.Monad.Trans.Reader
+import Prelude hiding (span,div)
 import Graphics.UI.Threepenny.Core
 
+{-----------------------------------------------------------------------------
+    Combinations
+------------------------------------------------------------------------------}
 -- | Add a stylesheet to the head.
 --
 -- The second argument refers to the filename of the stylesheet,
@@ -16,85 +36,96 @@ addStyleSheet
     -> FilePath
     -> IO ()
 addStyleSheet w filename = void $ do
-  head <- getHead w
-  (newElement w "link"
-    # set (attr "rel" ) "stylesheet"
-    # set (attr "type") "text/css"
-    # set (attr "href") ("/static/css/" ++ filename))
-    # appendTo head
+    head <- getHead w
+    newElement w "link"
+        # set (attr "rel" ) "stylesheet"
+        # set (attr "type") "text/css"
+        # set (attr "href") ("/static/css/" ++ filename)
+        # appendTo head
 
--- | Make a new anchor, @a@.
-anchor :: Window -> IO Element
-anchor = flip newElement "a"
+-- Make a @span@ element with a given text content.
+-- text :: String -> Dom Element
+-- text s = ReaderT $ \w -> newElement w "span" # set text s
 
--- | Make a new button.
-button :: Window -> IO Element
-button = flip newElement "button"
+-- | Make a new @div@ element, synonym for 'div'.
+new :: [Dom Element] -> Dom Element
+new = div
 
--- | Make a new @div@ element.
-div :: Window -> IO Element
-div = flip newElement "div"
+{-----------------------------------------------------------------------------
+    Primitives
+    
+    Taken from the HTML library (BSD3 license)
+    http://hackage.haskell.org/package/html
+------------------------------------------------------------------------------}
+tag    = mkElement
+itag s = mkElement s []
 
--- | Make a new form.
-form :: Window -> IO Element
-form = flip newElement "form"
-
--- | Make a new heading of first level, @h1@.
-h1 :: Window -> IO Element
-h1 = flip newElement "h1"
-
--- | Make a new heading of second level, @h2@.
-h2 :: Window -> IO Element
-h2 = flip newElement "h2"
-
--- | Make a new horizontal rule, @hr@.
-hr :: Window -> IO Element
-hr = flip newElement "hr"
-
--- | Make a new image, @img@.
-img :: Window -> IO Element
-img = flip newElement "img"
-
--- | Make a new input element.
-input :: Window -> IO Element
-input = flip newElement "input"
-
--- | Make a new label.
-label :: Window -> IO Element
-label = flip newElement "label"
-
--- | Make a new list item, @li@.
-li :: Window -> IO Element
-li = flip newElement "li"
-
--- | Make a new @div@ element.
-new :: Window -> IO Element
-new = flip newElement "div"
-
--- | Make a new paragraph, @p@.
-paragraph :: Window -> IO Element
-paragraph = flip newElement "p"
-
--- | Make a new span.
-span :: Window -> IO Element
-span = flip newElement "span"
-
--- | Make a new table, @table@.
-table :: Window -> IO Element
-table = flip newElement "table"
-
--- | Make a new table row, @tr@.
-tableRow :: Window -> IO Element
-tableRow = flip newElement "tr"
-
--- | Make a new table cell, @td@.
-tableCell :: Window -> IO Element
-tableCell = flip newElement "td"
-
--- | Make a new textarea.
-textarea :: Window -> IO Element
-textarea = flip newElement "textarea"
-
--- | Make a new unordered list, @ul@.
-ul :: Window -> IO Element
-ul = flip newElement "ul"
+address             =  tag "address"
+a                   =  anchor
+anchor              =  tag "a"
+applet              =  tag "applet"
+area                = itag "area"
+basefont            = itag "basefont"
+big                 =  tag "big"
+blockquote          =  tag "blockquote"
+body                =  tag "body"
+bold                =  tag "b"
+br                  = itag "br"
+caption             =  tag "caption"
+center              =  tag "center"
+cite                =  tag "cite"
+ddef                =  tag "dd"
+define              =  tag "dfn"
+div                 =  tag "div"
+dlist               =  tag "dl"
+dterm               =  tag "dt"
+emphasize           =  tag "em"
+fieldset            =  tag "fieldset"
+font                =  tag "font"
+form                =  tag "form"
+frame               =  tag "frame"
+frameset            =  tag "frameset"
+h1                  =  tag "h1"
+h2                  =  tag "h2"
+h3                  =  tag "h3"
+h4                  =  tag "h4"
+h5                  =  tag "h5"
+h6                  =  tag "h6"
+header              =  tag "head"
+hr                  = itag "hr"
+img                 = image
+image               = itag "img"
+input               = itag "input"
+italics             =  tag "i"
+keyboard            =  tag "kbd"
+legend              =  tag "legend"
+li                  =  tag "li"
+meta                = itag "meta"
+noframes            =  tag "noframes"
+olist               =  tag "ol"
+option              =  tag "option"
+paragraph           =  tag "p"
+param               = itag "param"
+pre                 =  tag "pre"
+sample              =  tag "samp"
+select              =  tag "select"
+small               =  tag "small"
+strong              =  tag "strong"
+sub                 =  tag "sub"
+sup                 =  tag "sup"
+table               =  tag "table"
+td                  =  tag "td"
+textarea            =  tag "textarea"
+th                  =  tag "th"
+thebase             = itag "base"
+thecode             =  tag "code"
+thehtml             =  tag "html"
+thelink             =  tag "link"
+themap              =  tag "map"
+span                =  tag "span"
+thetitle            =  tag "title"
+tr                  =  tag "tr"
+tt                  =  tag "tt"
+ul                  =  tag "ul"
+underline           =  tag "u"
+variable            =  tag "var"
