@@ -26,11 +26,11 @@ module Graphics.UI.Threepenny.Core (
     EventData(..), domEvent, on,
     module Control.Event,
     
-    -- * Properties
-    -- | For a list of predefined properties, see "Graphics.UI.Threepenny.Properties".
+    -- * Attributes
+    -- | For a list of predefined attributes, see "Graphics.UI.Threepenny.Attributes".
     (#), element,
-    Property(..), WriteOnlyProperty, ReadOnlyProperty,
-    mkProperty, set, get,
+    Attr, WriteAttr, ReadAttr, ReadWriteAttr(..),
+    set, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
     
     -- * Utilities
     -- | A few raw JavaScript utilities.
@@ -105,16 +105,16 @@ startGUI config handler =
     Manipulate DOM
 ------------------------------------------------------------------------------}
 -- | Title of the client window.
-title :: WriteOnlyProperty Window String
-title = mkProperty Core.setTitle undefined
+title :: WriteAttr Window String
+title = mkWriteAttr Core.setTitle
 
 -- | Cookies on the client.
-cookies :: ReadOnlyProperty Window [(String,String)]
-cookies = mkProperty undefined Core.getRequestCookies
+cookies :: ReadAttr Window [(String,String)]
+cookies = mkReadAttr Core.getRequestCookies
 
 -- | Child elements of a given element.
-children :: WriteOnlyProperty Element [Element]
-children = mkProperty set undefined
+children :: WriteAttr Element [Element]
+children = mkWriteAttr set
     where
     set xs x = do
         Core.emptyEl x
@@ -127,21 +127,21 @@ appendTo :: Element     -- ^ Parent.
 appendTo x my = do { y <- my; Core.appendElementTo x y; }
 
 -- | Child elements of a given element as a HTML string.
-html :: WriteOnlyProperty Element String
-html = mkProperty (\v a -> Core.setHtml v a # void) undefined
+html :: WriteAttr Element String
+html = mkWriteAttr (\i x -> Core.setHtml i x # void)
 
--- | Attributes of an element.
-attr :: String -> WriteOnlyProperty Element String
-attr name = mkProperty (\v a -> Core.setAttr name v a # void) undefined
+-- | HTML attributes of an element.
+attr :: String -> WriteAttr Element String
+attr name = mkWriteAttr (\i x -> Core.setAttr name i x # void)
 
 -- | Value attribute of an element.
 -- Particularly relevant for control widgets like 'input'.
-value :: Property Element String
-value = mkProperty (set' $ attr "value") getValue
+value :: Attr Element String
+value = mkReadWriteAttr getValue (set' $ attr "value")
 
 -- | Text content of an element.
-text :: WriteOnlyProperty Element String
-text = mkProperty (\v a -> Core.setText v a # void) undefined
+text :: WriteAttr Element String
+text = mkWriteAttr (\i x -> Core.setText i x # void)
 
 {-----------------------------------------------------------------------------
     Create DOM
@@ -238,7 +238,7 @@ on f x h = void $ register (f x) (void . h)
 
 
 {-----------------------------------------------------------------------------
-    Properties
+    Attributes
 ------------------------------------------------------------------------------}
 infixl 8 #
 
@@ -254,7 +254,7 @@ infixl 8 #
 (#) :: a -> (a -> b) -> b
 (#) = flip ($)
 
--- | Convience synonym for 'return' to make elements work well with 'set'.
+-- | Convience synonym for 'return' to make elements work well with 'set'
 -- and with the 'Dom' monad.
 --
 -- Example usage.
@@ -264,31 +264,43 @@ infixl 8 #
 element :: Monad m => Element -> m Element
 element = return
 
--- | Properties are things that you can set and get.
-data Property a value = Property
-    { set' :: value -> a -> IO ()
-    , get' :: a     -> IO value
+
+-- | Attributes can be 'set' and 'get'.
+type Attr x a = ReadWriteAttr x a a
+
+-- | Attribute that only supports the 'get' operation.
+type ReadAttr x o = ReadWriteAttr x () o
+
+-- | Attribute that only supports the 'set' operation.
+type WriteAttr x i = ReadWriteAttr x i ()
+
+-- | Generalized attribute with different types for getting and setting.
+data ReadWriteAttr x i o = ReadWriteAttr
+    { get' :: x -> IO o
+    , set' :: i -> x -> IO ()
     }
 
--- | Properties that only support the 'get' operation.
-type ReadOnlyProperty  = Property
-
--- | Properties that only support the 'set' operation.
-type WriteOnlyProperty = Property
-
--- | Set value of a property in the 'IO' monad.
+-- | Set value of an attribute in the 'IO' monad.
 -- Best used in conjunction with '#'.
-set :: Property a value -> value -> IO a -> IO a
-set prop value ma = do { a <- ma; set' prop value a; return a; }
+set :: ReadWriteAttr x i o -> i -> IO x -> IO x
+set attr i mx = do { x <- mx; set' attr i x; return x; }
 
--- | Get property value.
-get :: Property a value -> a -> IO value
+-- | Get attribute value.
+get :: ReadWriteAttr x i o -> x -> IO o
 get = get'
 
--- | Build a property from a getter and a setter.
-mkProperty
-    :: (value -> a -> IO ())    -- ^ Setter.
-    -> (a -> IO value)          -- ^ Getter.
-    -> Property a value
-mkProperty = Property
+-- | Build an attribute from a getter and a setter.
+mkReadWriteAttr
+    :: (x -> IO o)          -- ^ Getter.
+    -> (i -> x -> IO ())    -- ^ Setter.
+    -> ReadWriteAttr x i o
+mkReadWriteAttr get set = ReadWriteAttr { get' = get, set' = set }
+
+-- | Build attribute from a getter.
+mkReadAttr :: (x -> IO o) -> ReadAttr x o
+mkReadAttr get = mkReadWriteAttr get (\_ _ -> return ())
+
+-- | Build attribute from a setter.
+mkWriteAttr :: (i -> x -> IO ()) -> WriteAttr x i
+mkWriteAttr set = mkReadWriteAttr (\_ -> return ()) set
 
