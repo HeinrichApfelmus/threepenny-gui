@@ -48,7 +48,7 @@ addStyleSheet w filename = void $ do
 -- text s = ReaderT $ \w -> newElement w "span" # set text s
 
 -- | Make a new @div@ element, synonym for 'div'.
-new :: [Dom Element] -> Dom Element
+new :: Dom Element
 new = div
 
 {-----------------------------------------------------------------------------
@@ -58,7 +58,7 @@ new = div
     http://hackage.haskell.org/package/html
 ------------------------------------------------------------------------------}
 tag    = mkElement
-itag s = mkElement s []
+itag   = mkElement
 
 address             =  tag "address"
 a                   =  anchor

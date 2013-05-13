@@ -27,33 +27,8 @@ import Paths
 
 
 {-----------------------------------------------------------------------------
-    Attributes for HTML combinators
+    HTML utilities
 ------------------------------------------------------------------------------}
-class Attributable h where
-    (!) :: h -> Attribute -> h
-
-instance Attributable (Dom Element) where
-    (!) m a = ReaderT $ \w -> do
-        el <- runReaderT m w
-        setAttribute a el
-        return el
-
-instance Attributable (b -> Dom Element) where
-    (!) f a = \x -> f x ! a
-
--- | Set class of an element.
-(!.) :: Attributable h => h -> String -> h 
-x !. s = x ! class_ s
-
-newtype Attribute = Attribute { setAttribute :: Element -> IO () }
-
-fromProperty :: Property Element a -> a -> Attribute
-fromProperty prop a = Attribute $ set' prop a 
-
-href, class_ :: String -> Attribute
-href   = fromProperty (attr "href")
-class_ = fromProperty (attr "class")
-
 -- Make a @span@ element with a given text content.
 text :: String -> Dom Element
 text s = ReaderT $ \w -> newElement w "span" # set UI.text s
@@ -84,9 +59,9 @@ setup globalMsgs w = do
     messageArea      <- withWindow w $ mkMessageArea msgs nick
 
     body <- getBody w
-    addTo body
-        [ div !. "header"   $ [text "Threepenny Chat"]
-        , div !. "gradient" $ []
+    withWindow w $ element body #+
+        [ div #. "header"   #+ [text "Threepenny Chat"]
+        , div #. "gradient"
         , codeLink
         , element nickname
         , element messageArea
@@ -102,12 +77,12 @@ receiveMessages w msgs messageArea = do
     messages <- Chan.getChanContents msgs
     forM_ messages $ \msg -> do
         atomic w $ do
-          addTo messageArea [mkMessage msg]
+          withWindow w $ element messageArea #+ [mkMessage msg]
           scrollToBottom messageArea
 
 mkMessageArea :: Chan Message -> Element -> Dom Element
 mkMessageArea msgs nickname = do
-    input <- textarea [] !. "send-textarea"
+    input <- textarea #. "send-textarea"
     
     liftIO $ onSendValue input $ (. trim) $ \content -> do
         when (not (null content)) $ do
@@ -117,14 +92,14 @@ mkMessageArea msgs nickname = do
             when (not (null nick)) $
                 Chan.writeChan msgs (now,nick,content)
 
-    div !. "message-area" $ [div !. "send-area" $ [element input]]
+    div #. "message-area" #+ [div #. "send-area" #+ [element input]]
 
 
 mkNickname :: Dom (Element, Element)
 mkNickname = do
-    i  <- input !. "name-input"
-    el <- div !. "name-area" $
-        [ span !. "name-label" $ [text "Your name "]
+    i  <- input #. "name-input"
+    el <- div   #. "name-area"  #+
+        [ span  #. "name-label" #+ [text "Your name "]
         , element i
         ]
     liftIO $ setFocus i
@@ -132,13 +107,13 @@ mkNickname = do
 
 mkMessage :: Message -> Dom Element
 mkMessage (timestamp, nick, content) =
-    div !. "message" $
-        [ div !. "timestamp" $ [text $ show timestamp]
-        , div !. "name"      $ [text $ nick ++ "says:"]
-        , div !. "content"   $ [text content]
+    div #. "message" #+
+        [ div #. "timestamp" #+ [text $ show timestamp]
+        , div #. "name"      #+ [text $ nick ++ "says:"]
+        , div #. "content"   #+ [text content]
         ]
 
 codeLink :: Dom Element
-codeLink = anchor !. "code-link" ! href url $ [text "View source code"]
+codeLink = anchor #. "code-link" # set UI.href url #+ [text "View source code"]
     where
     url = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs"

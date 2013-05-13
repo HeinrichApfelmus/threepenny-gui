@@ -14,7 +14,7 @@ module Graphics.UI.Threepenny.Core (
     getElementsByTagName, getElementByTagName, getElementById,
     
     -- * Create DOM elements
-    Dom, withWindow, mkElement, addTo,
+    Dom, withWindow, mkElement, (#+),
     
     -- * Layout
     -- | Combinators for quickly creating layouts.
@@ -28,7 +28,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * Attributes
     -- | For a list of predefined attributes, see "Graphics.UI.Threepenny.Attributes".
-    (#), element,
+    (#), (#.), element,
     Attr, WriteAttr, ReadAttr, ReadWriteAttr(..),
     set, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
     
@@ -121,10 +121,11 @@ children = mkWriteAttr set
         mapM_ (Core.appendElementTo x) xs
 
 -- | Append a child element to a parent element. Non-blocking.
-appendTo :: Element     -- ^ Parent.
-         -> IO Element  -- ^ Child.
-         -> IO Element  -- ^ Returns a reference to the child element again.
-appendTo x my = do { y <- my; Core.appendElementTo x y; }
+appendTo :: MonadIO m
+    => Element     -- ^ Parent.
+    -> m Element   -- ^ Child.
+    -> m Element   -- ^ Returns a reference to the child element again.
+appendTo x my = do { y <- my; liftIO $ Core.appendElementTo x y; }
 
 -- | Child elements of a given element as a HTML string.
 html :: WriteAttr Element String
@@ -153,20 +154,18 @@ type Dom = ReaderT Window IO
 withWindow :: Window -> Dom a -> IO a
 withWindow w m = runReaderT m w
 
--- | Make an element with children.
+-- | Make a new DOM element.
 mkElement
     :: String           -- ^ Tag name
-    -> [Dom Element]    -- ^ Actions that create the children
     -> Dom Element
-mkElement tag children = do
-    w  <- ask
-    el <- liftIO $ newElement w tag
-    liftIO $ addTo el children
-    return el
+mkElement tag = ReaderT $ \w -> newElement w tag
 
--- | Build dom elements and append them to a given element
-addTo :: Element -> [Dom Element] -> IO ()
-addTo el = mapM_ (appendTo el . withWindow (elSession el))
+-- | Append dom elements as children to a given element.
+(#+) :: MonadIO m => m Element -> [m Element] -> m Element
+(#+) mx xs = do
+    x <- mx
+    mapM_ (appendTo x) xs
+    return x
 
 {-----------------------------------------------------------------------------
     Layout
@@ -241,6 +240,8 @@ on f x h = void $ register (f x) (void . h)
     Attributes
 ------------------------------------------------------------------------------}
 infixl 8 #
+infixl 8 #+
+infixl 8 #.
 
 -- | Reverse function application.
 -- Allows convenient notation for setting properties.
@@ -253,6 +254,11 @@ infixl 8 #
 -- >     # set children  otherElements
 (#) :: a -> (a -> b) -> b
 (#) = flip ($)
+
+-- | Convenient combinator for setting the CSS class on element creation.
+(#.) :: Dom Element -> String -> Dom Element
+(#.) mx s = mx # set (attr "class") s
+
 
 -- | Convience synonym for 'return' to make elements work well with 'set'
 -- and with the 'Dom' monad.
@@ -282,8 +288,8 @@ data ReadWriteAttr x i o = ReadWriteAttr
 
 -- | Set value of an attribute in the 'IO' monad.
 -- Best used in conjunction with '#'.
-set :: ReadWriteAttr x i o -> i -> IO x -> IO x
-set attr i mx = do { x <- mx; set' attr i x; return x; }
+set :: MonadIO m => ReadWriteAttr x i o -> i -> m x -> m x
+set attr i mx = do { x <- mx; liftIO (set' attr i x); return x; }
 
 -- | Get attribute value.
 get :: ReadWriteAttr x i o -> x -> IO o
