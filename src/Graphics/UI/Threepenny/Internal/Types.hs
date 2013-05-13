@@ -10,15 +10,18 @@
 module Graphics.UI.Threepenny.Internal.Types
   where
 
+import Prelude              hiding ((++),init)
+
 import Control.Applicative
 import Control.Concurrent
 import qualified Control.Event as E
 import Control.Monad.Reader
+import Data.ByteString               (ByteString)
 import Data.Map             (Map)
 import Data.Time
-import Prelude              hiding ((++),init)
-import Text.JSON.Generic
+
 import Network.URI
+import Text.JSON.Generic
 
 --------------------------------------------------------------------------------
 -- Public types
@@ -56,7 +59,17 @@ data Session = Session
   , sConnectedState :: MVar ConnectedState
   , sThreadId       :: ThreadId
   , sStartInfo      :: (URI,[(String,String)])
+  , sServerState    :: ServerState
   }
+
+type Sessions  = Map Integer Session
+type Filepaths = (Integer, Map ByteString FilePath)
+
+data ServerState = ServerState
+    { sSessions :: MVar Sessions
+    , sFiles    :: MVar Filepaths
+    , sDirs     :: MVar Filepaths
+    }
 
 type EventKey = (String, String)
 

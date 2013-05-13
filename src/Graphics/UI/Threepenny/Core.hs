@@ -5,6 +5,7 @@ module Graphics.UI.Threepenny.Core (
     -- * Server
     -- $server
     Config(..), startGUI,
+    loadFile, loadDirectory,
     
     -- * Manipulate DOM elements
     Window, title, getHead, getBody, cookies, getRequestLocation,
@@ -45,7 +46,14 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader as Reader
 
-import Graphics.UI.Threepenny.Internal.Core  as Core
+import Network.URI
+
+import qualified Graphics.UI.Threepenny.Internal.Core  as Core
+import Graphics.UI.Threepenny.Internal.Core
+    (getHead, getBody, getRequestLocation, delete, getValuesList,
+     getElementById, getElementsByTagName, getElementByTagName,
+     debug, clear, callFunction, runFunction, callDeferredFunction,
+     atomic, newElement, )
 import Graphics.UI.Threepenny.Internal.Types as Core
 
 
@@ -101,6 +109,15 @@ startGUI
 startGUI config handler =
     Core.serve config $ \w -> handler w >> Core.handleEvents w
 
+
+-- | Make a local file available as a relative URI.
+loadFile :: Window -> FilePath -> IO String
+loadFile = flip Core.loadFile
+
+-- | Make a local directory available as a relative URI.
+loadDirectory :: Window -> FilePath -> IO String
+loadDirectory = flip Core.loadDirectory
+
 {-----------------------------------------------------------------------------
     Manipulate DOM
 ------------------------------------------------------------------------------}
@@ -138,7 +155,7 @@ attr name = mkWriteAttr (\i x -> Core.setAttr name i x # void)
 -- | Value attribute of an element.
 -- Particularly relevant for control widgets like 'input'.
 value :: Attr Element String
-value = mkReadWriteAttr getValue (set' $ attr "value")
+value = mkReadWriteAttr Core.getValue (set' $ attr "value")
 
 -- | Text content of an element.
 text :: WriteAttr Element String
@@ -158,7 +175,7 @@ withWindow w m = runReaderT m w
 mkElement
     :: String           -- ^ Tag name
     -> Dom Element
-mkElement tag = ReaderT $ \w -> newElement w tag
+mkElement tag = ReaderT $ \w -> Core.newElement w tag
 
 -- | Append dom elements as children to a given element.
 (#+) :: MonadIO m => m Element -> [m Element] -> m Element
@@ -208,8 +225,8 @@ grid mrows = do
         wrap "table" rows
 
     where
-    wrap c xs = ReaderT $ \window -> do
-        newElement window "div"
+    wrap c xs =
+        mkElement "div"
             # set (attr "class") c
             # set children xs
 

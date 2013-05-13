@@ -12,6 +12,8 @@ module Graphics.UI.Threepenny.Internal.Core
   (
   -- * Server running
    serve
+  ,loadFile
+  ,loadDirectory
   
   -- * Event handling
   -- $eventhandling
@@ -71,6 +73,7 @@ module Graphics.UI.Threepenny.Internal.Core
 import           Graphics.UI.Threepenny.Internal.Types     as Threepenny
 import           Graphics.UI.Threepenny.Internal.Resources
 
+import           Control.Applicative
 import           Control.Concurrent
 import           Control.Concurrent.Chan.Extra
 import           Control.Concurrent.Delay
@@ -96,21 +99,27 @@ import           Snap.Util.FileServe
 import           System.FilePath
 import           Text.JSON.Generic
 
-
---------------------------------------------------------------------------------
--- Server running
+
+{-----------------------------------------------------------------------------
+    Server running
+------------------------------------------------------------------------------}
+newServerState :: IO ServerState
+newServerState = ServerState 
+    <$> newMVar M.empty
+    <*> newMVar (0,M.empty)
+    <*> newMVar (0,M.empty)
 
 -- | Run a TP server with Snap on the specified port and the given
 --   worker action.
 serve :: Config -> (Session -> IO ()) -> IO () -- ^ A TP server.
 serve Config{..} worker = do
-  sessions <- newMVar M.empty
-  _ <- forkIO $ custodian 30 sessions
-  httpServe server (router tpCustomHTML tpStatic worker sessions)
- where server = setPort tpPort defaultConfig
+  server <- newServerState
+  _ <- forkIO $ custodian 30 (sSessions server)
+  httpServe config (router tpCustomHTML tpStatic worker server)
+ where config = setPort tpPort defaultConfig
 
 -- | Kill sessions after at least n seconds of disconnectedness.
-custodian :: Integer -> MVar (Map Integer Session) -> IO ()
+custodian :: Integer -> MVar Sessions -> IO ()
 custodian seconds sessions = forever $ do
   delaySeconds seconds
   modifyMVar_ sessions $ \sessions -> do
@@ -134,35 +143,64 @@ router
     :: Maybe FilePath
     -> FilePath
     -> (Session -> IO a)
-    -> MVar (Map Integer Session)
+    -> ServerState
     -> Snap ()
-router customHTML wwwroot worker sessions =
+router customHTML wwwroot worker server =
         route [("/static"                    , serveDirectory wwwroot)
               ,("/"                          , root)
               ,("/driver/threepenny-gui.js"  , writeText jsDriverCode )
               ,("/driver/threepenny-gui.css" , writeText cssDriverCode)
-              ,("/init"                      , init worker sessions)
-              ,("/poll"                      , poll sessions)
-              ,("/signal"                    , signal sessions)
+              ,("/init"                      , init worker server)
+              ,("/poll"                      , withSession  server poll  )
+              ,("/signal"                    , withSession  server signal)
+              ,("/file/:name"                , withFilepath (sFiles server) serveFile)
+              ,("/dir/:name"                 , withFilepath (sDirs  server) serveDirectory)
               ]
     where
     root = case customHTML of
         Just file -> serveFile (wwwroot </> file)
         Nothing   -> writeText defaultHtmlFile
 
+-- Get a filename from a URI
+withFilepath :: MVar Filepaths -> (FilePath -> Snap a) -> Snap a
+withFilepath rDict cont = do
+    mName    <- getParam "name"
+    (_,dict) <- io $ withMVar rDict return
+    case (\key -> M.lookup key dict) =<< mName of
+        Just path -> cont path
+        Nothing   -> error $ "File not loaded: " ++ show mName
+
+newAssociation :: MVar Filepaths -> FilePath -> IO String
+newAssociation rDict x = do
+    (old, dict) <- takeMVar rDict
+    let new = old + 1; key = show new
+    putMVar rDict $ (new, M.insert (fromString key) x dict)
+    return key
+
+-- | Begin to serve a local file under an URI.
+loadFile :: FilePath -> Session -> IO String
+loadFile path Session{..} = do
+    key <- newAssociation (sFiles sServerState) path
+    return $ "/file/" ++ key
+
+-- | Begin to serve a local directory under an URI.
+loadDirectory :: FilePath -> Session -> IO String
+loadDirectory path Session{..} = do
+    key <- newAssociation (sDirs sServerState) path
+    return $ "/dir/" ++ key
 
 -- Initialize the session.
-init :: (Session -> IO void) -> MVar (Map Integer Session) -> Snap ()
-init sessionThread sessions = do
+init :: (Session -> IO void) -> ServerState -> Snap ()
+init sessionThread server = do
   uri <- getRequestURI
   params <- getRequestCookies
-  key <- io $ modifyMVar sessions $ \sessions -> do
+  key <- io $ modifyMVar (sSessions server) $ \sessions -> do
     let newKey = maybe 0 (+1) (lastMay (M.keys sessions))
-    session <- newSession (uri,params) newKey
+    session <- newSession server (uri,params) newKey
     _ <- forkIO $ do _ <- sessionThread session; return ()
     return (M.insert newKey session sessions,newKey)
   modifyResponse $ setHeader "Set-Token" (fromString (show key))
-  withGivenSession key sessions pollWithSession
+  withGivenSession key server poll
     
   where getRequestURI = do
           uri <- getInput "info"
@@ -172,8 +210,8 @@ init sessionThread sessions = do
           return $ flip map cookies $ \Cookie{..} -> (toString cookieName,toString cookieValue)
 
 -- Make a new session.
-newSession :: (URI,[(String, String)]) -> Integer -> IO Session
-newSession info token = do
+newSession :: ServerState -> (URI,[(String, String)]) -> Integer -> IO Session
+newSession server info token = do
   signals <- newChan
   instructions <- newChan
   (event, handler) <- newEventsTagged
@@ -192,18 +230,15 @@ newSession info token = do
     , sToken = token
     , sMutex = mutex
     , sConnectedState = conState
-    , sThreadId = threadId
-    , sClosures = closures
-    , sStartInfo = info
+    , sThreadId    = threadId
+    , sClosures    = closures
+    , sStartInfo   = info
+    , sServerState = server
     }
-
--- Respond to poll requests.
-poll :: MVar (Map Integer Session) -> Snap ()
-poll sessions = withSession sessions pollWithSession
   
--- Poll for the given session.
-pollWithSession :: Session -> Snap ()
-pollWithSession Session{..} = do
+-- Respond to poll requests.
+poll :: Session -> Snap ()
+poll Session{..} = do
   let setDisconnected = do
         now <- getCurrentTime
         modifyMVar_ sConnectedState (const (return (Disconnected now)))
@@ -229,9 +264,8 @@ writeString :: (MonadSnap m) => String -> m ()
 writeString = writeText . pack
 
 -- Handle signals sent from the client.
-signal :: MVar (Map Integer Session) -> Snap ()
-signal sessions = do
-  withSession sessions $ \Session{..} -> do
+signal :: Session -> Snap ()
+signal Session{..} = do
     input <- getInput "signal"
     case input of
       Just signalJson -> do
@@ -246,17 +280,17 @@ getInput :: (MonadSnap f) => ByteString -> f (Maybe String)
 getInput = fmap (fmap (unpack . decodeUtf8)) . getParam
 
 -- Run a snap action with the given session.
-withSession :: MVar (Map Integer session) -> (session -> Snap a) -> Snap a
-withSession sessions cont = do
+withSession :: ServerState -> (Session -> Snap a) -> Snap a
+withSession server cont = do
   token <- readInput "token"
   case token of
-    Nothing -> error $ "Invalid session token format."
-    Just token -> withGivenSession token sessions cont
+    Nothing    -> error $ "Invalid session token format."
+    Just token -> withGivenSession token server cont
     
 -- Do something with the session given by its token id.
-withGivenSession :: Integer -> MVar (Map Integer session) -> (session -> Snap a) -> Snap a
-withGivenSession token sessions cont = do
-  sessions <- io $ withMVar sessions return
+withGivenSession :: Integer -> ServerState -> (Session -> Snap a) -> Snap a
+withGivenSession token ServerState{..} cont = do
+  sessions <- io $ withMVar sSessions return
   case M.lookup token sessions of
     Nothing -> error $ "Nonexistant token: " ++ show token
     Just session -> cont session
@@ -265,7 +299,6 @@ withGivenSession token sessions cont = do
 readInput :: (MonadSnap f,Read a) => ByteString -> f (Maybe a)
 readInput = fmap (>>= readMay) . getInput
 
-
 --------------------------------------------------------------------------------
 -- Event handling
 -- 
