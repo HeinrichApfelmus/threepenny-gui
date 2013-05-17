@@ -60,7 +60,6 @@ Library
                     ,Control.Monad.IO
                     ,Control.Concurrent.Delay
                     ,Graphics.UI.Threepenny.Internal.Core
-                    ,Graphics.UI.Threepenny.Internal.Include
                     ,Graphics.UI.Threepenny.Internal.Resources
                     ,Graphics.UI.Threepenny.Internal.Types
                     ,Paths_threepenny_gui
@@ -79,7 +78,6 @@ Library
                     ,network
                     ,filepath
                     ,data-default
-                    ,template-haskell
                     ,transformers
                     
 Executable threepenny-examples-bartab
