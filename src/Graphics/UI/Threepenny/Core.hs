@@ -249,8 +249,8 @@ domEvent = Core.bind
 -- Example:
 --
 -- > on click element $ \_ -> ...
-on :: (element -> Event a) -> element -> (a -> IO void) -> IO ()
-on f x h = void $ register (f x) (void . h)
+on :: MonadIO m => (element -> Event a) -> element -> (a -> IO void) -> m ()
+on f x h = liftIO $ register (f x) (void . h) >> return ()
 
 
 {-----------------------------------------------------------------------------

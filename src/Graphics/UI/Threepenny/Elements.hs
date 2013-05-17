@@ -6,15 +6,18 @@ module Graphics.UI.Threepenny.Elements (
     new,
     
     -- * Primitive HTML elements
-    address, a, anchor, applet, area, basefont, big, blockquote,
-    body, bold, br, caption, center, cite, ddef, define, div, dlist,
+    address, a, anchor, applet, area,
+    basefont, big, blockquote, body, bold, br, button,
+    caption, center, cite, ddef, define, div, dlist,
     dterm, emphasize, fieldset, font, form, frame, frameset,
-    h1, h2, h3, h4, h5, h6, header, hr, img, image, input,
-    italics, keyboard, legend, li, meta, noframes, olist, option,
-    paragraph, param, pre, sample, select, small, span, strong,
-    sub, sup, table, td, textarea, th, thebase, thecode,
+    h1, h2, h3, h4, h5, h6, header, hr,
+    img, image, input, italics,
+    keyboard, legend, li, meta, noframes, olist, option,
+    p, paragraph, param, pre,
+    sample, select, small, source, span, strong, sub, sup,
+    table, td, textarea, th, thebase, thecode,
     thehtml, thelink, themap, thetitle, tr, tt, ul,
-    underline, variable, 
+    underline, variable, video,
     ) where
 
 import Control.Monad
@@ -71,6 +74,7 @@ blockquote          =  tag "blockquote"
 body                =  tag "body"
 bold                =  tag "b"
 br                  = itag "br"
+button              =  tag "button"
 caption             =  tag "caption"
 center              =  tag "center"
 cite                =  tag "cite"
@@ -104,12 +108,14 @@ meta                = itag "meta"
 noframes            =  tag "noframes"
 olist               =  tag "ol"
 option              =  tag "option"
+p                   =  tag "p"
 paragraph           =  tag "p"
 param               = itag "param"
 pre                 =  tag "pre"
 sample              =  tag "samp"
 select              =  tag "select"
 small               =  tag "small"
+source              =  tag "source"
 strong              =  tag "strong"
 sub                 =  tag "sub"
 sup                 =  tag "sup"
@@ -129,3 +135,4 @@ tt                  =  tag "tt"
 ul                  =  tag "ul"
 underline           =  tag "u"
 variable            =  tag "var"
+video               =  tag "video"

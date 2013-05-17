@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP, PackageImports #-}
-{-# OPTIONS -fno-warn-name-shadowing #-}
+
 
 import Control.Monad
 import Control.Concurrent (threadDelay)
@@ -7,11 +7,15 @@ import Control.Concurrent (threadDelay)
 #ifdef CABAL
 import "threepenny-gui" Graphics.UI.Threepenny
 #else
-import Graphics.UI.Threepenny
+import qualified Graphics.UI.Threepenny as UI
+import Graphics.UI.Threepenny.Core
 #endif
 import Paths
 
--- | Main entry point. Starts a TP server.
+{-----------------------------------------------------------------------------
+    Buttons
+------------------------------------------------------------------------------}
+
 main :: IO ()
 main = do
     static <- getStaticDir
@@ -21,84 +25,63 @@ main = do
         , tpStatic     = static
         } setup
 
--- | A per-user worker thread. Each user session has a thread.
 setup :: Window -> IO ()
-setup w = do
+setup w = void $ do
     return w # set title "Buttons"
-    
+    UI.addStyleSheet w "buttons.css"
+
     body <- getBody w
-    addStyleSheet w "buttons.css"
-    wrap <- new w
-                # set cssClass "wrap"
-                # appendTo body
-    
-    greet       w wrap
-    makeButtons w wrap
-    codeLink    w wrap
+    withWindow w $ do
+        buttons <- mkButtons w
+        element body #+
+            [UI.div #. "wrap" #+ (greet ++ map element buttons ++ [viewSource])]
 
-greet :: Window -> Element -> IO ()
-greet w body = void $ do
-    h1 w
-        # set text "Hello, Haskell!"
-        # appendTo body
-    new w
-        # set text "Try the buttons below, they hover and click."
-        # appendTo body
+greet :: [Dom Element]
+greet =
+    [ UI.h1  # set text "Hello, Haskell!"
+    , UI.div # set text "Try the buttons below, they hover and click."
+    ]
 
-codeLink :: Window -> Element -> IO ()
-codeLink w body = void $ do
-    p <- paragraph w
-        # set text ""
-        # appendTo body
-         
-    anchor w
-        # set (attr "href") "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Buttons.hs"
-        # set text "View source code"
-        # set cssClass "view-source"
-        # appendTo p
 
-makeButtons :: Window -> Element -> IO ()
-makeButtons w body = void $ do
-    list <- ul w
-        # set cssClass "buttons-list"
-        # appendTo body
+mkButton :: String -> Dom (Element, Element)
+mkButton title = do
+    button <- UI.button #. "button" # set text title
+    view   <- UI.p #+ [element button]
+    return (button, view)
+
+mkButtons :: Window -> Dom [Element]
+mkButtons w = do
+    list    <- UI.ul #. "buttons-list"
     
-    button1 <- appendToButton w body button1Title
+    (button1, view1) <- mkButton button1Title
     
-    on hover button1 $ \_ -> void $ do
+    on UI.hover button1 $ \_ -> do
         element button1 # set text (button1Title ++ " [hover]")
-    on leave button1 $ \_ -> void $ do
+    on UI.leave button1 $ \_ -> do
         element button1 # set text button1Title
-    on click button1 $ \_ -> void $ do
+    on UI.click button1 $ \_ -> do
         threadDelay $ 1000 * 1000 * 1
-        element button1
-            # set text (button1Title ++ " [pressed]")
-        li w
-            # set html "<b>Delayed</b> result!"
-            # appendTo list
+        element button1 # set text (button1Title ++ " [pressed]")
+        withWindow w $ element list #+ [UI.li # set html "<b>Delayed</b> result!"]
     
-    button2 <- appendToButton w body button2Title
+    (button2, view2) <- mkButton button2Title
 
-    on hover button2 $ \_ -> do
+    on UI.hover button2 $ \_ -> do
         element button2 # set text (button2Title ++ " [hover]")
-    on leave button2 $ \_ -> do
+    on UI.leave button2 $ \_ -> do
         element button2 # set text button2Title
-    on click button2 $ \_ -> do
-        element button1
-            # set text (button1Title ++ " [pressed]")
-        li w
-            # set html "Zap! Quick result!"
-            # appendTo list
+    on UI.click button2 $ \_ -> do
+        element button1 # set text (button1Title ++ " [pressed]")
+        withWindow w $ element list #+ [UI.li # set html "Zap! Quick result!"]
+    
+    return [list, view1, view2]
 
   where button1Title = "Click me, I delay a bit"
         button2Title = "Click me, I work immediately"
 
-appendToButton :: Window -> Element -> String -> IO Element
-appendToButton w body caption = do
-    p <- paragraph w
-        # appendTo body
-    button w
-        # set text caption
-        # set cssClass "button"
-        # appendTo p
+viewSource :: Dom Element
+viewSource = UI.p #+
+    [UI.anchor #. "view-source" # set UI.href url # set text "View source code"]
+    where
+    url = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Buttons.hs"
 
