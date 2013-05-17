@@ -170,11 +170,15 @@ withFilepath rDict cont = do
         Just path -> cont path
         Nothing   -> error $ "File not loaded: " ++ show mName
 
+-- FIXME: Serving large files fails with the exception
+-- System.SendFile.Darwin: invalid argument (Socket is not connected)
+
+
 newAssociation :: MVar Filepaths -> FilePath -> IO String
-newAssociation rDict x = do
+newAssociation rDict path = do
     (old, dict) <- takeMVar rDict
-    let new = old + 1; key = show new
-    putMVar rDict $ (new, M.insert (fromString key) x dict)
+    let new = old + 1; key = show new ++ takeFileName path
+    putMVar rDict $ (new, M.insert (fromString key) path dict)
     return key
 
 -- | Begin to serve a local file under an URI.
