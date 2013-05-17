@@ -32,7 +32,7 @@ setup w = void $ do
 
     body <- getBody w
     withWindow w $ do
-        buttons <- mkButtons w
+        buttons <- mkButtons
         element body #+
             [UI.div #. "wrap" #+ (greet ++ map element buttons ++ [viewSource])]
 
@@ -49,8 +49,8 @@ mkButton title = do
     view   <- UI.p #+ [element button]
     return (button, view)
 
-mkButtons :: Window -> Dom [Element]
-mkButtons w = do
+mkButtons :: Dom [Element]
+mkButtons = do
     list    <- UI.ul #. "buttons-list"
     
     (button1, view1) <- mkButton button1Title
@@ -62,7 +62,7 @@ mkButtons w = do
     on UI.click button1 $ \_ -> do
         threadDelay $ 1000 * 1000 * 1
         element button1 # set text (button1Title ++ " [pressed]")
-        withWindow w $ element list #+ [UI.li # set html "<b>Delayed</b> result!"]
+        element list    #+ [UI.li # set html "<b>Delayed</b> result!"]
     
     (button2, view2) <- mkButton button2Title
 
@@ -72,7 +72,7 @@ mkButtons w = do
         element button2 # set text button2Title
     on UI.click button2 $ \_ -> do
         element button1 # set text (button1Title ++ " [pressed]")
-        withWindow w $ element list #+ [UI.li # set html "Zap! Quick result!"]
+        element list    #+ [UI.li # set html "Zap! Quick result!"]
     
     return [list, view1, view2]
 

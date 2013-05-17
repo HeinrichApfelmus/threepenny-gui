@@ -178,10 +178,11 @@ mkElement
 mkElement tag = ReaderT $ \w -> Core.newElement w tag
 
 -- | Append dom elements as children to a given element.
-(#+) :: MonadIO m => m Element -> [m Element] -> m Element
-(#+) mx xs = do
-    x <- mx
-    mapM_ (appendTo x) xs
+(#+) :: MonadIO m => m Element -> [Dom Element] -> m Element
+(#+) mx mys = do
+    x  <- mx
+    ys <- liftIO $ withWindow (elSession x) $ sequence mys
+    liftIO $ mapM_ (Core.appendElementTo x) ys
     return x
 
 {-----------------------------------------------------------------------------

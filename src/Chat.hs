@@ -59,7 +59,7 @@ setup globalMsgs w = do
     messageArea      <- withWindow w $ mkMessageArea msgs nick
 
     body <- getBody w
-    withWindow w $ element body #+
+    element body #+
         [ div #. "header"   #+ [text "Threepenny Chat"]
         , div #. "gradient"
         , viewSource
@@ -77,7 +77,7 @@ receiveMessages w msgs messageArea = do
     messages <- Chan.getChanContents msgs
     forM_ messages $ \msg -> do
         atomic w $ do
-          withWindow w $ element messageArea #+ [mkMessage msg]
+          element messageArea #+ [mkMessage msg]
           scrollToBottom messageArea
 
 mkMessageArea :: Chan Message -> Element -> Dom Element
