@@ -8,7 +8,7 @@ module Graphics.UI.Threepenny.Core (
     loadFile, loadDirectory,
     
     -- * Manipulate DOM elements
-    Window, title, getHead, getBody, cookies, getRequestLocation,
+    Window, title, getHead, getBody, getWindow, cookies, getRequestLocation,
     Element, newElement, delete, appendTo,
         children, text, html, attr, value,
         getValuesList,
@@ -121,6 +121,10 @@ loadDirectory = flip Core.loadDirectory
 {-----------------------------------------------------------------------------
     Manipulate DOM
 ------------------------------------------------------------------------------}
+-- | Retrieve 'Window' that a given 'Element' resides in.
+getWindow :: Element -> Window
+getWindow = elSession
+
 -- | Title of the client window.
 title :: WriteAttr Window String
 title = mkWriteAttr Core.setTitle
