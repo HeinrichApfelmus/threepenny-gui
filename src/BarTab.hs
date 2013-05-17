@@ -1,7 +1,6 @@
 {-# LANGUAGE CPP, PackageImports #-}
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
-import Prelude hiding (div,span)
 import Control.Applicative
 import Control.Monad
 import Data.IORef
@@ -10,9 +9,11 @@ import Data.Maybe
 import Paths
 
 #ifdef CABAL
-import "threepenny-gui" Graphics.UI.Threepenny
+import qualified "threepenny-gui" Graphics.UI.Threepenny
+import "threepenny-gui" Graphics.UI.Threepenny.Core
 #else
-import Graphics.UI.Threepenny
+import qualified Graphics.UI.Threepenny as UI
+import Graphics.UI.Threepenny.Core
 #endif
 
 -- | Main entry point. Starts a TP server.
@@ -30,9 +31,9 @@ setup w = do
     -- active elements
     return w # set title "BarTab"
 
-    elAdd    <- button w # set text "Add"
-    elRemove <- button w # set text "Remove"
-    elResult <- span      w
+    elAdd    <- withWindow w $ UI.button # set UI.text "Add"
+    elRemove <- withWindow w $ UI.button # set UI.text "Remove"
+    elResult <- withWindow w $ UI.span
 
     inputs   <- newIORef []
     
@@ -46,28 +47,27 @@ setup w = do
 
         mkInput :: IO ()
         mkInput = do
-            elInput <- input w
-            on blur elInput $ \_ -> displayTotal
+            elInput <- withWindow w $ UI.input
+            on UI.blur elInput $ \_ -> displayTotal
             is      <- readIORef inputs
             writeIORef inputs $ elInput : is
             redoLayout
         
         redoLayout :: IO ()
-        redoLayout = do
-            layout <- mkLayout =<< readIORef inputs
+        redoLayout = void $ do
+            layout <- withWindow w . mkLayout =<< readIORef inputs
             getBody w # set children [layout]
-            return ()
         
-        mkLayout :: [Element] -> IO Element
+        mkLayout :: [Element] -> Dom Element
         mkLayout xs = column $
             [row [element elAdd, element elRemove]
-            ,hr w]
+            ,UI.hr]
             ++ map element xs ++
-            [hr w
-            ,row [span w # set text "Sum: ", element elResult]
+            [UI.hr
+            ,row [UI.span # set text "Sum: ", element elResult]
             ]
         
-    on click elAdd $ \_ -> mkInput
+    on UI.click elAdd $ \_ -> mkInput
     mkInput
 
 

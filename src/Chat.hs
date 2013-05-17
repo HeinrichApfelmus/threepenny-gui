@@ -8,20 +8,17 @@ import Control.Monad
 import Data.Functor
 import Data.List.Extra
 import Data.Time
-import Prelude hiding (catch,div,span)
+import Prelude hiding (catch)
 
 import Control.Monad.Trans.Reader as Reader
 import Control.Monad.IO.Class
 
 #ifdef CABAL
 import "threepenny-gui" Graphics.UI.Threepenny as UI
+import "threepenny-gui" Graphics.UI.Threepenny.Core hiding (text)
 #else
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core hiding (text)
--- import qualified Graphics.UI.Threepenny.Internal.Types as UI
-import Graphics.UI.Threepenny.Elements (span, div, textarea, input, anchor)
-import Graphics.UI.Threepenny.JQuery
-import Graphics.UI.Threepenny.Properties
 #endif
 import Paths
 
@@ -31,7 +28,7 @@ import Paths
 ------------------------------------------------------------------------------}
 -- Make a @span@ element with a given text content.
 text :: String -> Dom Element
-text s = ReaderT $ \w -> newElement w "span" # set UI.text s
+text s = UI.span # set UI.text s
 
 {-----------------------------------------------------------------------------
     Main application
@@ -60,8 +57,8 @@ setup globalMsgs w = do
 
     body <- getBody w
     element body #+
-        [ div #. "header"   #+ [text "Threepenny Chat"]
-        , div #. "gradient"
+        [ UI.div #. "header"   #+ [text "Threepenny Chat"]
+        , UI.div #. "gradient"
         , viewSource
         , element nickname
         , element messageArea
@@ -78,13 +75,13 @@ receiveMessages w msgs messageArea = do
     forM_ messages $ \msg -> do
         atomic w $ do
           element messageArea #+ [mkMessage msg]
-          scrollToBottom messageArea
+          UI.scrollToBottom messageArea
 
 mkMessageArea :: Chan Message -> Element -> Dom Element
 mkMessageArea msgs nickname = do
-    input <- textarea #. "send-textarea"
+    input <- UI.textarea #. "send-textarea"
     
-    liftIO $ onSendValue input $ (. trim) $ \content -> do
+    liftIO $ UI.onSendValue input $ (. trim) $ \content -> do
         when (not (null content)) $ do
             now  <- getCurrentTime
             nick <- trim <$> get value nickname
@@ -92,28 +89,28 @@ mkMessageArea msgs nickname = do
             when (not (null nick)) $
                 Chan.writeChan msgs (now,nick,content)
 
-    div #. "message-area" #+ [div #. "send-area" #+ [element input]]
+    UI.div #. "message-area" #+ [UI.div #. "send-area" #+ [element input]]
 
 
 mkNickname :: Dom (Element, Element)
 mkNickname = do
-    i  <- input #. "name-input"
-    el <- div   #. "name-area"  #+
-        [ span  #. "name-label" #+ [text "Your name "]
+    i  <- UI.input #. "name-input"
+    el <- UI.div   #. "name-area"  #+
+        [ UI.span  #. "name-label" #+ [text "Your name "]
         , element i
         ]
-    liftIO $ setFocus i
+    liftIO $ UI.setFocus i
     return (i,el)
 
 mkMessage :: Message -> Dom Element
 mkMessage (timestamp, nick, content) =
-    div #. "message" #+
-        [ div #. "timestamp" #+ [text $ show timestamp]
-        , div #. "name"      #+ [text $ nick ++ "says:"]
-        , div #. "content"   #+ [text content]
+    UI.div #. "message" #+
+        [ UI.div #. "timestamp" #+ [text $ show timestamp]
+        , UI.div #. "name"      #+ [text $ nick ++ "says:"]
+        , UI.div #. "content"   #+ [text content]
         ]
 
 viewSource :: Dom Element
-viewSource = anchor #. "view-source" # set UI.href url #+ [text "View source code"]
+viewSource = UI.anchor #. "view-source" # set UI.href url #+ [text "View source code"]
     where
     url = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs"
