@@ -97,7 +97,7 @@ body {
 .name-input:focus,.send-textarea:focus {
   background: #333;
 }
-.code-link {
+.view-source {
   position: absolute;
   z-index: 4;
   right: 20px;

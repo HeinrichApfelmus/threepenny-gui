@@ -62,7 +62,7 @@ setup globalMsgs w = do
     withWindow w $ element body #+
         [ div #. "header"   #+ [text "Threepenny Chat"]
         , div #. "gradient"
-        , codeLink
+        , viewSource
         , element nickname
         , element messageArea
         ]
@@ -113,7 +113,7 @@ mkMessage (timestamp, nick, content) =
         , div #. "content"   #+ [text content]
         ]
 
-codeLink :: Dom Element
-codeLink = anchor #. "code-link" # set UI.href url #+ [text "View source code"]
+viewSource :: Dom Element
+viewSource = anchor #. "view-source" # set UI.href url #+ [text "View source code"]
     where
     url = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs"
