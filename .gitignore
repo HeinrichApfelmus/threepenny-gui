@@ -5,3 +5,4 @@ dist
 TAGS
 log
 *.DS_Store
+/Material/
