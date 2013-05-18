@@ -5,13 +5,25 @@ import Control.Monad.Extra
 import Safe
 
 #ifdef CABAL
-import "threepenny-gui" Graphics.UI.Threepenny as UI
+import qualified  "threepenny-gui" Graphics.UI.Threepenny as UI
+import "threepenny-gui" Graphics.UI.Threepenny.Core
+import 
 #else
-import Graphics.UI.Threepenny as UI
+import qualified Graphics.UI.Threepenny as UI
+import Graphics.UI.Threepenny.Core
 #endif
 import Paths
 
--- | Main entry point. Starts a TP server.
+{-----------------------------------------------------------------------------
+    HTML utilities
+------------------------------------------------------------------------------}
+-- Make a @span@ element with a given text content.
+string :: String -> Dom Element
+string s = UI.span # set UI.text s
+
+{-----------------------------------------------------------------------------
+    Missing Dollars
+------------------------------------------------------------------------------}
 main :: IO ()
 main = do
     static <- getStaticDir
@@ -23,88 +35,55 @@ main = do
 
 
 setup :: Window -> IO ()
-setup w = do
+setup w = void $ do
     return w # set title "Missing Dollars"
-    addStyleSheet w "missing-dollars.css"
+    UI.addStyleSheet w "missing-dollars.css"
     
     body <- getBody w
-    wrap <- new w # set cssClass "wrap" # appendTo body
+    withWindow w $ do
+        (headerView,headerMe) <- mkHeader
+        riddle                <- mkMissingDollarRiddle headerMe
+        let layout = [element headerView] ++ riddle ++ attributionSource
+        
+        element body #+ [UI.div #. "wrap" #+ layout]
 
-    headerMe <- doheader w wrap
-    missingDollarRiddle w wrap headerMe
-    attributionsource w wrap
 
-doheader :: Window -> Element -> IO Element
-doheader w body = do
-    header   <- h1 w      # set text "The " # appendTo body
-    headerMe <- UI.span w # set text "..."  # appendTo header
-    UI.span w # set text " Dollars"  # appendTo header
-    return headerMe
+mkHeader :: Dom (Element, Element)
+mkHeader = do
+    headerMe <- UI.span # set text "..."
+    view     <- UI.h1   # set text "The " #+
+                    [element headerMe, UI.span # set text " Dollars"]
+    return (view, headerMe)
 
-attributionsource :: Window -> Element -> IO ()
-attributionsource w body = do
-    p <- paragraph w # appendTo body    
-    anchor w
-        # set (attr "href") "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/MissingDollars.hs"
-        # set text "View source code"
-        # set cssClass "view-source"
-        # appendTo p
+attributionSource :: [Dom Element]
+attributionSource =
+    [ UI.p #+
+        [ UI.anchor #. "view-source" # set UI.href urlSource
+            # set UI.text "View source code"
+        ]
+    , UI.p # set text "Originally by" #+
+        [ UI.anchor # set UI.href urlAttribution
+            # set UI.text "Albert Lai"
+        ]
+    ]
+  where
+    urlSource      = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/MissingDollars.hs"
+    urlAttribution = "http://www.vex.net/~trebla/humour/missing_dollar.html"
+
+
+mkMissingDollarRiddle :: Element -> Dom [Dom Element]
+mkMissingDollarRiddle headerMe = do
+    -- declare input and display values
+    (hotelOut : hotelCost : hotelHold : _)
+        <- sequence . replicate 3 $
+            UI.input # set (attr "size") "3" # set (attr "type") "text"
+
+    (hotelChange : hotelRet     : hotelBal : hotelPocket :
+     hotelBal2   : hotelPocket2 : hotelSum : hotelMe     : _)
+        <- sequence . replicate 8 $
+            UI.span  # set text ""
     
-    author <- paragraph w # set text "Originally by" # appendTo body
-    anchor w
-        # set (attr "href") "http://www.vex.net/~trebla/humour/missing_dollar.html"
-        # set text "Albert Lai"
-        # appendTo author
-
-    return ()
-
-missingDollarRiddle :: Window -> Element -> Element -> IO ()
-missingDollarRiddle w body headerMe = do
-    h2 w
-        # set text "The Guests, The Bellhop, And The Pizza"
-        # appendTo body
-
-    -- User input area.
-    intro <- paragraph w # appendTo body
-    let write      = void . writeRef
-        writeRef s = UI.span w # set text s # appendTo intro
-        input      = UI.input w
-                    # set (attr "type") "text"
-                    # set (attr "size") "3"
-                    # appendTo intro
-  
-    write "Three guests went to a hotel and gave $"
-    hotelOut <- input
-    write " to the bellhop to buy pizza. The pizza cost only $"
-    hotelCost <- input
-    write ". Of the $"
-    hotelChange <- writeRef ""
-    write " change, the bellhop kept $"
-    hotelHold <- input
-    write " to himself and returned $"
-    hotelRet <- writeRef ""
-    write " to the guests."
-    
-    -- Conclusion paragraph.
-    conclude <- paragraph w # appendTo body
-    let write      = void . writeRef
-        writeRef s = UI.span w # set text s # appendTo conclude
-    write "So the guests spent $"
-    hotelBal <- writeRef ""
-    write ", and the bellhop pocketed $"
-    hotelPocket <- writeRef ""
-    write ". Now "
-    write "$"
-    hotelBal2 <- writeRef ""
-    write "+$"
-    hotelPocket2 <- writeRef ""
-    write "=$"
-    hotelSum <- writeRef ""
-    write ". Where did the "
-    hotelMe <- writeRef ""
-    write "!"
-
-    -- Update procedure.
+    -- update procedure
     let updateDisplay out cost hold = do
         let change = out - cost
             ret    = change - hold
@@ -129,13 +108,48 @@ missingDollarRiddle w body headerMe = do
                    element headerMe # set text "Missing"
         return ()
     
-    -- Calculate button.
-    calculate <- button w # set text "Calculate" # appendTo body
-    on click calculate $ \_ -> do
+    -- initialize values
+    updateDisplay 30 25 2
+    
+    -- calculate button
+    calculate <- UI.button # set text "Calculate"
+    on UI.click calculate $ \_ -> do
         result <- mapM readMay `liftM` getValuesList [hotelOut,hotelCost,hotelHold]
         case result of
             Just [getout,getcost,gethold] -> updateDisplay getout getcost gethold
             _ -> return ()
- 
-    updateDisplay 30 25 2
+    
+    return $
+        [ UI.h2 #+ [string "The Guests, The Bellhop, And The Pizza"]
+        , UI.p  #+
+            [ string "Three guests went to a hotel and gave $"
+            , element hotelOut
+            , string " to the bellhop to buy pizza. The pizza cost only $"
+            , element hotelCost
+            , string ". Of the $"
+            , element hotelChange
+            , string " change, the bellhop kept $"
+            , element hotelHold
+            , string " to himself and returned $"
+            , element hotelRet
+            , string " to the guests."
+            ]
+        , UI.p  #+
+            [ string "So the guests spent $"
+            , element hotelBal
+            , string ", and the bellhop pocketed $"
+            , element hotelPocket
+            , string ". Now "
+            , string "$"
+            , element hotelBal2
+            , string "+$"
+            , element hotelPocket2
+            , string "=$"
+            , element hotelSum
+            , string ". Where did the "
+            , element hotelMe
+            , string "?"
+            ]
+        , element calculate
+        ]    
 
