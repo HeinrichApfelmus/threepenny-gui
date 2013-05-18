@@ -7,19 +7,11 @@ import Safe
 #ifdef CABAL
 import qualified  "threepenny-gui" Graphics.UI.Threepenny as UI
 import "threepenny-gui" Graphics.UI.Threepenny.Core
-import 
 #else
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
 #endif
 import Paths
-
-{-----------------------------------------------------------------------------
-    HTML utilities
-------------------------------------------------------------------------------}
--- Make a @span@ element with a given text content.
-string :: String -> Dom Element
-string s = UI.span # set UI.text s
 
 {-----------------------------------------------------------------------------
     Missing Dollars
@@ -50,20 +42,19 @@ setup w = void $ do
 
 mkHeader :: Dom (Element, Element)
 mkHeader = do
-    headerMe <- UI.span # set text "..."
-    view     <- UI.h1   # set text "The " #+
-                    [element headerMe, UI.span # set text " Dollars"]
+    headerMe <- string "..."
+    view     <- UI.h1   #+ [string "The ", element headerMe, string " Dollars"]
     return (view, headerMe)
 
 attributionSource :: [Dom Element]
 attributionSource =
     [ UI.p #+
         [ UI.anchor #. "view-source" # set UI.href urlSource
-            # set UI.text "View source code"
+            #+ [string "View source code"]
         ]
-    , UI.p # set text "Originally by" #+
-        [ UI.anchor # set UI.href urlAttribution
-            # set UI.text "Albert Lai"
+    , UI.p #+
+        [ string "Originally by "
+        , UI.anchor # set UI.href urlAttribution #+ [string "Albert Lai"]
         ]
     ]
   where
@@ -80,8 +71,7 @@ mkMissingDollarRiddle headerMe = do
 
     (hotelChange : hotelRet     : hotelBal : hotelPocket :
      hotelBal2   : hotelPocket2 : hotelSum : hotelMe     : _)
-        <- sequence . replicate 8 $
-            UI.span  # set text ""
+        <- sequence . replicate 8 $ UI.span
     
     -- update procedure
     let updateDisplay out cost hold = do
@@ -112,7 +102,7 @@ mkMissingDollarRiddle headerMe = do
     updateDisplay 30 25 2
     
     -- calculate button
-    calculate <- UI.button # set text "Calculate"
+    calculate <- UI.button #+ [string "Calculate"]
     on UI.click calculate $ \_ -> do
         result <- mapM readMay `liftM` getValuesList [hotelOut,hotelCost,hotelHold]
         case result of

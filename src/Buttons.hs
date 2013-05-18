@@ -39,14 +39,14 @@ setup w = void $ do
 
 greet :: [Dom Element]
 greet =
-    [ UI.h1  # set text "Hello, Haskell!"
-    , UI.div # set text "Try the buttons below, they hover and click."
+    [ UI.h1  #+ [string "Hello, Haskell!"]
+    , UI.div #+ [string "Try the buttons below, they hover and click."]
     ]
 
 
 mkButton :: String -> Dom (Element, Element)
 mkButton title = do
-    button <- UI.button #. "button" # set text title
+    button <- UI.button #. "button" #+ [string title]
     view   <- UI.p #+ [element button]
     return (button, view)
 
@@ -82,7 +82,7 @@ mkButtons = do
 
 viewSource :: Dom Element
 viewSource = UI.p #+
-    [UI.anchor #. "view-source" # set UI.href url # set text "View source code"]
+    [UI.anchor #. "view-source" # set UI.href url #+ [string "View source code"]]
     where
     url = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Buttons.hs"
 

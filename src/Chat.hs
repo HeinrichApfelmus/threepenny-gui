@@ -22,16 +22,8 @@ import Graphics.UI.Threepenny.Core hiding (text)
 #endif
 import Paths
 
-
 {-----------------------------------------------------------------------------
-    HTML utilities
-------------------------------------------------------------------------------}
--- Make a @span@ element with a given text content.
-text :: String -> Dom Element
-text s = UI.span # set UI.text s
-
-{-----------------------------------------------------------------------------
-    Main application
+    Chat
 ------------------------------------------------------------------------------}
 
 main :: IO ()
@@ -57,7 +49,7 @@ setup globalMsgs w = do
 
     body <- getBody w
     element body #+
-        [ UI.div #. "header"   #+ [text "Threepenny Chat"]
+        [ UI.div #. "header"   #+ [string "Threepenny Chat"]
         , UI.div #. "gradient"
         , viewSource
         , element nickname
@@ -96,7 +88,7 @@ mkNickname :: Dom (Element, Element)
 mkNickname = do
     i  <- UI.input #. "name-input"
     el <- UI.div   #. "name-area"  #+
-        [ UI.span  #. "name-label" #+ [text "Your name "]
+        [ UI.span  #. "name-label" #+ [string "Your name "]
         , element i
         ]
     liftIO $ UI.setFocus i
@@ -105,12 +97,13 @@ mkNickname = do
 mkMessage :: Message -> Dom Element
 mkMessage (timestamp, nick, content) =
     UI.div #. "message" #+
-        [ UI.div #. "timestamp" #+ [text $ show timestamp]
-        , UI.div #. "name"      #+ [text $ nick ++ "says:"]
-        , UI.div #. "content"   #+ [text content]
+        [ UI.div #. "timestamp" #+ [string $ show timestamp]
+        , UI.div #. "name"      #+ [string $ nick ++ " says:"]
+        , UI.div #. "content"   #+ [string content]
         ]
 
 viewSource :: Dom Element
-viewSource = UI.anchor #. "view-source" # set UI.href url #+ [text "View source code"]
+viewSource =
+    UI.anchor #. "view-source" # set UI.href url #+ [string "View source code"]
     where
     url = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs"

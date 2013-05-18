@@ -15,7 +15,7 @@ module Graphics.UI.Threepenny.Core (
     getElementsByTagName, getElementByTagName, getElementById,
     
     -- * Create DOM elements
-    Dom, withWindow, mkElement, (#+),
+    Dom, withWindow, mkElement, string, (#+),
     
     -- * Layout
     -- | Combinators for quickly creating layouts.
@@ -180,6 +180,10 @@ mkElement
     :: String           -- ^ Tag name
     -> Dom Element
 mkElement tag = ReaderT $ \w -> Core.newElement w tag
+
+-- | Make a @span@ element with a given text content.
+string :: String -> Dom Element
+string s = mkElement "span" # set text s
 
 -- | Append dom elements as children to a given element.
 (#+) :: MonadIO m => m Element -> [Dom Element] -> m Element
