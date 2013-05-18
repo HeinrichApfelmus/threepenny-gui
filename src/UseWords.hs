@@ -10,15 +10,17 @@ import Data.Maybe
 import Text.Parsec
 
 #ifdef CABAL
-import "threepenny-gui" Graphics.UI.Threepenny
-import "threepenny-gui" Graphics.UI.Threepenny.Elements as H
+import qualified  "threepenny-gui" Graphics.UI.Threepenny as UI
+import "threepenny-gui" Graphics.UI.Threepenny.Core hiding (string)
 #else
-import Graphics.UI.Threepenny
-import Graphics.UI.Threepenny.Elements as H
+import qualified Graphics.UI.Threepenny as UI
+import Graphics.UI.Threepenny.Core hiding (string)
 #endif
 import Paths
 
-
+{-----------------------------------------------------------------------------
+    GUI
+------------------------------------------------------------------------------}
 main :: IO ()
 main = do
     static <- getStaticDir
@@ -38,58 +40,64 @@ setup w = do
         Left parseerror -> debug w $ show parseerror
         Right parts     -> do
             body    <- getBody w
-            addStyleSheet w "use-words.css"
+            UI.addStyleSheet w "use-words.css"
 
-            wrap    <- new w # set cssClass "wrap"   # appendTo body
-            codeLink w wrap
+            let (header, Prelude.drop 2 -> rest) = splitAt 3 parts            
             
-            heading <- new w # set cssClass "header" # appendTo wrap
-            ul      <- new w # set cssClass "vars"   # appendTo wrap
+            withWindow w $ void $ do
+                (views1, vars1) <- renderParts header
+                (views2, vars2) <- renderParts rest
+                varChoices      <- mapM (renderVarChoice (vars1 ++ vars2)) vars
             
-            let (header, Prelude.drop 2 -> rest) = splitAt 3 parts
-            r  <- liftM catMaybes $ forM header (addPart w heading)
-            rs <- liftM catMaybes $ forM rest   (addPart w wrap)
-            forM_ vars (addVarChoice w ul (r ++ rs))
+                element body #+
+                    [ viewSource
+                    , UI.div #. "wrap" #+ (
+                        [ UI.div #. "header" #+ map element views1
+                        , UI.ul  #. "vars"   #+ map element varChoices
+                        ]
+                        ++ map element views2 )
+                    ]
+            
+type VariableViews = [(Name, Element)]
 
-addVarChoice w ul refs (label,(name,def)) = do
-    li <- new w # appendTo ul
-    H.span w
-        # set text (label ++ ":")
-        # appendTo li
-    input <- H.input w
-        # set cssClass "var-value"
-        # set value def
-        # appendTo li
+renderVarChoice :: VariableViews -> Variable -> Dom Element
+renderVarChoice views (label,(name,def)) = do
+    input <- UI.input #. "var-value" # set value def
     
     on (domEvent "livechange") input $ \(EventData xs) -> do
         let s = concat $ catMaybes xs
-        forM_ (filter ((==name).fst) refs) $ \(_,el) -> do
+        forM_ (filter ((==name).fst) views) $ \(_,el) -> do
             element el # set text s
+    
+    UI.li #+ [UI.string (label ++ ":"), element input]
 
-addPart w wrap (Text str) = do
-    new w
-        # set cssClass "text"
-        # set text str
-        # appendTo wrap
-    return Nothing
-addPart w wrap (Ref  var) = do
-    v <- new w
-        # set cssClass "var"
-        # maybe (set text $ "{" ++ var ++ "}") (either (set html) (set text))
-                (lookup var templatevars)
-        # appendTo wrap
-    return (Just (var,v))
+renderParts :: [Part] -> Dom ([Element], VariableViews)
+renderParts parts = do
+    views <- mapM renderPart parts
+    let variables = [(var, view) | (Ref var, view) <- zip parts views]
+    return (views, variables)
 
-codeLink w wrap = do
-    anchor w
-        # set (attr "href") "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/UseWords.hs"
-        # set text "View source code"
-        # set cssClass "code-link"
-        # appendTo wrap
+renderPart :: Part -> Dom Element
+renderPart (Text str) = UI.div #. "text" #+ [UI.string str]
+renderPart (Ref  var) = UI.div #. "var"
+    # maybe (set text $ "{" ++ var ++ "}") (either (set html) (set text))
+            (lookup var templatevars)
 
-fname = "wwwroot/and-then-haskell.txt"
+viewSource :: Dom Element
+viewSource = UI.p #+
+    [UI.anchor #. "view-source" # set UI.href url #+ [UI.string "View source code"]]
+    where
+    url = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/UseWords.hs"
+
+{-----------------------------------------------------------------------------
+    Parsing
+------------------------------------------------------------------------------}
+type Name     = String
+type Variable = (String, (Name, String))
 
 templatevars = map (second Right . snd) vars ++ map (second Left) exts
+
+vars :: [Variable]
 vars = [("Favourite technology",("favourite-language","Haskell"))
        ,("Technology used at work",("work-language","Python"))
        ,("Cool forum",("bar","LtU"))

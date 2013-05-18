@@ -69,8 +69,7 @@ She's not like anything else.
 Original post: http://www.xent.com/pipermail/fork/Week-of-Mon-20070219/044101.html
 {br}
 {br}
-(It's intended in good humour (and just a demonstration of my Threepenny web
-dev library). Haskell is my favourite programming language, and I like
+(It's intended in good humour (and just a demonstration of the Threepenny library). Haskell is my favourite programming language, and I like
 this mailing list message, but anyone with a brain can realise it's
 easy to replace the word "Haskell" with "Lisp" or "Vim" or whatever
 you prefer and suddenly it's stroking your sense of identity, the post
