@@ -81,7 +81,7 @@ data Instruction
   | End ()
   | SetToken Integer
   | Clear ()
-  | GetElementById String
+  | GetElementsById [String]
   | GetElementsByTagName String
   | SetStyle Element [(String,String)]
   | SetAttr Element String String

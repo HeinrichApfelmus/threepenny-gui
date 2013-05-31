@@ -46,6 +46,7 @@ module Graphics.UI.Threepenny
   ,getBody
   ,getElementsByTagName
   ,getElementByTagName
+  ,getElementsById
   ,getElementById
   ,getValue
   ,getValuesList
@@ -485,17 +486,26 @@ getElementsByTagName tagName =
       Elements els -> return (Just els)
       _            -> return Nothing
   
+-- | Get elements by particular IDs.  Blocks.
+getElementsById
+  :: MonadTP m
+  => [String]     -- ^ The ID strings
+  -> m [Element]  -- ^ Elements with given ID.
+getElementsById ids =
+  call (GetElementsById ids) $ \signal ->
+    case signal of 
+      Elements els -> return (Just els)
+      _            -> return Nothing
+
 -- | Get an element by a particular ID.  Blocks.
 getElementById
   :: MonadTP m
-  => String             -- ^ The ID string.
+  => String             -- ^ The ID string
   -> m (Maybe Element)  -- ^ Element (if any) with given ID.
-getElementById id =
-  call (GetElementById id) $ \signal ->
-    case signal of 
-      Elements els -> return (Just $ listToMaybe els)
-      _            -> return Nothing
-     
+getElementById id = do
+    els <- getElementsById [id]
+    return $ listToMaybe els
+
 -- | Get the value of an input. Blocks.
 getValue :: MonadTP m
          => Element  -- ^ The element to get the value of.
