@@ -11,7 +11,7 @@ module Graphics.UI.Threepenny.Core (
     Element, newElement, delete, appendTo,
         children, text, html, attr, value,
         getValuesList,
-    getElementsByTagName, getElementByTagName, getElementById,
+    getElementsByTagName, getElementByTagName, getElementsById, getElementById,
     
     -- * Layout
     -- | Combinators for quickly creating layouts.

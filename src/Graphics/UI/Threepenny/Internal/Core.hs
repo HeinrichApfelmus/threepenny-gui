@@ -41,6 +41,7 @@ module Graphics.UI.Threepenny.Internal.Core
   ,getBody
   ,getElementsByTagName
   ,getElementByTagName
+  ,getElementsById
   ,getElementById
   ,getValue
   ,getValuesList
@@ -434,16 +435,23 @@ getElementsByTagName window tagName =
       Elements els -> return $ Just $ [Element el window | el <- els]
       _            -> return Nothing
 
+-- | Get a list of elements by particular IDs.  Blocks.
+getElementsById
+    :: Window        -- ^ Browser window
+    -> [String]      -- ^ The ID string.
+    -> IO [Element]  -- ^ Elements with given ID.
+getElementsById window ids =
+  call window (GetElementsById ids) $ \signal ->
+    case signal of
+      Elements els -> return $ Just [Element el window | el <- els]
+      _            -> return Nothing
+
 -- | Get an element by a particular ID.  Blocks.
 getElementById
     :: Window              -- ^ Browser window
     -> String              -- ^ The ID string.
     -> IO (Maybe Element)  -- ^ Element (if any) with given ID.
-getElementById window id =
-  call window (GetElementById id) $ \signal ->
-    case signal of
-      Elements els -> return $ Just $ listToMaybe [Element el window | el <- els]
-      _            -> return Nothing
+getElementById window id = listToMaybe `fmap` getElementsById window [id]
 
 -- | Get the value of an input. Blocks.
 getValue
