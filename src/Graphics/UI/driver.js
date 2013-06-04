@@ -197,11 +197,16 @@ $.fn.livechange = function(ms,trigger){
         });
         break;
       }
-      case "GetElementById": {
+      case "GetElementsById": {
         // Note that this is the html ID, not the elid that is the key of the el_table.
-        var element = document.getElementById(event.GetElementById);
-        var guid = getElementGuid(element);
-        var els = [{Element: guid}];
+        var ids = event.GetElementsById;
+        var els = [];
+        for(var i = 0; i < ids.length; i++) {
+        // What should we do if element with Id doesn't exist? How to handle null?
+          els.push({
+            Element: getElementGuid(document.getElementById(ids[i]))
+          });
+        }
         signal({
           Elements: els
         },function(){
@@ -408,7 +413,7 @@ $.fn.livechange = function(ms,trigger){
         el_table[elid] = element;
         return elid;
       } else {
-        var elid = "ClientGenId " + element_count.toString();
+        var elid = "!" + element_count.toString();
         element.elid = elid;
         el_table[elid] = element;
         element_count++;

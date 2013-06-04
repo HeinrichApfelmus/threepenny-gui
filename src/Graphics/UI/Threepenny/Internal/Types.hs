@@ -96,7 +96,7 @@ data Instruction
   | End ()
   | SetToken Integer
   | Clear ()
-  | GetElementById String
+  | GetElementsById [String]
   | GetElementsByTagName String
   | SetStyle ElementId [(String,String)]
   | SetAttr ElementId String String
