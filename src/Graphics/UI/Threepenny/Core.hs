@@ -46,12 +46,14 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader as Reader
 
+import Data.String (fromString)
+
 import Network.URI
 
 import qualified Graphics.UI.Threepenny.Internal.Core  as Core
 import Graphics.UI.Threepenny.Internal.Core
     (getHead, getBody, getRequestLocation, delete, getValuesList,
-     getElementById, getElementsByTagName, getElementByTagName,
+     getElementById, getElementsById, getElementsByTagName, getElementByTagName,
      debug, clear, callFunction, runFunction, callDeferredFunction,
      atomic, newElement, )
 import Graphics.UI.Threepenny.Internal.Types as Core
@@ -111,12 +113,16 @@ startGUI config handler =
 
 
 -- | Make a local file available as a relative URI.
-loadFile :: Window -> FilePath -> IO String
-loadFile = flip Core.loadFile
+loadFile
+    :: Window     -- ^ Browser window
+    -> String     -- ^ MIME type
+    -> FilePath   -- ^ Local path to the file
+    -> IO String  -- ^ Generated URI
+loadFile w mime path = Core.loadFile w (fromString mime) path
 
 -- | Make a local directory available as a relative URI.
 loadDirectory :: Window -> FilePath -> IO String
-loadDirectory = flip Core.loadDirectory
+loadDirectory = Core.loadDirectory
 
 {-----------------------------------------------------------------------------
     Manipulate DOM

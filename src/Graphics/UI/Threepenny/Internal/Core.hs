@@ -154,8 +154,10 @@ router customHTML wwwroot worker server =
               ,("/init"                      , init worker server)
               ,("/poll"                      , withSession  server poll  )
               ,("/signal"                    , withSession  server signal)
-              ,("/file/:name"                , withFilepath (sFiles server) serveFile)
-              ,("/dir/:name"                 , withFilepath (sDirs  server) serveDirectory)
+              ,("/file/:name"                ,
+                    withFilepath (sFiles server) (flip serveFileAs))
+              ,("/dir/:name"                 ,
+                    withFilepath (sDirs  server) (\path _ -> serveDirectory path))
               ]
     where
     root = case customHTML of
@@ -163,35 +165,35 @@ router customHTML wwwroot worker server =
         Nothing   -> writeText defaultHtmlFile
 
 -- Get a filename from a URI
-withFilepath :: MVar Filepaths -> (FilePath -> Snap a) -> Snap a
+withFilepath :: MVar Filepaths -> (FilePath -> MimeType -> Snap a) -> Snap a
 withFilepath rDict cont = do
     mName    <- getParam "name"
     (_,dict) <- io $ withMVar rDict return
     case (\key -> M.lookup key dict) =<< mName of
-        Just path -> cont path
-        Nothing   -> error $ "File not loaded: " ++ show mName
+        Just (path,mimetype) -> cont path mimetype
+        Nothing              -> error $ "File not loaded: " ++ show mName
 
 -- FIXME: Serving large files fails with the exception
 -- System.SendFile.Darwin: invalid argument (Socket is not connected)
 
 
-newAssociation :: MVar Filepaths -> FilePath -> IO String
-newAssociation rDict path = do
+newAssociation :: MVar Filepaths -> (FilePath, MimeType) -> IO String
+newAssociation rDict (path,mimetype) = do
     (old, dict) <- takeMVar rDict
     let new = old + 1; key = show new ++ takeFileName path
-    putMVar rDict $ (new, M.insert (fromString key) path dict)
+    putMVar rDict $ (new, M.insert (fromString key) (path,mimetype) dict)
     return key
 
 -- | Begin to serve a local file under an URI.
-loadFile :: FilePath -> Session -> IO String
-loadFile path Session{..} = do
-    key <- newAssociation (sFiles sServerState) path
+loadFile :: Session -> MimeType -> FilePath -> IO String
+loadFile Session{..} mimetype path = do
+    key <- newAssociation (sFiles sServerState) (path,mimetype)
     return $ "/file/" ++ key
 
 -- | Begin to serve a local directory under an URI.
-loadDirectory :: FilePath -> Session -> IO String
-loadDirectory path Session{..} = do
-    key <- newAssociation (sDirs sServerState) path
+loadDirectory :: Session -> FilePath -> IO String
+loadDirectory Session{..} path = do
+    key <- newAssociation (sDirs sServerState) (path,"")
     return $ "/dir/" ++ key
 
 -- Initialize the session.

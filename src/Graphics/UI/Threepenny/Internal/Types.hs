@@ -63,7 +63,8 @@ data Session = Session
   }
 
 type Sessions  = Map Integer Session
-type Filepaths = (Integer, Map ByteString FilePath)
+type MimeType  = ByteString
+type Filepaths = (Integer, Map ByteString (FilePath, MimeType))
 
 data ServerState = ServerState
     { sSessions :: MVar Sessions
