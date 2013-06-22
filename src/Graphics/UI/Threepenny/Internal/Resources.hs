@@ -8,9 +8,11 @@ import           System.FilePath
 import           System.IO.Unsafe
 
 #ifdef CABAL
-import           Paths_threepenny_gui
+import qualified Paths_threepenny_gui
+getDataDir = fmap (</> "src" </> "Graphics" </> "UI") Paths_threepenny_gui.getDataDir
+
 #else
-getDataDir = return ""
+getDataDir = return $ "Graphics" </> "UI"
 #endif
 
 
@@ -32,8 +34,7 @@ readFiles files = do
     ys <- mapM (Text.readFile . getDataFile) files
     return $ Text.unlines ys
 
-getDataFile x = unsafePerformIO $
-    fmap (</> "Graphics" </> "UI" </> x) getDataDir
+getDataFile x = unsafePerformIO $ fmap (</> x) getDataDir
 
 
 {-

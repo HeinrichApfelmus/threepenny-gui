@@ -12,13 +12,11 @@ Description:
     from your Haskell code.
     .
     Stability forecast: Significant API changes are likely in future versions.
-    .
-    To build, might need --constraint=base16-bytestring==0.1.0.* on GHC 6.12.3.
+
 License:             BSD3
-Author:              Chris Done <chrisdone@gmail.com>
+Author:              Chris Done, Heinrich Apfelmus
 Maintainer:          Heinrich Apfelmus <apfelmus at quantentunnel dot de>
 Homepage:            http://www.haskell.org/haskellwiki/threepenny-gui
-Copyright:           2011 by Chris Done
 Category:            Web, GUI
 Build-type:          Simple
 Cabal-version:       >=1.8
@@ -136,6 +134,7 @@ Executable threepenny-examples-chat
         cpp-options:       -DCABAL
         build-depends:     base                      >= 4     && < 5
                           ,threepenny-gui
+                          ,transformers
                           ,filepath
                           ,time
     else

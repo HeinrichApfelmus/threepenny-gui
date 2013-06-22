@@ -17,6 +17,7 @@ import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core hiding (string)
 #endif
 import Paths
+import System.FilePath ((</>))
 
 {-----------------------------------------------------------------------------
     GUI
@@ -31,11 +32,10 @@ main = do
         } setup
 
 
-filename = "../wwwroot/and-then-haskell.txt"
-
 setup :: Window -> IO ()
 setup w = do
-    andthen <- readFile filename
+    filename <- fmap (</> "and-then-haskell.txt") getStaticDir 
+    andthen  <- readFile filename
     case parts filename andthen of
         Left parseerror -> debug w $ show parseerror
         Right parts     -> do

@@ -14,7 +14,7 @@ import Control.Monad.Trans.Reader as Reader
 import Control.Monad.IO.Class
 
 #ifdef CABAL
-import "threepenny-gui" Graphics.UI.Threepenny as UI
+import qualified "threepenny-gui" Graphics.UI.Threepenny as UI
 import "threepenny-gui" Graphics.UI.Threepenny.Core hiding (text)
 #else
 import qualified Graphics.UI.Threepenny as UI
