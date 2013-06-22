@@ -1,6 +1,6 @@
 Use the web browser as a GUI, controllable from Haskell.
 
-## Basics
+## Introduction
 
 Threepenny is a GUI library for Haskell designed for easy setup across
 all major OS variants.  It leverages the web browser as the foundation on 
@@ -24,65 +24,21 @@ This project was originally called Ji in its earliest iterations.
 
 ## Examples
 
-* [Some simple buttons](http://chrisdone.com/ji/buttons/)
-* [Missing dollars question](http://chrisdone.com/ji/missing-dollars/)
-* [A chat app](http://chrisdone.com/ji/chat/)
-* [Use words](http://chrisdone.com/ji/use-words/) (Apologies for the male-centric story)
-* [moogle.tv](http://moogle.tv/) (WIP)
-
-## Difference to HJScript and Fay
-
-HJScript and Fay are a libraries that generate JavaScript, which runs on the
-client, with JavaScript semantics.
-
-So, e.g. if you want to write expressions in HJScript you write:
-
-    x <- varWith (int 10)
-    alert (mathMax (val 10 * x) 45)
-    ajax (string "get-user") (10,"admin") $ \user -> do
-       udiv <- j "<div></div>"
-       setText (toString user)
-       append body udiv
-
-Threepenny is a set of Haskell functions that manipulate a remote DOM, which
-runs on the server and sends code to the client, with Haskell
-semantics.
-
-So for the above in Threepenny you might write:
-
-    let x = 10
-    alert (max (10 * x) 45)
-    user <- getUser 10 Admin
-    udiv <- new
-    setText (show user) udiv
-    append body udiv
-
-Although the HJScript can be abstracted somewhat to look more like the
-below, by using Haskell like a macro language for JavaScript, it's
-still JavaScript.
-
-## More detail
-
-Threepenny transparently runs on the server or the client depending on what
-needs to be done, but most time is spent on the server. In this sense
-one could write code like this:
-
-     body <- getBody
-     ul <- new # addTo body
-     forM_ [1..10] $ \i -> do
-       new # addTo ul # setText (show i)
-       threadDelay (1000*1000)
-
-Which would add a new line with each number to the browser's body at
-least every second, network latency allowing.
+* [Simple buttons](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Buttons.hs)
+* [Missing dollars question](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/MissingDollars.hs)
+* [Multi-user chat](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs)
+* [Replace words in a text](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/UseWords.hs) (Apologies for the male-centric story)
+* [BarTab - dynamic creation of widgets](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/BarTab.hs)
 
 ## Challenges
 
 ### Latency
 
-The above example has a latency. If this is a problem, e.g. then using
-Threepenny for this task is wrong. The solution is to produce some JavaScript
-that will run on the client. Consider this approach similar to [a
+As indicated, the frequent communication between browser and server
+means that Threepenny is best used as a GUI server running on localhost.
+
+If you want to reduce latency, the best option is to generate JavaScript
+code and run it on the client. Consider this approach similar to [a
 shading language.](http://en.wikipedia.org/wiki/Shading_language)
 
 Some means of producing JavaScript from Haskell might be:
