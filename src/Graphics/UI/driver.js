@@ -202,10 +202,12 @@ $.fn.livechange = function(ms,trigger){
         var ids = event.GetElementsById;
         var els = [];
         for(var i = 0; i < ids.length; i++) {
-        // What should we do if element with Id doesn't exist? How to handle null?
-          els.push({
-            Element: getElementGuid(document.getElementById(ids[i]))
-          });
+            var match = document.getElementById(ids[i]);
+            if (match != null) {
+                els.push({
+                  Element: getElementGuid(match)
+                });
+            }
         }
         signal({
           Elements: els
