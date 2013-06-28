@@ -39,7 +39,7 @@ $.fn.livechange = function(ms,trigger){
   ////////////////////////////////////////////////////////////////////////////////
   // State
   var sessionToken = null;
-  var global_ids = [], element_count = 0, el_table = [];
+  var element_count = 0, el_table = [];
   var tp_enable_log = $.cookie('tp_log') == "true";
   var signal_count = 0;
 
@@ -406,21 +406,14 @@ $.fn.livechange = function(ms,trigger){
   // exists in a table under a different elid since it can now be access through either.
   function getElementGuid(element){
     if(element.elid) {
-      return element.elid;
+        return element.elid;
 	}
     else {
-      if(global_ids.length > 0) {
-        var elid = global_ids.pop();
-        element.elid = elid;
-        el_table[elid] = element;
-        return elid;
-      } else {
         var elid = "!" + element_count.toString();
         element.elid = elid;
         el_table[elid] = element;
         element_count++;
         return elid;
-      }
     }
   }
 
