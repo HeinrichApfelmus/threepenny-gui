@@ -358,7 +358,7 @@ newClosure window@(Session{..}) eventType elid thunk = do
     let key = (elid, eventType)
     _ <- register (sEvent key) $ \(EventData xs) -> thunk xs
     return (Closure key)
-
+
 --------------------------------------------------------------------------------
 -- Setting attributes
 --
@@ -370,35 +370,27 @@ newClosure window@(Session{..}) eventType elid thunk = do
 -- | Set the style of the given element.
 setStyle :: [(String, String)] -- ^ Pairs of CSS (property,value).
          -> Element            -- ^ The element to update.
-         -> IO Element
-setStyle props e@(Element el session) = do
-    run session $ SetStyle el props
-    return e
+         -> IO ()
+setStyle props e@(Element el session) = run session $ SetStyle el props
 
 -- | Set the attribute of the given element.
 setAttr :: String  -- ^ The attribute name.
         -> String  -- ^ The attribute value.
         -> Element -- ^ The element to update.
-        -> IO Element
-setAttr key value e@(Element el session) = do
-    run session $ SetAttr el key value
-    return e
+        -> IO ()
+setAttr key value e@(Element el session) = run session $ SetAttr el key value
 
 -- | Set the text of the given element.
 setText :: String  -- ^ The plain text.
         -> Element -- ^ The element to update.
-        -> IO Element
-setText props e@(Element el session) = do
-    run session $ SetText el props
-    return e
+        -> IO ()
+setText props e@(Element el session) = run session $ SetText el props
 
 -- | Set the HTML of the given element.
 setHtml :: String  -- ^ The HTML.
         -> Element -- ^ The element to update.
-        -> IO Element
-setHtml props e@(Element el session) = do
-    run session $ SetHtml el props
-    return e
+        -> IO ()
+setHtml props e@(Element el session) = run session $ SetHtml el props
 
 -- | Set the title of the document.
 setTitle
@@ -408,15 +400,12 @@ setTitle
 setTitle title session = run session $ SetTitle title
 
 -- | Empty the given element.
-emptyEl :: Element -> IO Element
-emptyEl e@(Element el session) = do
-    run session $ EmptyEl el
-    return e
+emptyEl :: Element -> IO ()
+emptyEl e@(Element el session) = run session $ EmptyEl el
 
 -- | Delete the given element.
 delete :: Element -> IO ()
-delete e@(Element el session) = do
-    run session $ Delete el
+delete e@(Element el session)  = run session $ Delete el
 
 
 --------------------------------------------------------------------------------
@@ -440,12 +429,11 @@ newElement session@(Session{..}) tagName = do
 appendElementTo
     :: Element     -- ^ Parent.
     -> Element     -- ^ Child.
-    -> IO Element  -- ^ Returns a reference to the child element again.
-appendElementTo (Element parent session) e@(Element child _) = do
+    -> IO () 
+appendElementTo (Element parent session) e@(Element child _) =
     -- TODO: Right now, parent and child need to be from the same session/browser window
     --       Implement transfer of elements across browser windows
     run session $ Append parent child
-    return e
 
 
 --------------------------------------------------------------------------------
