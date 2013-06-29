@@ -39,19 +39,14 @@ addStyleSheet
     -> FilePath
     -> IO ()
 addStyleSheet w filename = void $ do
-    head <- getHead w
-    newElement w "link"
-        # set (attr "rel" ) "stylesheet"
-        # set (attr "type") "text/css"
-        # set (attr "href") ("/static/css/" ++ filename)
-        # appendTo head
-
--- Make a @span@ element with a given text content.
--- text :: String -> Dom Element
--- text s = ReaderT $ \w -> newElement w "span" # set text s
+    el <- mkElement "link"
+            # set (attr "rel" ) "stylesheet"
+            # set (attr "type") "text/css"
+            # set (attr "href") ("/static/css/" ++ filename)
+    getHead w #+ [element el]
 
 -- | Make a new @div@ element, synonym for 'div'.
-new :: Dom Element
+new :: IO Element
 new = div
 
 {-----------------------------------------------------------------------------

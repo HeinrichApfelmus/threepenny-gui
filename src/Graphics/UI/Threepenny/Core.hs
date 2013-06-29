@@ -14,7 +14,7 @@ module Graphics.UI.Threepenny.Core (
     -- | Create and manipulate DOM elements.
     Element, mkElement, delete, (#+), string,
         getHead, getBody, 
-        children, text, html, attr, value,
+        children, text, html, attr, style, value,
     getValuesList,
     getElementsByTagName, getElementByTagName, getElementsById, getElementById,
     
@@ -222,6 +222,10 @@ html = mkWriteAttr (updateElement . Core.setHtml)
 attr :: String -> WriteAttr Element String
 attr name = mkWriteAttr (updateElement . Core.setAttr name)
 
+-- | Set CSS style of an Element
+style :: WriteAttr Element [(String,String)]
+style = mkWriteAttr (updateElement . Core.setStyle)
+
 -- | Value attribute of an element.
 -- Particularly relevant for control widgets like 'input'.
 value :: Attr Element String
@@ -245,7 +249,8 @@ value = mkReadWriteAttr get set
 getValuesList
     :: [Element]   -- ^ A list of elements to get the values of.
     -> IO [String] -- ^ The list of plain text values.
-getValuesList = undefined
+getValuesList = mapM (get value)
+    -- TODO: improve this to use Core.getValuesList
 
 -- | Text content of an element.
 text :: WriteAttr Element String

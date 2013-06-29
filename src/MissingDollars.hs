@@ -32,21 +32,20 @@ setup w = void $ do
     UI.addStyleSheet w "missing-dollars.css"
     
     body <- getBody w
-    withWindow w $ do
-        (headerView,headerMe) <- mkHeader
-        riddle                <- mkMissingDollarRiddle headerMe
-        let layout = [element headerView] ++ riddle ++ attributionSource
+    (headerView,headerMe) <- mkHeader
+    riddle                <- mkMissingDollarRiddle headerMe
+    let layout = [element headerView] ++ riddle ++ attributionSource
         
-        element body #+ [UI.div #. "wrap" #+ layout]
+    element body #+ [UI.div #. "wrap" #+ layout]
 
 
-mkHeader :: Dom (Element, Element)
+mkHeader :: IO (Element, Element)
 mkHeader = do
     headerMe <- string "..."
     view     <- UI.h1   #+ [string "The ", element headerMe, string " Dollars"]
     return (view, headerMe)
 
-attributionSource :: [Dom Element]
+attributionSource :: [IO Element]
 attributionSource =
     [ UI.p #+
         [ UI.anchor #. "view-source" # set UI.href urlSource
@@ -62,7 +61,7 @@ attributionSource =
     urlAttribution = "http://www.vex.net/~trebla/humour/missing_dollar.html"
 
 
-mkMissingDollarRiddle :: Element -> Dom [Dom Element]
+mkMissingDollarRiddle :: Element -> IO [IO Element]
 mkMissingDollarRiddle headerMe = do
     -- declare input and display values
     (hotelOut : hotelCost : hotelHold : _)
