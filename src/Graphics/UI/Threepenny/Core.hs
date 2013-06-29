@@ -141,11 +141,13 @@ cookies = mkReadAttr Core.getRequestCookies
 {-----------------------------------------------------------------------------
     Elements
 ------------------------------------------------------------------------------}
+type Value = String
+
 -- | Reference to an element in the DOM of the client window.
 newtype Element = Element (MVar Elem)
 data    Elem
-    = Alive Core.Element                    -- element exists in a window
-    | Limbo (Window -> IO Core.Element)     -- still needs to be created
+    = Alive Core.Element                       -- element exists in a window
+    | Limbo Value (Window -> IO Core.Element)  -- still needs to be created
 
 -- Turn a live reference into an 'Element'.
 -- Note that multiple MVars may now point to the same live reference,
@@ -158,11 +160,11 @@ updateElement :: (Core.Element -> IO ()) -> Element -> IO ()
 updateElement f (Element me) = do
     e <- takeMVar me
     case e of
-        Alive e      -> do   -- update immediately
+        Alive e -> do   -- update immediately
             f e
             putMVar me $ Alive e
-        Limbo create ->      -- update on creation
-            putMVar me $ Limbo $ \w -> create w >>= \e -> f e >> return e
+        Limbo value create ->      -- update on creation
+            putMVar me $ Limbo value $ \w -> create w >>= \e -> f e >> return e
 
 -- Given a browser window, make sure that the element exists there.
 -- TODO: 1. Throw exception if the element exists in another window.
@@ -171,8 +173,8 @@ manifestElement :: Window -> Element -> IO Core.Element
 manifestElement w (Element me) = do
     e1 <- takeMVar me
     e2 <- case e1 of
-        Alive e      -> return e
-        Limbo create -> create w
+        Alive e        -> return e
+        Limbo v create -> do { e2 <- create w; Core.setAttr "value" v e2; return e2 }
     putMVar me $ Alive e2
     return e2
 
@@ -190,7 +192,7 @@ appendTo parent child = do
 mkElement
     :: String           -- ^ Tag name
     -> IO Element
-mkElement tag = Element <$> newMVar (Limbo $ \w -> Core.newElement w tag)
+mkElement tag = Element <$> newMVar (Limbo "" $ \w -> Core.newElement w tag)
 
 -- | Delete the given element.
 delete :: Element -> IO ()
@@ -223,7 +225,21 @@ attr name = mkWriteAttr (updateElement . Core.setAttr name)
 -- | Value attribute of an element.
 -- Particularly relevant for control widgets like 'input'.
 value :: Attr Element String
-value = mkReadWriteAttr Core.getValue (set' $ attr "value")
+value = mkReadWriteAttr get set
+    where
+    get   (Element ref) = getValue =<< readMVar ref
+    set v (Element ref) = updateMVar (setValue v) ref
+    
+    getValue (Limbo v _) = return v
+    getValue (Alive e  ) = Core.getValue e
+    
+    setValue v (Limbo _ f) = return $ Limbo v f
+    setValue v (Alive e  ) = Core.setAttr "value" v e >> return (Alive e)
+    
+    updateMVar f ref = do
+        x <- takeMVar ref
+        y <- f x
+        putMVar ref y
 
 -- | Get values from inputs. Blocks. This is faster than many 'getValue' invocations.
 getValuesList
