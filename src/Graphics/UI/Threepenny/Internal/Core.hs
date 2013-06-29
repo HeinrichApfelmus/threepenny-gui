@@ -42,9 +42,7 @@ module Graphics.UI.Threepenny.Internal.Core
   ,getHead
   ,getBody
   ,getElementsByTagName
-  ,getElementByTagName
   ,getElementsById
-  ,getElementById
   ,getWindow
   ,getValue
   ,getValuesList
@@ -445,13 +443,6 @@ appendElementTo (Element parent session) e@(Element child _) =
 -- The DOM can be searched for elements of a given name, and nodes can
 -- be inspected for their values.
 
--- | Get an element by its tag name.  Blocks.
-getElementByTagName
-    :: Window             -- ^ Browser window
-    -> String             -- ^ The tag name.
-    -> IO (Maybe Element) -- ^ An element (if any) with that tag name.
-getElementByTagName window = liftM listToMaybe . getElementsByTagName window
-
 -- | Get all elements of the given tag name.  Blocks.
 getElementsByTagName
     :: Window        -- ^ Browser window
@@ -473,13 +464,6 @@ getElementsById window ids =
     case signal of
       Elements els -> return $ Just [Element el window | el <- els]
       _            -> return Nothing
-
--- | Get an element by a particular ID.  Blocks.
-getElementById
-    :: Window              -- ^ Browser window
-    -> String              -- ^ The ID string.
-    -> IO (Maybe Element)  -- ^ Element (if any) with given ID.
-getElementById window id = listToMaybe `fmap` getElementsById window [id]
 
 -- | Get the value of an input. Blocks.
 getValue

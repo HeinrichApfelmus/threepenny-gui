@@ -11,6 +11,7 @@ module Graphics.UI.Threepenny.Core (
     Window, title, cookies, getRequestLocation,
     
     -- * DOM elements
+    -- | Create and manipulate DOM elements.
     Element, mkElement, delete, (#+), string,
         getHead, getBody, 
         children, text, html, attr, value,
@@ -41,6 +42,7 @@ module Graphics.UI.Threepenny.Core (
     
     ) where
 
+import Data.Maybe (listToMaybe)
 import Data.Functor
 import Control.Event
 import Control.Monad
@@ -55,10 +57,6 @@ import Data.String (fromString)
 import Network.URI
 
 import qualified Graphics.UI.Threepenny.Internal.Core  as Core
--- TODO: redefine functions to use the new Element type
-import Graphics.UI.Threepenny.Internal.Core
-    (getHead, getBody, delete, getValuesList,
-     getElementById, getElementsById, getElementsByTagName, getElementByTagName)
 import Graphics.UI.Threepenny.Internal.Core
     (getRequestLocation,
      debug, clear, callFunction, runFunction, callDeferredFunction, atomic, )
@@ -74,13 +72,12 @@ Threepenny runs a small web server that displays the user interface
 as a web page to any browser that connects to it.
 To start the web server, use the 'startGUI' function.
 
+Creating of DOM elements is easy,
+the '(#+)' combinator allows a style similar to HTML combinator libraries.
+
 Existing DOM elements can be accessed much in the same way they are
 accessed from JavaScript; they can be searched, updated, moved and
 inspected. Events can be bound to DOM elements and handled.
-
-Creating DOM elements can be done by hand, but it is more convenient
-to use the 'Dom' monad which offers functionality similar
-to HTML combinator libaries.
 
 
 Applications written in Threepenny are multithreaded. Each client (user)
@@ -144,10 +141,17 @@ cookies = mkReadAttr Core.getRequestCookies
 {-----------------------------------------------------------------------------
     Elements
 ------------------------------------------------------------------------------}
+-- | Reference to an element in the DOM of the client window.
 newtype Element = Element (MVar Elem)
 data    Elem
     = Alive Core.Element                    -- element exists in a window
     | Limbo (Window -> IO Core.Element)     -- still needs to be created
+
+-- Turn a live reference into an 'Element'.
+-- Note that multiple MVars may now point to the same live reference,
+-- but this is ok since live references never change.
+fromAlive :: Core.Element -> IO Element
+fromAlive e = Element <$> newMVar (Alive e)
 
 -- Update an element that may be in Limbo.
 updateElement :: (Core.Element -> IO ()) -> Element -> IO ()
@@ -188,6 +192,17 @@ mkElement
     -> IO Element
 mkElement tag = Element <$> newMVar (Limbo $ \w -> Core.newElement w tag)
 
+-- | Delete the given element.
+delete :: Element -> IO ()
+delete = updateElement (Core.delete)
+
+-- | Append DOM elements as children to a given element.
+(#+) :: IO Element -> [IO Element] -> IO Element
+(#+) mx mys = do
+    x  <- mx
+    ys <- sequence mys
+    mapM_ (appendTo x) ys
+    return x
 
 -- | Child elements of a given element.
 children :: WriteAttr Element [Element]
@@ -210,6 +225,12 @@ attr name = mkWriteAttr (updateElement . Core.setAttr name)
 value :: Attr Element String
 value = mkReadWriteAttr Core.getValue (set' $ attr "value")
 
+-- | Get values from inputs. Blocks. This is faster than many 'getValue' invocations.
+getValuesList
+    :: [Element]   -- ^ A list of elements to get the values of.
+    -> IO [String] -- ^ The list of plain text values.
+getValuesList = undefined
+
 -- | Text content of an element.
 text :: WriteAttr Element String
 text = mkWriteAttr (updateElement . Core.setText)
@@ -218,13 +239,45 @@ text = mkWriteAttr (updateElement . Core.setText)
 string :: String -> IO Element
 string s = mkElement "span" # set text s
 
--- | Append dom elements as children to a given element.
-(#+) :: IO Element -> [IO Element] -> IO Element
-(#+) mx mys = do
-    x  <- mx
-    ys <- sequence mys
-    mapM_ (appendTo x) ys
-    return x
+
+-- | Get the head of the page.
+getHead :: Window -> IO Element
+getHead = fromAlive <=< Core.getHead
+
+-- | Get the body of the page.
+getBody :: Window -> IO Element
+getBody = fromAlive <=< Core.getBody
+
+-- | Get an element by its tag name.  Blocks.
+getElementByTagName
+    :: Window             -- ^ Browser window
+    -> String             -- ^ The tag name.
+    -> IO (Maybe Element) -- ^ An element (if any) with that tag name.
+getElementByTagName window = liftM listToMaybe . getElementsByTagName window
+
+-- | Get all elements of the given tag name.  Blocks.
+getElementsByTagName
+    :: Window        -- ^ Browser window
+    -> String        -- ^ The tag name.
+    -> IO [Element]  -- ^ All elements with that tag name.
+getElementsByTagName window name =
+    mapM fromAlive =<< Core.getElementsByTagName window name
+
+-- | Get an element by a particular ID.  Blocks.
+getElementById
+    :: Window              -- ^ Browser window
+    -> String              -- ^ The ID string.
+    -> IO (Maybe Element)  -- ^ Element (if any) with given ID.
+getElementById window id = listToMaybe `fmap` getElementsById window [id]
+
+-- | Get a list of elements by particular IDs.  Blocks.
+getElementsById
+    :: Window        -- ^ Browser window
+    -> [String]      -- ^ The ID string.
+    -> IO [Element]  -- ^ Elements with given ID.
+getElementsById window name =
+    mapM fromAlive =<< Core.getElementsById window name
+
 
 {-----------------------------------------------------------------------------
     Layout
