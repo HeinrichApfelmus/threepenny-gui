@@ -31,9 +31,9 @@ setup w = do
     -- active elements
     return w # set title "BarTab"
 
-    elAdd    <- withWindow w $ UI.button # set UI.text "Add"
-    elRemove <- withWindow w $ UI.button # set UI.text "Remove"
-    elResult <- withWindow w $ UI.span
+    elAdd    <- UI.button # set UI.text "Add"
+    elRemove <- UI.button # set UI.text "Remove"
+    elResult <- UI.span
 
     inputs   <- newIORef []
     
@@ -47,7 +47,7 @@ setup w = do
 
         mkInput :: IO ()
         mkInput = do
-            elInput <- withWindow w $ UI.input
+            elInput <- UI.input
             on UI.blur elInput $ \_ -> displayTotal
             is      <- readIORef inputs
             writeIORef inputs $ elInput : is
@@ -55,10 +55,10 @@ setup w = do
         
         redoLayout :: IO ()
         redoLayout = void $ do
-            layout <- withWindow w . mkLayout =<< readIORef inputs
+            layout <- mkLayout =<< readIORef inputs
             getBody w # set children [layout]
         
-        mkLayout :: [Element] -> Dom Element
+        mkLayout :: [Element] -> IO Element
         mkLayout xs = column $
             [row [element elAdd, element elRemove]
             ,UI.hr]
@@ -66,7 +66,8 @@ setup w = do
             [UI.hr
             ,row [UI.span # set text "Sum: ", element elResult]
             ]
-        
+    
+    -- BUG: Clicking the add button twice will not work!
     on UI.click elAdd $ \_ -> mkInput
     mkInput
 
