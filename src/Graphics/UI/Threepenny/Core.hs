@@ -7,15 +7,15 @@ module Graphics.UI.Threepenny.Core (
     Config(..), startGUI,
     loadFile, loadDirectory,
     
-    -- * Manipulate DOM elements
-    Window, title, getHead, getBody, getWindow, cookies, getRequestLocation,
-    Element, newElement, delete, appendTo,
-        children, text, html, attr, value,
-        getValuesList,
-    getElementsByTagName, getElementByTagName, getElementsById, getElementById,
+    -- * Browser Window
+    Window, title, cookies, getRequestLocation,
     
-    -- * Create DOM elements
-    Dom, withWindow, mkElement, string, (#+),
+    -- * DOM elements
+    Element, mkElement, delete, (#+), string,
+        getHead, getBody, 
+        children, text, html, attr, value,
+    getValuesList,
+    getElementsByTagName, getElementByTagName, getElementsById, getElementById,
     
     -- * Layout
     -- | Combinators for quickly creating layouts.
@@ -41,23 +41,29 @@ module Graphics.UI.Threepenny.Core (
     
     ) where
 
+import Data.Functor
 import Control.Event
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader as Reader
+
+import Control.Concurrent.MVar
+import Data.IORef
 
 import Data.String (fromString)
 
 import Network.URI
 
 import qualified Graphics.UI.Threepenny.Internal.Core  as Core
+-- TODO: redefine functions to use the new Element type
 import Graphics.UI.Threepenny.Internal.Core
-    (getHead, getBody, getRequestLocation, delete, getValuesList,
-     getElementById, getElementsById, getElementsByTagName, getElementByTagName,
-     debug, clear, callFunction, runFunction, callDeferredFunction,
-     atomic, newElement, )
-import Graphics.UI.Threepenny.Internal.Types as Core
-
+    (getHead, getBody, delete, getValuesList,
+     getElementById, getElementsById, getElementsByTagName, getElementByTagName)
+import Graphics.UI.Threepenny.Internal.Core
+    (getRequestLocation,
+     debug, clear, callFunction, runFunction, callDeferredFunction, atomic, )
+import qualified Graphics.UI.Threepenny.Internal.Types as Core
+import Graphics.UI.Threepenny.Internal.Types (Window, Config, EventData)
 
 {-----------------------------------------------------------------------------
     Guide
@@ -125,12 +131,8 @@ loadDirectory :: Window -> FilePath -> IO String
 loadDirectory = Core.loadDirectory
 
 {-----------------------------------------------------------------------------
-    Manipulate DOM
+    Browser window
 ------------------------------------------------------------------------------}
--- | Retrieve 'Window' that a given 'Element' resides in.
-getWindow :: Element -> Window
-getWindow = elSession
-
 -- | Title of the client window.
 title :: WriteAttr Window String
 title = mkWriteAttr Core.setTitle
@@ -139,28 +141,69 @@ title = mkWriteAttr Core.setTitle
 cookies :: ReadAttr Window [(String,String)]
 cookies = mkReadAttr Core.getRequestCookies
 
+{-----------------------------------------------------------------------------
+    Elements
+------------------------------------------------------------------------------}
+newtype Element = Element (MVar Elem)
+data    Elem
+    = Alive Core.Element                    -- element exists in a window
+    | Limbo (Window -> IO Core.Element)     -- still needs to be created
+
+-- Update an element that may be in Limbo.
+updateElement :: (Core.Element -> IO ()) -> Element -> IO ()
+updateElement f (Element me) = do
+    e <- takeMVar me
+    case e of
+        Alive e      -> do   -- update immediately
+            f e
+            putMVar me $ Alive e
+        Limbo create ->      -- update on creation
+            putMVar me $ Limbo $ \w -> create w >>= \e -> f e >> return e
+
+-- Given a browser window, make sure that the element exists there.
+-- TODO: 1. Throw exception if the element exists in another window.
+--       2. Don't throw exception, but move the element across windows.
+manifestElement :: Window -> Element -> IO Core.Element
+manifestElement w (Element me) = do
+    e1 <- takeMVar me
+    e2 <- case e1 of
+        Alive e      -> return e
+        Limbo create -> create w
+    putMVar me $ Alive e2
+    return e2
+
+-- Append a child element to a parent element. Non-blocking.
+appendTo
+    :: Element   -- ^ Parent.
+    -> Element   -- ^ Child.
+    -> IO ()
+appendTo parent child = do
+    flip updateElement parent $ \x -> do
+        y <- manifestElement (Core.getWindow x) child
+        Core.appendElementTo x y
+
+-- | Make a new DOM element.
+mkElement
+    :: String           -- ^ Tag name
+    -> IO Element
+mkElement tag = Element <$> newMVar (Limbo $ \w -> Core.newElement w tag)
+
+
 -- | Child elements of a given element.
 children :: WriteAttr Element [Element]
 children = mkWriteAttr set
     where
     set xs x = do
-        Core.emptyEl x
-        mapM_ (Core.appendElementTo x) xs
-
--- | Append a child element to a parent element. Non-blocking.
-appendTo :: MonadIO m
-    => Element     -- ^ Parent.
-    -> m Element   -- ^ Child.
-    -> m Element   -- ^ Returns a reference to the child element again.
-appendTo x my = do { y <- my; liftIO $ Core.appendElementTo x y; }
+        updateElement Core.emptyEl x
+        mapM_ (appendTo x) xs
 
 -- | Child elements of a given element as a HTML string.
 html :: WriteAttr Element String
-html = mkWriteAttr (\i x -> Core.setHtml i x # void)
+html = mkWriteAttr (updateElement . Core.setHtml)
 
 -- | HTML attributes of an element.
 attr :: String -> WriteAttr Element String
-attr name = mkWriteAttr (\i x -> Core.setAttr name i x # void)
+attr name = mkWriteAttr (updateElement . Core.setAttr name)
 
 -- | Value attribute of an element.
 -- Particularly relevant for control widgets like 'input'.
@@ -169,45 +212,29 @@ value = mkReadWriteAttr Core.getValue (set' $ attr "value")
 
 -- | Text content of an element.
 text :: WriteAttr Element String
-text = mkWriteAttr (\i x -> Core.setText i x # void)
-
-{-----------------------------------------------------------------------------
-    Create DOM
-------------------------------------------------------------------------------}
--- | Monad for creating 'Element' in a specific 'Window'
-type Dom = ReaderT Window IO
-
--- | Build elements in a particular window
-withWindow :: Window -> Dom a -> IO a
-withWindow w m = runReaderT m w
-
--- | Make a new DOM element.
-mkElement
-    :: String           -- ^ Tag name
-    -> Dom Element
-mkElement tag = ReaderT $ \w -> Core.newElement w tag
+text = mkWriteAttr (updateElement . Core.setText)
 
 -- | Make a @span@ element with a given text content.
-string :: String -> Dom Element
+string :: String -> IO Element
 string s = mkElement "span" # set text s
 
 -- | Append dom elements as children to a given element.
-(#+) :: MonadIO m => m Element -> [Dom Element] -> m Element
+(#+) :: IO Element -> [IO Element] -> IO Element
 (#+) mx mys = do
     x  <- mx
-    ys <- liftIO $ withWindow (elSession x) $ sequence mys
-    liftIO $ mapM_ (Core.appendElementTo x) ys
+    ys <- sequence mys
+    mapM_ (appendTo x) ys
     return x
 
 {-----------------------------------------------------------------------------
     Layout
 ------------------------------------------------------------------------------}
 -- | Align given elements in a row. Special case of 'grid'.
-row :: [Dom Element] -> Dom Element
+row :: [IO Element] -> IO Element
 row xs = grid [xs]
 
 -- | Align given elements in a column. Special case of 'grid'.
-column :: [Dom Element] -> Dom Element
+column :: [IO Element] -> IO Element
 column = grid . map (:[])
 
 -- | Align given elements in a rectangular grid.
@@ -229,7 +256,7 @@ column = grid . map (:[])
 -- You can customatize the actual layout by assigning an @id@ to the element
 -- and changing the @.table@, @.table-row@ and @table-column@
 -- classes in a custom CSS file.
-grid    :: [[Dom Element]] -> Dom Element
+grid    :: [[IO Element]] -> IO Element
 grid mrows = do
         rows0 <- mapM (sequence) mrows
     
@@ -257,15 +284,28 @@ domEvent
         --   the name is @click@ and so on.
     -> Element          -- ^ Element where the event is to occur.
     -> Event EventData
-domEvent = Core.bind
+domEvent name element = Control.Event.Event $ \handler -> do
+    ref <- newIORef $ return ()
+    let
+        -- register handler and remember unregister function
+        register' = flip updateElement element $ \e -> do
+            unregister <- register (Core.bind name e) handler
+            writeIORef ref unregister
+        
+        -- update element to unregister the event handler
+        unregister' = flip updateElement element $ \_ -> do
+            join $ readIORef ref
+    
+    register'
+    return unregister'
 
 -- | Convenience function to register 'Event's for 'Element's.
 --
 -- Example:
 --
 -- > on click element $ \_ -> ...
-on :: MonadIO m => (element -> Event a) -> element -> (a -> IO void) -> m ()
-on f x h = liftIO $ register (f x) (void . h) >> return ()
+on :: (element -> Event a) -> element -> (a -> IO void) -> IO ()
+on f x h = register (f x) (void . h) >> return ()
 
 
 {-----------------------------------------------------------------------------
@@ -280,7 +320,7 @@ infixl 8 #.
 --
 -- Example usage.
 --
--- > newElement window "div"
+-- > mkElement window "div"
 -- >     # set style     [("color","#CCAABB")]
 -- >     # set draggable True
 -- >     # set children  otherElements
@@ -288,18 +328,17 @@ infixl 8 #.
 (#) = flip ($)
 
 -- | Convenient combinator for setting the CSS class on element creation.
-(#.) :: Dom Element -> String -> Dom Element
+(#.) :: IO Element -> String -> IO Element
 (#.) mx s = mx # set (attr "class") s
 
 
--- | Convience synonym for 'return' to make elements work well with 'set'
--- and with the 'Dom' monad.
+-- | Convience synonym for 'return' to make elements work well with 'set'.
 --
 -- Example usage.
 --
--- > e <- newElement window "button"
+-- > e <- mkElement "button"
 -- > element e # set text "Ok"
-element :: Monad m => Element -> m Element
+element :: Element -> IO Element
 element = return
 
 

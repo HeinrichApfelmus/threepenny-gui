@@ -45,6 +45,7 @@ module Graphics.UI.Threepenny.Internal.Core
   ,getElementByTagName
   ,getElementsById
   ,getElementById
+  ,getWindow
   ,getValue
   ,getValuesList
   ,readValue
@@ -489,6 +490,10 @@ getValue e@(Element el window) =
     case signal of
       Value str -> return (Just str)
       _         -> return Nothing
+
+-- | Get 'Window' associated to an 'Element'.
+getWindow :: Element -> Window
+getWindow (Element _ window) = window
 
 -- | Get values from inputs. Blocks. This is faster than many 'getValue' invocations.
 getValuesList
