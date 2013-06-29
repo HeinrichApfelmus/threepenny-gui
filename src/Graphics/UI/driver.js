@@ -61,7 +61,7 @@ $.fn.livechange = function(ms,trigger){
   };
   
   window.jquery_animate = function(el_id,props,duration,easing,complete){
-    var el = lookupElementTable(JSON.parse(el_id));
+    var el = elidToElement(JSON.parse(el_id));
     $(el).animate(JSON.parse(props),
                   duration * 1,
                   easing * 1,
@@ -69,13 +69,13 @@ $.fn.livechange = function(ms,trigger){
   }
 
   window.jquery_scrollToBottom = function(el_id,cont){
-    var el = lookupElementTable(JSON.parse(el_id));
+    var el = elidToElement(JSON.parse(el_id));
     $(el).scrollTop(el.scrollHeight);
     cont();
   };
 
   window.jquery_setFocus = function(el_id,cont){
-    var el = lookupElementTable(JSON.parse(el_id));
+    var el = elidToElement(JSON.parse(el_id));
     $(el).focus();
     cont();
   };
@@ -128,7 +128,7 @@ $.fn.livechange = function(ms,trigger){
       switch(key){
       case "EmptyEl": {
         var id = event.EmptyEl;
-        var el = lookupElementTable(id);
+        var el = elidToElement(id);
         // TODO: Drop all the child ids within this element.
         $(el).empty();
         continuation();
@@ -187,7 +187,7 @@ $.fn.livechange = function(ms,trigger){
         var len = elements.length;
         for(var i = 0; i < len; i++) {
           els.push({
-            Element: getElementGuid(elements[i])
+            Element: elementToElid(elements[i])
           });
         }
         signal({
@@ -205,7 +205,7 @@ $.fn.livechange = function(ms,trigger){
             var match = document.getElementById(ids[i]);
             if (match != null) {
                 els.push({
-                  Element: getElementGuid(match)
+                  Element: elementToElid(match)
                 });
             }
         }
@@ -220,7 +220,7 @@ $.fn.livechange = function(ms,trigger){
         var set = event.SetStyle;
         var id = set[0];
         var style = set[1];
-        var el = lookupElementTable(id);
+        var el = elidToElement(id);
         var len = style.length;
         for(var i = 0; i < len; i++){
           el.style[style[i][0]] = style[i][1];
@@ -233,14 +233,14 @@ $.fn.livechange = function(ms,trigger){
         var id = set[0];
         var key = set[1];
         var value = set[2];
-        var el = lookupElementTable(id);
+        var el = elidToElement(id);
         $(el).attr(key,value);
         continuation();
         break;
       }
       case "GetValue": {
         var id = event.GetValue;
-        var el = lookupElementTable(id);
+        var el = elidToElement(id);
         var value = $(el).val();
         signal({
           Value: value
@@ -262,7 +262,7 @@ $.fn.livechange = function(ms,trigger){
         var len = ids.length;
         var values = [];
         for(var i = 0; i < len; i++) {
-          values.push($(lookupElementTable(ids[i])).val());
+          values.push($(elidToElement(ids[i])).val());
         }
         signal({
           Values: values
@@ -273,13 +273,13 @@ $.fn.livechange = function(ms,trigger){
       }
       case "Append": {
         var append = event.Append;
-        $(lookupElementTable(append[0])).append($(lookupElementTable(append[1])));
+        $(elidToElement(append[0])).append($(elidToElement(append[1])));
         continuation();
         break;
       }
       case "SetText": {
         var set = event.SetText;
-        $(lookupElementTable(set[0])).text(set[1]);
+        $(elidToElement(set[0])).text(set[1]);
         continuation();
         break;
       }
@@ -290,7 +290,7 @@ $.fn.livechange = function(ms,trigger){
       }
       case "SetHtml": {
         var set = event.SetHtml;
-        $(lookupElementTable(set[0])).html(set[1]);
+        $(elidToElement(set[0])).html(set[1]);
         continuation();
         break;
       }
@@ -298,7 +298,7 @@ $.fn.livechange = function(ms,trigger){
         var bind = event.Bind;
         var eventType = bind[0];
         var handlerGuid = bind[2];
-        var el = lookupElementTable(bind[1]);
+        var el = elidToElement(bind[1]);
         console_log('event type: ' + eventType);
         if(eventType == 'livechange') {
           $(el).livechange(300,function(e){
@@ -347,7 +347,7 @@ $.fn.livechange = function(ms,trigger){
 
   function event_delete(event){
     var id = event.Delete;
-    var el = lookupElementTable(id);
+    var el = elidToElement(id);
     // TODO: Drop all the child ids within this element.
     $(el).empty();
     $(el).remove();
@@ -373,11 +373,11 @@ $.fn.livechange = function(ms,trigger){
     });
   }
 
-  // When the server creates elements in the TP monad, it assigns them a string "elid".  
-  // This lookupElementTable function is used to sync the elids on the server with the 
+  // When the server creates elements, it assigns them a string "elid".  
+  // This elidToElement function is used to sync the elids on the server with the 
   // elids on this client code.  Lookups on elids that do not already exist in the client
   // table are created and added automatically.
-  function lookupElementTable(elid){
+  function elidToElement(elid){
     if(elid == 'body')
       return document.body;
     else if(elid == 'head')
@@ -387,9 +387,10 @@ $.fn.livechange = function(ms,trigger){
     } else {
       if(elid[0] == '*'){
         var create = elid.split(':');
-        var el = document.createElement(create[1]);
-        el_table[elid] = el;
-        return el;
+        var element = document.createElement(create[1]);
+        element.elid   = elid;
+        el_table[elid] = element;
+        return element;
       } else {
         throw "Unknown element: " + elid;
       }
@@ -402,17 +403,23 @@ $.fn.livechange = function(ms,trigger){
   // Get/generate a elid for an element.  This function is used for cases in which the
   // element is accessed without knowing an elid from the server, such as when the 
   // element is retrieved by type or html ID attribute.  The element is then added to 
-  // elid lookup table using the new elid.  It doesn't matter if the element already 
-  // exists in a table under a different elid since it can now be access through either.
-  function getElementGuid(element){
+  // elid lookup table using the new elid.
+  // Note: The mapping between  elids  and  DOM elements  must be bijective.
+  function elementToElid(element){
     if(element.elid) {
         return element.elid;
 	}
+	else if (element === document.body) {
+        return "body";
+    }
+	else if (element === document.head) {
+        return "head";
+    }
     else {
         var elid = "!" + element_count.toString();
-        element.elid = elid;
-        el_table[elid] = element;
         element_count++;
+        element.elid   = elid;
+        el_table[elid] = element;
         return elid;
     }
   }
