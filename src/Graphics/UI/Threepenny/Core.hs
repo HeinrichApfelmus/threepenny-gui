@@ -40,6 +40,9 @@ module Graphics.UI.Threepenny.Core (
     callFunction, runFunction, callDeferredFunction,
     atomic,
     
+    -- * Internal
+    updateElement,
+    
     ) where
 
 import Data.Maybe (listToMaybe)

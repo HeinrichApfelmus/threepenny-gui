@@ -1,12 +1,14 @@
 {-# OPTIONS -fno-warn-wrong-do-bind #-}
 module Graphics.UI.Threepenny.JQuery where
 
+import Control.Event
 import Control.Arrow
 import Data.Char
 import Data.Default
 import Data.Maybe
 import Graphics.UI.Threepenny.Core
-import Graphics.UI.Threepenny.Internal.Types
+import qualified Graphics.UI.Threepenny.Internal.Core as Core
+import qualified Graphics.UI.Threepenny.Internal.Types as Core
 import Text.JSON
 
 data Easing = Swing | Linear
@@ -17,31 +19,35 @@ instance Default Easing where
 
 -- | Animate property changes of a function.
 animate :: Element -> [(String,String)] -> Int -> Easing -> IO () -> IO ()
-animate (Element el window) props duration easing complete = do
-  callDeferredFunction window
-    "jquery_animate"
-    [encode el,encode (makeObj (map (second showJSON) props)),show duration,map toLower (show easing)]
-    (const complete)
+animate el props duration easing complete =
+    flip updateElement el $ \(Core.Element el window) ->
+        callDeferredFunction window
+            "jquery_animate"
+            [encode el,encode (makeObj (map (second showJSON) props)),show duration,map toLower (show easing)]
+            (const complete)
 
 -- | Fade in an element.
 fadeIn :: Element -> Int -> Easing -> IO () -> IO ()
-fadeIn el duration easing complete = animate el [("opacity","1")] duration easing complete
+fadeIn el duration easing complete =
+    animate el [("opacity","1")] duration easing complete
 
 -- | Fade out an element.
 fadeOut :: Element -> Int -> Easing -> IO () -> IO ()
-fadeOut el duration easing complete = animate el [("opacity","0")] duration easing complete
+fadeOut el duration easing complete =
+    animate el [("opacity","0")] duration easing complete
 
 -- | Do something on return.
-onSendValue :: Element -> (String -> IO ()) -> IO ()
-onSendValue input m = do
-    register (domEvent "sendvalue" input) $ \(EventData evdata) -> do
-        m (concat (catMaybes evdata))
-    return ()
+sendValue :: Element -> Event String
+sendValue el = fmap f (domEvent "sendvalue" el)
+    where
+    f (EventData x) = concat . catMaybes $ x
 
 -- | Focus an element.
-setFocus :: Element -> IO Element
-setFocus e@(Element el window) = runFunction window "jquery_setFocus" [encode el] >> return e
+setFocus :: Element -> IO ()
+setFocus = updateElement $ \(Core.Element el window) ->
+    runFunction window "jquery_setFocus" [encode el]
 
 -- | Scroll to the bottom of an element.
 scrollToBottom :: Element -> IO ()
-scrollToBottom (Element area window) = runFunction window "jquery_scrollToBottom" [encode area]
+scrollToBottom = updateElement $ \(Core.Element area window) ->
+    runFunction window "jquery_scrollToBottom" [encode area]

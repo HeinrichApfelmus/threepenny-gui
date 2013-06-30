@@ -44,11 +44,10 @@ setup globalMsgs w = do
 
     return w # set title "Chat"
     
-    (nick, nickname) <- withWindow w $ mkNickname
-    messageArea      <- withWindow w $ mkMessageArea msgs nick
+    (nick, nickname) <- mkNickname
+    messageArea      <- mkMessageArea msgs nick
 
-    body <- getBody w
-    element body #+
+    getBody w #+
         [ UI.div #. "header"   #+ [string "Threepenny Chat"]
         , UI.div #. "gradient"
         , viewSource
@@ -69,11 +68,11 @@ receiveMessages w msgs messageArea = do
           element messageArea #+ [mkMessage msg]
           UI.scrollToBottom messageArea
 
-mkMessageArea :: Chan Message -> Element -> Dom Element
+mkMessageArea :: Chan Message -> Element -> IO Element
 mkMessageArea msgs nickname = do
     input <- UI.textarea #. "send-textarea"
     
-    liftIO $ UI.onSendValue input $ (. trim) $ \content -> do
+    on UI.sendValue input $ (. trim) $ \content -> do
         when (not (null content)) $ do
             now  <- getCurrentTime
             nick <- trim <$> get value nickname
@@ -84,17 +83,17 @@ mkMessageArea msgs nickname = do
     UI.div #. "message-area" #+ [UI.div #. "send-area" #+ [element input]]
 
 
-mkNickname :: Dom (Element, Element)
+mkNickname :: IO (Element, Element)
 mkNickname = do
     i  <- UI.input #. "name-input"
     el <- UI.div   #. "name-area"  #+
         [ UI.span  #. "name-label" #+ [string "Your name "]
         , element i
         ]
-    liftIO $ UI.setFocus i
+    UI.setFocus i
     return (i,el)
 
-mkMessage :: Message -> Dom Element
+mkMessage :: Message -> IO Element
 mkMessage (timestamp, nick, content) =
     UI.div #. "message" #+
         [ UI.div #. "timestamp" #+ [string $ show timestamp]
@@ -102,7 +101,7 @@ mkMessage (timestamp, nick, content) =
         , UI.div #. "content"   #+ [string content]
         ]
 
-viewSource :: Dom Element
+viewSource :: IO Element
 viewSource =
     UI.anchor #. "view-source" # set UI.href url #+ [string "View source code"]
     where
