@@ -48,7 +48,7 @@ setup w = do
         mkInput :: IO ()
         mkInput = do
             elInput <- UI.input
-            on UI.blur elInput $ \_ -> displayTotal
+            on (domEvent "livechange") elInput $ \_ -> displayTotal
             is      <- readIORef inputs
             writeIORef inputs $ elInput : is
             redoLayout
@@ -57,7 +57,7 @@ setup w = do
         redoLayout = void $ do
             layout <- mkLayout =<< readIORef inputs
             getBody w # set children [layout]
-        
+
         mkLayout :: [Element] -> IO Element
         mkLayout xs = column $
             [row [element elAdd, element elRemove]
@@ -67,7 +67,6 @@ setup w = do
             ,row [UI.span # set text "Sum: ", element elResult]
             ]
     
-    -- BUG: Clicking the add button twice will not work!
     on UI.click elAdd $ \_ -> mkInput
     mkInput
 

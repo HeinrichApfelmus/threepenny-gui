@@ -341,10 +341,7 @@ grid mrows = do
         wrap "table" rows
 
     where
-    wrap c xs =
-        mkElement "div"
-            # set (attr "class") c
-            # set children xs
+    wrap c xs = mkElement "div" # set (attr "class") c #+ map element xs
 
 {-----------------------------------------------------------------------------
     Events
