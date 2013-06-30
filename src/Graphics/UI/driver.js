@@ -39,7 +39,7 @@ $.fn.livechange = function(ms,trigger){
   ////////////////////////////////////////////////////////////////////////////////
   // State
   var sessionToken = null;
-  var element_count = 0, el_table = [];
+  var element_count = 0, el_table = {};
   var tp_enable_log = $.cookie('tp_log') == "true";
   var signal_count = 0;
 
@@ -129,8 +129,10 @@ $.fn.livechange = function(ms,trigger){
       case "EmptyEl": {
         var id = event.EmptyEl;
         var el = elidToElement(id);
-        // TODO: Drop all the child ids within this element.
-        $(el).empty();
+        // Detach child elements without deleting associated event handlers and data.
+        // It is not correct to remove the child elements from the el_table
+        // because they may still be present on the server side.
+        $(el).contents().detach();
         continuation();
         break;
       }
@@ -177,7 +179,7 @@ $.fn.livechange = function(ms,trigger){
         break;
       }
       case "Clear": {
-        $('body').empty();
+        $('body').contents().detach();
         continuation();
         break;
       }
@@ -348,9 +350,8 @@ $.fn.livechange = function(ms,trigger){
   function event_delete(event){
     var id = event.Delete;
     var el = elidToElement(id);
-    // TODO: Drop all the child ids within this element.
-    $(el).empty();
-    $(el).remove();
+    // TODO: Think whether it is correct to remove element ids
+    $(el).detach();
     deleteElementTable(id);
   }
 

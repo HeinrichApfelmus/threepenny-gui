@@ -55,9 +55,13 @@ Threepenny.
 
 Every DOM element referenced from the server needs a number generated
 for it per session in a map, and once the session timesout it's
-deleted. It would be good to optimize this to an IntMap, for space
-reasons. It we can attach finalizers to Element values then we can
-automatically free up "reference" numbers to be used again.
+deleted.
+
+We need more fine-grained garbage collection, though.
+In particular, elements that are no longer referenced on the server
+and elements that are no longer used in client window
+should be removed. This needs some support from the JS garbage collector.
+
 
 ## Other ideas
 

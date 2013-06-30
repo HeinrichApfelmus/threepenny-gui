@@ -11,17 +11,10 @@ module Graphics.UI.Threepenny.Attributes (
 
 import Control.Monad
 import Graphics.UI.Threepenny.Core
-import Graphics.UI.Threepenny.Internal.Core
 
 {-----------------------------------------------------------------------------
     Attributes
 ------------------------------------------------------------------------------}
-style :: WriteAttr Element [(String,String)]
-style = mkWriteAttr set
-    where
-    set vs a = setStyle vs a >> return ()
-
-
 mkElementAttr name = mkWriteAttr (set' (attr name))
 
 -- | CSS class.

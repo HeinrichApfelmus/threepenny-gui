@@ -32,25 +32,24 @@ setup w = void $ do
     UI.addStyleSheet w "buttons.css"
 
     body <- getBody w
-    withWindow w $ do
-        buttons <- mkButtons
-        element body #+
-            [UI.div #. "wrap" #+ (greet ++ map element buttons ++ [viewSource])]
+    buttons <- mkButtons
+    element body #+
+        [UI.div #. "wrap" #+ (greet ++ map element buttons ++ [viewSource])]
 
-greet :: [Dom Element]
+greet :: [IO Element]
 greet =
     [ UI.h1  #+ [string "Hello, Haskell!"]
     , UI.div #+ [string "Try the buttons below, they hover and click."]
     ]
 
 
-mkButton :: String -> Dom (Element, Element)
+mkButton :: String -> IO (Element, Element)
 mkButton title = do
     button <- UI.button #. "button" #+ [string title]
     view   <- UI.p #+ [element button]
     return (button, view)
 
-mkButtons :: Dom [Element]
+mkButtons :: IO [Element]
 mkButtons = do
     list    <- UI.ul #. "buttons-list"
     
@@ -80,7 +79,7 @@ mkButtons = do
   where button1Title = "Click me, I delay a bit"
         button2Title = "Click me, I work immediately"
 
-viewSource :: Dom Element
+viewSource :: IO Element
 viewSource = UI.p #+
     [UI.anchor #. "view-source" # set UI.href url #+ [string "View source code"]]
     where

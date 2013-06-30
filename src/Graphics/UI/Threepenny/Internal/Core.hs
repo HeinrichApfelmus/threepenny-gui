@@ -42,9 +42,8 @@ module Graphics.UI.Threepenny.Internal.Core
   ,getHead
   ,getBody
   ,getElementsByTagName
-  ,getElementByTagName
   ,getElementsById
-  ,getElementById
+  ,getWindow
   ,getValue
   ,getValuesList
   ,readValue
@@ -358,7 +357,7 @@ newClosure window@(Session{..}) eventType elid thunk = do
     let key = (elid, eventType)
     _ <- register (sEvent key) $ \(EventData xs) -> thunk xs
     return (Closure key)
-
+
 --------------------------------------------------------------------------------
 -- Setting attributes
 --
@@ -370,35 +369,27 @@ newClosure window@(Session{..}) eventType elid thunk = do
 -- | Set the style of the given element.
 setStyle :: [(String, String)] -- ^ Pairs of CSS (property,value).
          -> Element            -- ^ The element to update.
-         -> IO Element
-setStyle props e@(Element el session) = do
-    run session $ SetStyle el props
-    return e
+         -> IO ()
+setStyle props e@(Element el session) = run session $ SetStyle el props
 
 -- | Set the attribute of the given element.
 setAttr :: String  -- ^ The attribute name.
         -> String  -- ^ The attribute value.
         -> Element -- ^ The element to update.
-        -> IO Element
-setAttr key value e@(Element el session) = do
-    run session $ SetAttr el key value
-    return e
+        -> IO ()
+setAttr key value e@(Element el session) = run session $ SetAttr el key value
 
 -- | Set the text of the given element.
 setText :: String  -- ^ The plain text.
         -> Element -- ^ The element to update.
-        -> IO Element
-setText props e@(Element el session) = do
-    run session $ SetText el props
-    return e
+        -> IO ()
+setText props e@(Element el session) = run session $ SetText el props
 
 -- | Set the HTML of the given element.
 setHtml :: String  -- ^ The HTML.
         -> Element -- ^ The element to update.
-        -> IO Element
-setHtml props e@(Element el session) = do
-    run session $ SetHtml el props
-    return e
+        -> IO ()
+setHtml props e@(Element el session) = run session $ SetHtml el props
 
 -- | Set the title of the document.
 setTitle
@@ -408,15 +399,12 @@ setTitle
 setTitle title session = run session $ SetTitle title
 
 -- | Empty the given element.
-emptyEl :: Element -> IO Element
-emptyEl e@(Element el session) = do
-    run session $ EmptyEl el
-    return e
+emptyEl :: Element -> IO ()
+emptyEl e@(Element el session) = run session $ EmptyEl el
 
 -- | Delete the given element.
 delete :: Element -> IO ()
-delete e@(Element el session) = do
-    run session $ Delete el
+delete e@(Element el session)  = run session $ Delete el
 
 
 --------------------------------------------------------------------------------
@@ -440,12 +428,11 @@ newElement session@(Session{..}) tagName = do
 appendElementTo
     :: Element     -- ^ Parent.
     -> Element     -- ^ Child.
-    -> IO Element  -- ^ Returns a reference to the child element again.
-appendElementTo (Element parent session) e@(Element child _) = do
+    -> IO () 
+appendElementTo (Element parent session) e@(Element child _) =
     -- TODO: Right now, parent and child need to be from the same session/browser window
     --       Implement transfer of elements across browser windows
     run session $ Append parent child
-    return e
 
 
 --------------------------------------------------------------------------------
@@ -455,13 +442,6 @@ appendElementTo (Element parent session) e@(Element child _) = do
 -- 
 -- The DOM can be searched for elements of a given name, and nodes can
 -- be inspected for their values.
-
--- | Get an element by its tag name.  Blocks.
-getElementByTagName
-    :: Window             -- ^ Browser window
-    -> String             -- ^ The tag name.
-    -> IO (Maybe Element) -- ^ An element (if any) with that tag name.
-getElementByTagName window = liftM listToMaybe . getElementsByTagName window
 
 -- | Get all elements of the given tag name.  Blocks.
 getElementsByTagName
@@ -485,13 +465,6 @@ getElementsById window ids =
       Elements els -> return $ Just [Element el window | el <- els]
       _            -> return Nothing
 
--- | Get an element by a particular ID.  Blocks.
-getElementById
-    :: Window              -- ^ Browser window
-    -> String              -- ^ The ID string.
-    -> IO (Maybe Element)  -- ^ Element (if any) with given ID.
-getElementById window id = listToMaybe `fmap` getElementsById window [id]
-
 -- | Get the value of an input. Blocks.
 getValue
     :: Element   -- ^ The element to get the value of.
@@ -501,6 +474,10 @@ getValue e@(Element el window) =
     case signal of
       Value str -> return (Just str)
       _         -> return Nothing
+
+-- | Get 'Window' associated to an 'Element'.
+getWindow :: Element -> Window
+getWindow (Element _ window) = window
 
 -- | Get values from inputs. Blocks. This is faster than many 'getValue' invocations.
 getValuesList

@@ -38,29 +38,27 @@ setup w = do
     andthen  <- readFile filename
     case parts filename andthen of
         Left parseerror -> debug w $ show parseerror
-        Right parts     -> do
-            body    <- getBody w
+        Right parts     -> void $ do
             UI.addStyleSheet w "use-words.css"
 
             let (header, Prelude.drop 2 -> rest) = splitAt 3 parts            
             
-            withWindow w $ void $ do
-                (views1, vars1) <- renderParts header
-                (views2, vars2) <- renderParts rest
-                varChoices      <- mapM (renderVarChoice (vars1 ++ vars2)) vars
-            
-                element body #+
-                    [ viewSource
-                    , UI.div #. "wrap" #+ (
-                        [ UI.div #. "header" #+ map element views1
-                        , UI.ul  #. "vars"   #+ map element varChoices
-                        ]
-                        ++ map element views2 )
+            (views1, vars1) <- renderParts header
+            (views2, vars2) <- renderParts rest
+            varChoices      <- mapM (renderVarChoice (vars1 ++ vars2)) vars
+        
+            getBody w #+
+                [ viewSource
+                , UI.div #. "wrap" #+ (
+                    [ UI.div #. "header" #+ map element views1
+                    , UI.ul  #. "vars"   #+ map element varChoices
                     ]
+                    ++ map element views2 )
+                ]
             
 type VariableViews = [(Name, Element)]
 
-renderVarChoice :: VariableViews -> Variable -> Dom Element
+renderVarChoice :: VariableViews -> Variable -> IO Element
 renderVarChoice views (label,(name,def)) = do
     input <- UI.input #. "var-value" # set value def
     
@@ -71,19 +69,19 @@ renderVarChoice views (label,(name,def)) = do
     
     UI.li #+ [UI.string (label ++ ":"), element input]
 
-renderParts :: [Part] -> Dom ([Element], VariableViews)
+renderParts :: [Part] -> IO ([Element], VariableViews)
 renderParts parts = do
     views <- mapM renderPart parts
     let variables = [(var, view) | (Ref var, view) <- zip parts views]
     return (views, variables)
 
-renderPart :: Part -> Dom Element
+renderPart :: Part -> IO Element
 renderPart (Text str) = UI.div #. "text" #+ [UI.string str]
 renderPart (Ref  var) = UI.div #. "var"
     # maybe (set text $ "{" ++ var ++ "}") (either (set html) (set text))
             (lookup var templatevars)
 
-viewSource :: Dom Element
+viewSource :: IO Element
 viewSource = UI.p #+
     [UI.anchor #. "view-source" # set UI.href url #+ [UI.string "View source code"]]
     where
