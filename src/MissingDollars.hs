@@ -31,12 +31,10 @@ setup w = void $ do
     return w # set title "Missing Dollars"
     UI.addStyleSheet w "missing-dollars.css"
     
-    body <- getBody w
     (headerView,headerMe) <- mkHeader
     riddle                <- mkMissingDollarRiddle headerMe
-    let layout = [element headerView] ++ riddle ++ attributionSource
-        
-    element body #+ [UI.div #. "wrap" #+ layout]
+    let layout = [element headerView] ++ riddle ++ attributionSource        
+    getBody w #+ [UI.div #. "wrap" #+ layout]
 
 
 mkHeader :: IO (Element, Element)

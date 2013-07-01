@@ -31,9 +31,8 @@ setup w = void $ do
     return w # set title "Buttons"
     UI.addStyleSheet w "buttons.css"
 
-    body <- getBody w
     buttons <- mkButtons
-    element body #+
+    getBody w #+
         [UI.div #. "wrap" #+ (greet ++ map element buttons ++ [viewSource])]
 
 greet :: [IO Element]
