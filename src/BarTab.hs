@@ -39,24 +39,15 @@ setup w = do
     
     -- functionality
     let
-        displayTotal = do
-            is <- readIORef inputs
-            xs <- getValuesList is
+        displayTotal = void $ do
+            xs <- getValuesList =<< readIORef inputs
             element elResult # set text (showNumber . sum $ map readNumber xs)
-            return ()
-
-        mkInput :: IO ()
-        mkInput = do
-            elInput <- UI.input
-            on (domEvent "livechange") elInput $ \_ -> displayTotal
-            is      <- readIORef inputs
-            writeIORef inputs $ elInput : is
-            redoLayout
         
         redoLayout :: IO ()
         redoLayout = void $ do
             layout <- mkLayout =<< readIORef inputs
             getBody w # set children [layout]
+            displayTotal
 
         mkLayout :: [Element] -> IO Element
         mkLayout xs = column $
@@ -66,9 +57,16 @@ setup w = do
             [UI.hr
             ,row [UI.span # set text "Sum: ", element elResult]
             ]
+        
+        addInput :: IO ()
+        addInput = do
+            elInput <- UI.input # set value "0"
+            on (domEvent "livechange") elInput $ \_ -> displayTotal
+            modifyIORef inputs (elInput:)
     
-    on UI.click elAdd $ \_ -> mkInput
-    mkInput
+    on UI.click elAdd    $ \_ -> addInput                    >> redoLayout
+    on UI.click elRemove $ \_ -> modifyIORef inputs (drop 1) >> redoLayout
+    addInput >> redoLayout
 
 
 {-----------------------------------------------------------------------------
