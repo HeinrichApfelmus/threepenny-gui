@@ -49,6 +49,7 @@ Library
                     ,Graphics.UI.Threepenny
                     ,Graphics.UI.Threepenny.Attributes
                     ,Graphics.UI.Threepenny.Core
+                    ,Graphics.UI.Threepenny.DragNDrop
                     ,Graphics.UI.Threepenny.Elements
                     ,Graphics.UI.Threepenny.Events
                     ,Graphics.UI.Threepenny.JQuery
@@ -95,13 +96,25 @@ Executable threepenny-examples-buttons
         cpp-options:       -DCABAL
         build-depends:     base                      >= 4     && < 5
                           ,threepenny-gui
-                          ,transformers
                           ,filepath
     else
         buildable: False
     main-is:           Buttons.hs
     other-modules:     Paths_threepenny_gui
     hs-source-dirs:    src
+
+Executable threepenny-examples-dragndropexample
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,threepenny-gui
+                          ,filepath
+    else
+        buildable: False
+    main-is:           DragNDropExample.hs
+    other-modules:     Paths_threepenny_gui
+    hs-source-dirs:    src
+
 
 Executable threepenny-examples-missing-dollars
     if flag(buildExamples)
