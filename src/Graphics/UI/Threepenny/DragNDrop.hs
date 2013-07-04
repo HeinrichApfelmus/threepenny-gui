@@ -1,6 +1,11 @@
 module Graphics.UI.Threepenny.DragNDrop (
     -- * Synopsis
-    -- | Attributes and events related to drag and drop.
+    -- | APi for handling drag and drop operations.
+    -- 
+    -- The drag and drop model implementation here is intended to be
+    -- simpler than the HTML specification. See the documentation below for details.
+    -- 
+    -- Note: The implementation here is still a little preliminary.
     
     -- * Documentation
     draggable, droppable, dragData,
@@ -16,6 +21,9 @@ import Graphics.UI.Threepenny.Core
     Attributes
 ------------------------------------------------------------------------------}
 -- | Enable or disable whether the element can be dragged by the user.
+--
+-- An element with draggable set to 'True' will receive
+-- 'drag', 'dragStart' and 'dragEnd' events.
 draggable :: WriteAttr Element Bool
 draggable = mkWriteAttr set
     where
@@ -29,6 +37,14 @@ dragData = mkWriteAttr set
         "event.dataTransfer.setData('dragData', '" ++ v ++ "')"
 
 -- | Enable or disable whether the element accepts drops.
+--
+-- An element with 'droppable' set to 'True' will receive
+-- 'drop', 'dragOver', 'dragEnter' and 'dragLeave' events.
+--
+-- Child elements of a 'droppable' element may also be 'droppable'.
+-- When dragging something over an element, the closest ancestor element
+-- that is 'droppable' will be the target and receive corresponding
+-- events.
 droppable :: WriteAttr Element Bool
 droppable = mkWriteAttr enable
     where
@@ -57,7 +73,7 @@ withDragData = fmap extract
     extract (EventData [Just s]) = s
     extract _                    = ""
 
--- | Drag event.
+-- | Occurs periodically while the element is being dragged around.
 drag :: Element -> Event DragData
 drag = withDragData . domEvent "drag"
 
@@ -69,18 +85,18 @@ dragStart = withDragData . domEvent "dragstart"
 dragEnd :: Element -> Event DragData
 dragEnd = withDragData . domEvent "dragend"
 
--- | Drag enter.
+-- | The element is now the current target element for a 'drop'.
 dragEnter :: Element -> Event DragData
 dragEnter = withDragData . domEvent "dragenter"
 
--- | Drag over event.
+-- | Occurs periodically while the element is the current target element.
 dragOver :: Element -> Event DragData
 dragOver = withDragData . domEvent "dragover"
 
--- | Drag leave event.
+-- | The element is no longer the current target element for a 'drop'.
 dragLeave :: Element -> Event DragData
 dragLeave = withDragData . domEvent "dragleave"
 
--- | Something is being dropped on the element.
+-- | The drag and drop operation is being completed on this element.
 drop :: Element -> Event DragData
 drop = withDragData . domEvent "drop"
