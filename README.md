@@ -29,6 +29,8 @@ This project was originally called Ji in its earliest iterations.
 * [Multi-user chat](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs)
 * [Replace words in a text](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/UseWords.hs) (Apologies for the male-centric story)
 * [BarTab - dynamic creation of widgets](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/BarTab.hs)
+* [Drag'N'Drop example](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/DragNDropExample.hs)
+
 
 ## Challenges
 

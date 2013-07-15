@@ -11,12 +11,14 @@ Description:
     You can freely manipulate the HTML DOM and handle browser events
     from your Haskell code.
     .
-    Stability forecast: Significant API changes are likely in future versions.
+    Stability forecast: This is an experimental release! Send us your feedback!
+    Basic functionality should work.
+    Significant API changes are likely in future versions.
 
 License:             BSD3
 Author:              Chris Done, Heinrich Apfelmus
 Maintainer:          Heinrich Apfelmus <apfelmus at quantentunnel dot de>
-Homepage:            http://www.haskell.org/haskellwiki/threepenny-gui
+Homepage:            http://github.com/HeinrichApfelmus/threepenny-gui
 Category:            Web, GUI
 Build-type:          Simple
 Cabal-version:       >=1.8
