@@ -1,11 +1,14 @@
 module Graphics.UI.Threepenny.DragNDrop (
     -- * Synopsis
-    -- | APi for handling drag and drop operations.
+    -- | API for handling drag and drop operations.
     -- 
-    -- The drag and drop model implementation here is intended to be
-    -- simpler than the HTML specification. See the documentation below for details.
+    -- See the documentation below for details on the drag and drop model.
     -- 
-    -- Note: The implementation here is still a little preliminary.
+    -- WARNING: Events in this module may not behave as expected.
+    -- The model is currently implemented in terms of HTML 5 drag and drop,
+    -- but unfortunately,
+    -- the HTML 5 specification for drag and drop is horrible and
+    -- browser implementations are buggy.
     
     -- * Documentation
     draggable, droppable, dragData,
@@ -82,10 +85,14 @@ dragStart :: Element -> Event DragData
 dragStart = withDragData . domEvent "dragstart"
 
 -- | Dragging the element ends.
+--
+-- WARNING: This event can occur both before and after a corresponding 'drop' event.
 dragEnd :: Element -> Event DragData
 dragEnd = withDragData . domEvent "dragend"
 
 -- | The element is now the current target element for a 'drop'.
+-- 
+-- WARNING: This element is buggy when moving the mouse over child elements.
 dragEnter :: Element -> Event DragData
 dragEnter = withDragData . domEvent "dragenter"
 
@@ -94,6 +101,8 @@ dragOver :: Element -> Event DragData
 dragOver = withDragData . domEvent "dragover"
 
 -- | The element is no longer the current target element for a 'drop'.
+--
+-- WARNING: This event is also fired when the mouse is moved over a child element.
 dragLeave :: Element -> Event DragData
 dragLeave = withDragData . domEvent "dragleave"
 
