@@ -12,7 +12,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * DOM elements
     -- | Create and manipulate DOM elements.
-    Element, mkElement, delete, (#+), string,
+    Element, mkElement, getWindow, delete, (#+), string,
         getHead, getBody, 
         children, text, html, attr, style, value,
     getValuesList,
@@ -196,6 +196,21 @@ mkElement
     :: String           -- ^ Tag name
     -> IO Element
 mkElement tag = Element <$> newMVar (Limbo "" $ \w -> Core.newElement w tag)
+
+-- | Retreive the browser 'Window' in which the element resides.
+-- 
+-- Note that elements do not reside in any browser window when they are first created.
+-- To move the element to a particular browser window,
+-- you have to append it to a parent, for instance with the `(#+)` operator.
+--
+-- WARNING: The ability to move elements from one browser window to another
+-- is currently not implemented yet.
+getWindow :: Element -> IO (Maybe Window)
+getWindow (Element ref) = do
+    e1 <- readMVar ref
+    return $ case e1 of
+        Alive e   -> Just $ Core.getWindow e
+        Limbo _ _ -> Nothing
 
 -- | Delete the given element.
 delete :: Element -> IO ()
