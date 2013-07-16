@@ -390,7 +390,7 @@ domEvent name element = Control.Event.Event $ \handler -> do
 
 -- | Convenience function to register 'Event's for 'Element's.
 --
--- Example:
+-- Example usage.
 --
 -- > on click element $ \_ -> ...
 on :: (element -> Event a) -> element -> (a -> IO void) -> IO ()
@@ -409,7 +409,7 @@ infixl 8 #.
 --
 -- Example usage.
 --
--- > mkElement window "div"
+-- > mkElement "div"
 -- >     # set style     [("color","#CCAABB")]
 -- >     # set draggable True
 -- >     # set children  otherElements
