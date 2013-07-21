@@ -91,7 +91,7 @@ Executable threepenny-examples-bartab
     else
         buildable: False
     main-is:           BarTab.hs
-    other-modules:     Paths_threepenny_gui
+    other-modules:     Paths, Paths_threepenny_gui
     hs-source-dirs:    src
 
 Executable threepenny-examples-buttons
