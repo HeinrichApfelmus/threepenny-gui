@@ -16,6 +16,7 @@ Description:
     Significant API changes are likely in future versions.
 
 License:             BSD3
+License-file:        LICENSE
 Author:              Chris Done, Heinrich Apfelmus
 Maintainer:          Heinrich Apfelmus <apfelmus at quantentunnel dot de>
 Homepage:            http://github.com/HeinrichApfelmus/threepenny-gui
