@@ -6,23 +6,24 @@ module Graphics.UI.Threepenny.Elements (
     new,
     
     -- * Primitive HTML elements
-    address, a, anchor, applet, area,
+    address, a, anchor, applet, area, audio,
     basefont, big, blockquote, body, bold, br, button,
-    caption, center, cite, ddef, define, div, dlist,
+    caption, center, cite, code,
+    ddef, define, div, dlist,
     dterm, emphasize, fieldset, font, form, frame, frameset,
     h1, h2, h3, h4, h5, h6, header, hr,
     img, image, input, italics,
-    keyboard, legend, li, meta, noframes, olist, option,
+    keyboard, legend, li, link, map, meta, noframes, olist, option,
     p, paragraph, param, pre,
     sample, select, small, source, span, strong, sub, sup,
-    table, td, textarea, th, thebase, thecode,
-    thehtml, thelink, themap, thetitle, tr, tt, ul,
+    table, td, textarea, th, thebase,
+    thehtml, title_, tr, tt, ul,
     underline, variable, video,
     ) where
 
 import Control.Monad
 import Control.Monad.Trans.Reader
-import Prelude hiding (span,div)
+import Prelude hiding (span,div,map)
 import Graphics.UI.Threepenny.Core
 
 {-----------------------------------------------------------------------------
@@ -63,6 +64,7 @@ a                   =  anchor
 anchor              =  tag "a"
 applet              =  tag "applet"
 area                = itag "area"
+audio               =  tag "audio"
 basefont            = itag "basefont"
 big                 =  tag "big"
 blockquote          =  tag "blockquote"
@@ -73,6 +75,7 @@ button              =  tag "button"
 caption             =  tag "caption"
 center              =  tag "center"
 cite                =  tag "cite"
+code                =  tag "code"
 ddef                =  tag "dd"
 define              =  tag "dfn"
 div                 =  tag "div"
@@ -99,6 +102,8 @@ italics             =  tag "i"
 keyboard            =  tag "kbd"
 legend              =  tag "legend"
 li                  =  tag "li"
+link                =  tag "link"
+map                 =  tag "map"
 meta                = itag "meta"
 noframes            =  tag "noframes"
 olist               =  tag "ol"
@@ -119,12 +124,9 @@ td                  =  tag "td"
 textarea            =  tag "textarea"
 th                  =  tag "th"
 thebase             = itag "base"
-thecode             =  tag "code"
 thehtml             =  tag "html"
-thelink             =  tag "link"
-themap              =  tag "map"
 span                =  tag "span"
-thetitle            =  tag "title"
+title_              =  tag "title"
 tr                  =  tag "tr"
 tt                  =  tag "tt"
 ul                  =  tag "ul"

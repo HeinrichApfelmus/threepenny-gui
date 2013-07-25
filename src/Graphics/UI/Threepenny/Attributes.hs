@@ -1,17 +1,17 @@
 module Graphics.UI.Threepenny.Attributes (
     -- * Synopsis
-    -- | Element Attributes, for convenience.
+    -- | Common element attributes, for convenience.
     
     -- * Documentation
     action, align, alink, alt, altcode, archive,
     background, base, bgcolor, border, bordercolor,
-    cellpadding, cellspacing, checked, class_, clear_, code, codebase,
+    cellpadding, cellspacing, checked_, class_, clear_, code_, codebase,
     color, cols, colspan, compact, content, coords,
     enctype, face, frameborder, height, href, hspace, httpequiv,
-    id_, ismap, lang, link, marginheight, marginwidth, maxlength, method, multiple,
+    id_, ismap, lang, marginheight, marginwidth, maxlength, method, multiple,
     name, nohref, noresize, noshade, nowrap,
     rel, rev, rows, rowspan, rules,
-    scrolling, selected, shape, size, src, start,
+    scrolling, selected, shape, size, src,
     target, text_, type_, usemap, valign, version, vlink, vspace, width,
     ) where
 
@@ -52,9 +52,9 @@ border              =   intAttr "border"
 bordercolor         =   strAttr "bordercolor"
 cellpadding         =   intAttr "cellpadding"
 cellspacing         =   intAttr "cellspacing"
-checked             = emptyAttr "checked"
+checked_            = emptyAttr "checked"
 clear_              =   strAttr "clear"
-code                =   strAttr "code"
+code_               =   strAttr "code"
 codebase            =   strAttr "codebase"
 color               =   strAttr "color"
 cols                =   strAttr "cols"
@@ -72,7 +72,6 @@ httpequiv           =   strAttr "http-equiv"
 id_                 =   strAttr "id"
 ismap               = emptyAttr "ismap"
 lang                =   strAttr "lang"
-link                =   strAttr "link"
 marginheight        =   intAttr "marginheight"
 marginwidth         =   intAttr "marginwidth"
 maxlength           =   intAttr "maxlength"
@@ -93,7 +92,6 @@ selected            = emptyAttr "selected"
 shape               =   strAttr "shape"
 size                =   strAttr "size"
 src                 =   strAttr "src"
-start               =   intAttr "start"
 target              =   strAttr "target"
 text_               =   strAttr "text"
 class_              =   strAttr "class"

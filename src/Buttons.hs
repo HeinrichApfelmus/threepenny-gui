@@ -1,6 +1,5 @@
 {-# LANGUAGE CPP, PackageImports #-}
 
-
 import Control.Monad
 import Control.Concurrent (threadDelay)
 
