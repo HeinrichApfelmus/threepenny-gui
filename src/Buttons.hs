@@ -59,8 +59,8 @@ mkButtons = do
     on UI.leave button1 $ \_ -> do
         element button1 # set text button1Title
     on UI.click button1 $ \_ -> do
-        threadDelay $ 1000 * 1000 * 1
         element button1 # set text (button1Title ++ " [pressed]")
+        threadDelay $ 1000 * 1000 * 1
         element list    #+ [UI.li # set html "<b>Delayed</b> result!"]
     
     (button2, view2) <- mkButton button2Title
@@ -70,7 +70,7 @@ mkButtons = do
     on UI.leave button2 $ \_ -> do
         element button2 # set text button2Title
     on UI.click button2 $ \_ -> do
-        element button1 # set text (button1Title ++ " [pressed]")
+        element button2 # set text (button2Title ++ " [pressed]")
         element list    #+ [UI.li # set html "Zap! Quick result!"]
     
     return [list, view1, view2]
