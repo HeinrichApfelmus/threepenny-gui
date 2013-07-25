@@ -26,6 +26,7 @@ module Graphics.UI.Threepenny.Internal.Core
   -- $settingattributes
   ,setStyle
   ,setAttr
+  ,setProp
   ,setText
   ,setHtml
   ,setTitle
@@ -44,6 +45,7 @@ module Graphics.UI.Threepenny.Internal.Core
   ,getElementsByTagName
   ,getElementsById
   ,getWindow
+  ,getProp
   ,getValue
   ,getValuesList
   ,readValue
@@ -58,6 +60,9 @@ module Graphics.UI.Threepenny.Internal.Core
   ,runFunction
   ,callDeferredFunction
   ,atomic
+  
+  -- * Oddball
+  ,audioPlay
   
   -- * Types
   ,Window
@@ -305,18 +310,20 @@ withGivenSession token ServerState{..} cont = do
 readInput :: (MonadSnap f,Read a) => ByteString -> f (Maybe a)
 readInput = fmap (>>= readMay) . getInput
 
---------------------------------------------------------------------------------
--- Event handling
--- 
--- $eventhandling
--- 
--- To bind events to elements, use the 'bind' function.
---
--- To handle DOM events, use the 'handleEvent' function, or the
--- 'handleEvents' function which will block forever.
---
--- See the rest of this section for some helpful functions that do
--- common binding, such as clicks, hovers, etc.
+
+{-----------------------------------------------------------------------------
+    Event handling
+------------------------------------------------------------------------------}
+{- $eventhandling
+
+    To bind events to elements, use the 'bind' function.
+
+    To handle DOM events, use the 'handleEvent' function, or the
+    'handleEvents' function which will block forever.
+
+    See the rest of this section for some helpful functions that do
+    common binding, such as clicks, hovers, etc.
+-}
 
 -- | Handle events signalled from the client.
 handleEvents :: Window -> IO ()
@@ -358,13 +365,14 @@ newClosure window@(Session{..}) eventType elid thunk = do
     _ <- register (sEvent key) $ \(EventData xs) -> thunk xs
     return (Closure key)
 
---------------------------------------------------------------------------------
--- Setting attributes
---
--- $settingattributes
--- 
--- Text, HTML and attributes of DOM nodes can be set using the
--- functions in this section. 
+{-----------------------------------------------------------------------------
+    Setting attributes
+------------------------------------------------------------------------------}
+{- $settingattributes
+ 
+    Text, HTML and attributes of DOM nodes can be set using the
+    functions in this section. 
+-}
 
 -- | Set the style of the given element.
 setStyle :: [(String, String)] -- ^ Pairs of CSS (property,value).
@@ -378,6 +386,13 @@ setAttr :: String  -- ^ The attribute name.
         -> Element -- ^ The element to update.
         -> IO ()
 setAttr key value e@(Element el session) = run session $ SetAttr el key value
+
+-- | Set the property of the given element.
+setProp :: String  -- ^ The property name.
+        -> String  -- ^ The property value.
+        -> Element -- ^ The element to update.
+        -> IO ()
+setProp key value e@(Element el session) = run session $ SetProp el key value
 
 -- | Set the text of the given element.
 setText :: String  -- ^ The plain text.
@@ -407,12 +422,12 @@ delete :: Element -> IO ()
 delete e@(Element el session)  = run session $ Delete el
 
 
---------------------------------------------------------------------------------
--- Manipulating tree structure
---
+{-----------------------------------------------------------------------------
+    Manipulating tree structure
+------------------------------------------------------------------------------}
 -- $treestructure
--- 
--- Functions for creating, deleting, moving, appending, prepending, DOM nodes.
+--
+--  Functions for creating, deleting, moving, appending, prepending, DOM nodes.
 
 -- | Create a new element of the given tag name.
 newElement :: Window      -- ^ Browser window in which context to create the element
@@ -434,10 +449,17 @@ appendElementTo (Element parent session) e@(Element child _) =
     --       Implement transfer of elements across browser windows
     run session $ Append parent child
 
-
---------------------------------------------------------------------------------
--- Querying the DOM
---
+
+{-----------------------------------------------------------------------------
+    Oddball
+------------------------------------------------------------------------------}
+-- | Invoke the JavaScript expression @audioElement.play();@.
+audioPlay :: Element -> IO ()
+audioPlay (Element audio session) = run session $ AudioPlay audio
+
+{-----------------------------------------------------------------------------
+    Querying the DOM
+------------------------------------------------------------------------------}
 -- $querying
 -- 
 -- The DOM can be searched for elements of a given name, and nodes can
@@ -471,6 +493,17 @@ getValue
     -> IO String -- ^ The plain text value.
 getValue e@(Element el window) =
   call window (GetValue el) $ \signal ->
+    case signal of
+      Value str -> return (Just str)
+      _         -> return Nothing
+
+-- | Get the property of an element. Blocks.
+getProp
+    :: String    -- ^ The property name.
+    -> Element   -- ^ The element to get the value of.
+    -> IO String -- ^ The plain text value.
+getProp prop e@(Element el window) =
+  call window (GetProp el prop) $ \signal ->
     case signal of
       Value str -> return (Just str)
       _         -> return Nothing
@@ -551,10 +584,9 @@ getRequestLocation = return . fst . sStartInfo
 getRequestCookies :: Window -> IO [(String,String)]
 getRequestCookies = return . snd . sStartInfo
 
-
---------------------------------------------------------------------------------
--- Utilities
-
+{-----------------------------------------------------------------------------
+    Utilities
+------------------------------------------------------------------------------}
 -- | Send a debug message to the client. The behaviour of the client
 --   is unspecified.
 debug

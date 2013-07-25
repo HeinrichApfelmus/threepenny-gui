@@ -1,5 +1,5 @@
 Name:                threepenny-gui
-Version:             0.1.0.1
+Version:             0.2.0.0
 Synopsis:            Small GUI framework that uses the web browser as a display.
 Description:
     Threepenny-GUI is a small GUI framework that uses the web browser as a display.
@@ -56,6 +56,7 @@ Library
                     ,Graphics.UI.Threepenny.Elements
                     ,Graphics.UI.Threepenny.Events
                     ,Graphics.UI.Threepenny.JQuery
+                    ,Graphics.UI.Threepenny.Timer
   Other-modules:
                      Control.Concurrent.Chan.Extra
                     ,Control.Monad.Extra
