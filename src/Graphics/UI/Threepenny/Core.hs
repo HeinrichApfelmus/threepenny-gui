@@ -40,8 +40,8 @@ module Graphics.UI.Threepenny.Core (
     callFunction, runFunction, callDeferredFunction,
     atomic,
     
-    -- * Internal
-    updateElement,
+    -- * Internal and oddball functions
+    updateElement, audioPlay,
     
     ) where
 
@@ -329,6 +329,11 @@ getElementsById
     -> IO [Element]  -- ^ Elements with given ID.
 getElementsById window name =
     mapM fromAlive =<< Core.getElementsById window name
+
+{-----------------------------------------------------------------------------
+    Oddball
+------------------------------------------------------------------------------}
+audioPlay = updateElement Core.audioPlay
 
 
 {-----------------------------------------------------------------------------

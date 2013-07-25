@@ -95,6 +95,7 @@ data Instruction
   = Debug String
   | Begin ()
   | End ()
+  | AudioPlay ElementId
   | SetToken Integer
   | Clear ()
   | GetElementsById [String]

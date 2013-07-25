@@ -61,6 +61,9 @@ module Graphics.UI.Threepenny.Internal.Core
   ,callDeferredFunction
   ,atomic
   
+  -- * Oddball
+  ,audioPlay
+  
   -- * Types
   ,Window
   ,Element
@@ -365,8 +368,6 @@ newClosure window@(Session{..}) eventType elid thunk = do
 {-----------------------------------------------------------------------------
     Setting attributes
 ------------------------------------------------------------------------------}
---
--- $settingattributes
 {- $settingattributes
  
     Text, HTML and attributes of DOM nodes can be set using the
@@ -448,10 +449,17 @@ appendElementTo (Element parent session) e@(Element child _) =
     --       Implement transfer of elements across browser windows
     run session $ Append parent child
 
-
---------------------------------------------------------------------------------
--- Querying the DOM
---
+
+{-----------------------------------------------------------------------------
+    Oddball
+------------------------------------------------------------------------------}
+-- | Invoke the JavaScript expression @audioElement.play();@.
+audioPlay :: Element -> IO ()
+audioPlay (Element audio session) = run session $ AudioPlay audio
+
+{-----------------------------------------------------------------------------
+    Querying the DOM
+------------------------------------------------------------------------------}
 -- $querying
 -- 
 -- The DOM can be searched for elements of a given name, and nodes can
@@ -576,7 +584,6 @@ getRequestLocation = return . fst . sStartInfo
 getRequestCookies :: Window -> IO [(String,String)]
 getRequestCookies = return . snd . sStartInfo
 
-
 {-----------------------------------------------------------------------------
     Utilities
 ------------------------------------------------------------------------------}
