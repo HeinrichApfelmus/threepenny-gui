@@ -1,0 +1,18 @@
+.box-drag {
+    position: absolute;
+    top   : 20px;
+    border: 1px solid gray;
+    width : 90px;
+    height: 2ex;
+    text-align: center;
+    padding: 1ex;
+}
+
+.box-drop {
+    position: absolute;
+    top   : 100px;
+    width : 100px;
+    height: 2.2ex;
+    text-align: center;
+    padding: 1ex;
+}
