@@ -101,6 +101,8 @@ data Instruction
   | GetElementsByTagName String
   | SetStyle ElementId [(String,String)]
   | SetAttr ElementId String String
+  | SetProp ElementId String String
+  | GetProp ElementId String
   | Append ElementId ElementId
   | SetText ElementId String
   | SetHtml ElementId String

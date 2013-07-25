@@ -13,8 +13,8 @@ module Graphics.UI.Threepenny.Core (
     -- * DOM elements
     -- | Create and manipulate DOM elements.
     Element, mkElement, getWindow, delete, (#+), string,
-        getHead, getBody, 
-        children, text, html, attr, style, value,
+        getHead, getBody,
+        children, text, html, attr, checked, style, value,
     getValuesList,
     getElementsByTagName, getElementByTagName, getElementsById, getElementById,
     
@@ -239,6 +239,19 @@ html = mkWriteAttr (updateElement . Core.setHtml)
 -- | HTML attributes of an element.
 attr :: String -> WriteAttr Element String
 attr name = mkWriteAttr (updateElement . Core.setAttr name)
+
+-- | The @checked@ status of an input element of type checkbox.
+checked :: Attr Element Bool
+checked = mkReadWriteAttr get set
+    where
+    fromBool b = if b then "true" else "false"
+    set b      = updateElement (Core.setProp "checked" $ fromBool b)
+    
+    get (Element ref) = do
+        me <- readMVar ref
+        case me of
+            Limbo _ _ -> return False -- error "'checked' attribute: element must be in a browser window"
+            Alive e   -> (== "true") <$> Core.getProp "checked" e
 
 -- | Set CSS style of an Element
 style :: WriteAttr Element [(String,String)]

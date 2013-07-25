@@ -231,12 +231,22 @@ $.fn.livechange = function(ms,trigger){
         break;
       }
       case "SetAttr": {
-        var set = event.SetAttr;
-        var id = set[0];
-        var key = set[1];
+        var set   = event.SetAttr;
+        var id    = set[0];
+        var key   = set[1];
         var value = set[2];
-        var el = elidToElement(id);
+        var el    = elidToElement(id);
         $(el).attr(key,value);
+        continuation();
+        break;
+      }
+      case "SetProp": {
+        var set   = event.SetProp;
+        var id    = set[0];
+        var key   = set[1];
+        var value = set[2];
+        var el    = elidToElement(id);
+        $(el).prop(key,value);
         continuation();
         break;
       }
@@ -244,6 +254,18 @@ $.fn.livechange = function(ms,trigger){
         var id = event.GetValue;
         var el = elidToElement(id);
         var value = $(el).val();
+        signal({
+          Value: value
+        },function(){
+          continuation();
+        });
+        break;
+      }
+      case "GetProp": {
+        var get   = event.GetProp;
+        var el    = elidToElement(get[0]);
+        var key   = get[1];
+        var value = $(el).prop(key).toString();
         signal({
           Value: value
         },function(){
