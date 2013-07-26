@@ -327,8 +327,8 @@ $.fn.livechange = function(ms,trigger){
         break;
       }
       case "Bind": {
-        var bind = event.Bind;
-        var eventType = bind[0];
+        var bind        = event.Bind;
+        var eventType   = bind[0];
         var handlerGuid = bind[2];
         var el = elidToElement(bind[1]);
         console_log('event type: ' + eventType);
@@ -354,6 +354,15 @@ $.fn.livechange = function(ms,trigger){
                 e.originalEvent.dataTransfer
                     ?[e.originalEvent.dataTransfer.getData("dragData")]
                     :[]])
+            },function(){
+              // no action
+            });
+            return true;
+          });
+        } else if(eventType.match('mousemove')) {
+          $(el).bind(eventType,function(e){
+            signal({
+              Event: handlerGuid.concat([[e.pageX.toString(), e.pageY.toString()]])
             },function(){
               // no action
             });
