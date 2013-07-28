@@ -114,12 +114,10 @@ $.fn.livechange = function(ms,trigger){
   }
 
   function runMultipleEvents(events){
-    if(events.length == 0) {
-      return waitForEvents();
-    }
-    runEvent(events.shift(),function(){
-      runMultipleEvents(events);
-    });
+		for (var i = 0; i < events.length; i++) {
+			runEvent(events[i],function(){});
+		}
+		return waitForEvents();
   }
 
   function runEvent(event,continuation){
