@@ -62,32 +62,33 @@ Library
                     ,data-default
                     ,template-haskell
 
-Executable threepenny-examples-buttons
-  Main-is:           Buttons.hs
-  Hs-source-dirs:    src
-  Ghc-options:       -threaded -O2
-  Build-depends:     base                      >= 4     && < 5
-                    ,threepenny-gui
-
-Executable threepenny-examples-missing-dollars
-  Main-is:           MissingDollars.hs
-  Hs-source-dirs:    src
-  Ghc-options:       -threaded -O2
-  Build-depends:     base                      >= 4     && < 5
-                    ,threepenny-gui
-
-Executable threepenny-examples-use-words
-  Main-is:           UseWords.hs
-  Hs-source-dirs:    src
-  Ghc-options:       -threaded -O2
-  Build-depends:     base                      >= 4     && < 5
-                    ,threepenny-gui
-
-Executable threepenny-examples-chat
-  Main-is:           Chat.hs
-  Hs-source-dirs:    src
-  Ghc-options:       -threaded -O2
-  Build-depends:     base                      >= 4     && < 5
-                    ,threepenny-gui
-                    ,time
-                    ,parsec
+-- Executable threepenny-examples-buttons
+--  Main-is:           Buttons.hs
+--  Hs-source-dirs:    src
+--  Ghc-options:       -threaded -O2
+--  Build-depends:     base                      >= 4     && < 5
+--                    ,threepenny-gui
+--
+-- Executable threepenny-examples-missing-dollars
+--  Main-is:           MissingDollars.hs
+--  Hs-source-dirs:    src
+--  Ghc-options:       -threaded -O2
+--  Build-depends:     base                      >= 4     && < 5
+--                    ,threepenny-gui
+--
+-- Executable threepenny-examples-use-words
+--  Main-is:           UseWords.hs
+--  Hs-source-dirs:    src
+--  Ghc-options:       -threaded -O2
+--  Build-depends:     base                      >= 4     && < 5
+--                    ,threepenny-gui
+--
+-- Executable threepenny-examples-chat
+--  Main-is:           Chat.hs
+--  Hs-source-dirs:    src
+--  Ghc-options:       -threaded -O2
+--  Build-depends:     base                      >= 4     && < 5
+--                    ,threepenny-gui
+--                    ,time
+--                    ,parsec
+--

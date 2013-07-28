@@ -123,7 +123,7 @@ $.fn.livechange = function(ms,trigger){
   }
 
   function runEvent(event,continuation){
-    console_log("Event: %s",JSON.stringify(event));
+    //console_log("Event: %s",JSON.stringify(event));
     for(var key in event){
       switch(key){
       case "EmptyEl": {
@@ -359,7 +359,7 @@ $.fn.livechange = function(ms,trigger){
 
   function signal(signal,continuation){
     signal_count++;
-    console_log('Signal: %s',JSON.stringify(signal));
+    //console_log('Signal: %s',JSON.stringify(signal));
     $.ajax({
       dataType: 'json',
       url:'signal',
