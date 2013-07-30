@@ -15,7 +15,6 @@ module Graphics.UI.Threepenny.Core (
     Element, mkElement, getWindow, delete, (#+), string,
         getHead, getBody,
         children, text, html, attr, style, value,
-        checked, selection,
     getValuesList,
     getElementsByTagName, getElementByTagName, getElementsById, getElementById,
     
@@ -42,7 +41,7 @@ module Graphics.UI.Threepenny.Core (
     atomic,
     
     -- * Internal and oddball functions
-    updateElement, audioPlay,
+    updateElement, audioPlay, fromProp,
     
     ) where
 
@@ -241,39 +240,6 @@ html = mkWriteAttr (updateElement . Core.setHtml)
 attr :: String -> WriteAttr Element String
 attr name = mkWriteAttr (updateElement . Core.setAttr name)
 
--- | The @checked@ status of an input element of type checkbox.
-checked :: Attr Element Bool
-checked = mkReadWriteAttr get set
-    where
-    set i = set' (fromProp "checked") (if i then "true" else "false")
-    get x = (== "true") <$> get' (fromProp "checked") x
-
--- | Index of the currently selected option of a @<select>@ element.
---
--- The index starts at @0@.
--- If no option is selected, then the selection is 'Nothing'.
-selection :: Attr Element (Maybe Int)
-selection = mkReadWriteAttr get set
-    where
-    toString     = maybe ("-1") show
-    fromString s = let x = read s in if x == -1 then Nothing else Just x
-    
-    set i = set' (fromProp "selectedIndex") (toString i)
-    get x = fromString <$> get' (fromProp "selectedIndex") x
-
-
--- Turn a jQuery property @.prop()@ into an attribute.
-fromProp :: String -> Attr Element String
-fromProp name = mkReadWriteAttr get set
-    where
-    set x = updateElement (Core.setProp name x)
-    get (Element ref) = do
-        me <- readMVar ref
-        case me of
-            Limbo _ _ -> error "'checked' attribute: element must be in a browser window"
-            Alive e   -> Core.getProp name e
-
-
 -- | Set CSS style of an Element
 style :: WriteAttr Element [(String,String)]
 style = mkWriteAttr (updateElement . Core.setStyle)
@@ -356,6 +322,16 @@ getElementsById window name =
 ------------------------------------------------------------------------------}
 audioPlay = updateElement Core.audioPlay
 
+-- Turn a jQuery property @.prop()@ into an attribute.
+fromProp :: String -> (String -> a) -> (a -> String) -> Attr Element a
+fromProp name fromString toString = mkReadWriteAttr get set
+    where
+    set x = updateElement (Core.setProp name $ toString x)
+    get (Element ref) = do
+        me <- readMVar ref
+        case me of
+            Limbo _ _ -> error "'checked' attribute: element must be in a browser window"
+            Alive e   -> fromString <$> Core.getProp name e
 
 {-----------------------------------------------------------------------------
     Layout

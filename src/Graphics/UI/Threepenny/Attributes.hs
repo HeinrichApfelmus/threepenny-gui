@@ -1,8 +1,11 @@
 module Graphics.UI.Threepenny.Attributes (
     -- * Synopsis
-    -- | Common element attributes, for convenience.
+    -- | Element attributes.
     
-    -- * Documentation
+    -- * Input elements
+    checked, selection, enabled,
+    
+    -- * HTML attributes
     action, align, alink, alt, altcode, archive,
     background, base, bgcolor, border, bordercolor,
     cellpadding, cellspacing, checked_, class_, clear_, code_, codebase,
@@ -21,6 +24,30 @@ import Graphics.UI.Threepenny.Core
 {-----------------------------------------------------------------------------
     Attributes
 ------------------------------------------------------------------------------}
+-- | The @checked@ status of an input element of type checkbox.
+checked :: Attr Element Bool
+checked = fromProp "checked" (== "true") (\i -> if i then "true" else "false")
+
+-- | The @enabled@ status of an input element
+enabled :: Attr Element Bool
+enabled = fromProp "disabled" (== "false") (\i -> if not i then "true" else "false")
+
+-- | Index of the currently selected option of a @<select>@ element.
+--
+-- The index starts at @0@.
+-- If no option is selected, then the selection is 'Nothing'.
+selection :: Attr Element (Maybe Int)
+selection = fromProp "selectedIndex" fromString (maybe ("-1") show)
+    where
+    fromString s = let x = read s in if x == -1 then Nothing else Just x
+
+
+{-----------------------------------------------------------------------------
+    HTML atributes
+    
+    Taken from the HTML library (BSD3 license)
+    http://hackage.haskell.org/package/html
+------------------------------------------------------------------------------}
 strAttr :: String -> WriteAttr Element String
 strAttr name = mkWriteAttr (set' (attr name))
 
@@ -32,13 +59,7 @@ emptyAttr name = mkWriteAttr (set' (attr name) . f)
     where
     f True  = "1"
     f False = "0"
-
-{-----------------------------------------------------------------------------
-    Primitives
     
-    Taken from the HTML library (BSD3 license)
-    http://hackage.haskell.org/package/html
-------------------------------------------------------------------------------}
 action              =   strAttr "action"
 align               =   strAttr "align"
 alink               =   strAttr "alink"
