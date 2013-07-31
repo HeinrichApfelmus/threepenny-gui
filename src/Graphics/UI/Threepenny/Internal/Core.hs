@@ -265,10 +265,10 @@ poll Session{..} = do
   writeJson instructions
 
 -- Write JSON to output.
-writeJson :: (MonadSnap m, Data a) => a -> m ()
+writeJson :: (MonadSnap m, JSON a) => a -> m ()
 writeJson json = do
     modifyResponse $ setContentType "application/json"
-    (writeString . encodeJSON) json
+    (writeString . (\x -> showJSValue x "") . showJSON) json
 
 -- Write a string to output.
 writeString :: (MonadSnap m) => String -> m ()
@@ -389,7 +389,7 @@ setAttr key value e@(Element el session) = run session $ SetAttr el key value
 
 -- | Set the property of the given element.
 setProp :: String  -- ^ The property name.
-        -> String  -- ^ The property value.
+        -> JSValue -- ^ The property value.
         -> Element -- ^ The element to update.
         -> IO ()
 setProp key value e@(Element el session) = run session $ SetProp el key value

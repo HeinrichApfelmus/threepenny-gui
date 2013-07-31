@@ -102,7 +102,7 @@ data Instruction
   | GetElementsByTagName String
   | SetStyle ElementId [(String,String)]
   | SetAttr ElementId String String
-  | SetProp ElementId String String
+  | SetProp ElementId String JSValue
   | GetProp ElementId String
   | Append ElementId ElementId
   | SetText ElementId String
@@ -117,6 +117,13 @@ data Instruction
   | EmptyEl ElementId
   | Delete ElementId
   deriving (Typeable,Data,Show)
+
+instance Data JSValue -- dummy instance
+
+instance JSON Instruction where
+    readJSON _ = error "JSON.Instruction.readJSON: No method implemented."
+    showJSON (SetProp a b c) = makeObj [("SetProp",JSArray [toJSON a,toJSON b,c])]
+    showJSON x               = toJSON x 
 
 -- | A signal (mostly events) that are sent from the client to the server.
 data Signal

@@ -45,19 +45,17 @@ module Graphics.UI.Threepenny.Core (
     
     ) where
 
+import Data.IORef
 import Data.Maybe (listToMaybe)
 import Data.Functor
+import Data.String (fromString)
+import Control.Concurrent.MVar
 import Control.Event
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader as Reader
-
-import Control.Concurrent.MVar
-import Data.IORef
-
-import Data.String (fromString)
-
 import Network.URI
+import Text.JSON
 
 import qualified Graphics.UI.Threepenny.Internal.Core  as Core
 import Graphics.UI.Threepenny.Internal.Core
@@ -323,7 +321,7 @@ getElementsById window name =
 audioPlay = updateElement Core.audioPlay
 
 -- Turn a jQuery property @.prop()@ into an attribute.
-fromProp :: String -> (String -> a) -> (a -> String) -> Attr Element a
+fromProp :: String -> (String -> a) -> (a -> JSValue) -> Attr Element a
 fromProp name fromString toString = mkReadWriteAttr get set
     where
     set x = updateElement (Core.setProp name $ toString x)

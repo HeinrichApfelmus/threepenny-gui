@@ -18,7 +18,7 @@ module Graphics.UI.Threepenny.Attributes (
     target, text_, type_, usemap, valign, version, vlink, vspace, width,
     ) where
 
-
+import Text.JSON
 import Graphics.UI.Threepenny.Core
 
 {-----------------------------------------------------------------------------
@@ -26,18 +26,18 @@ import Graphics.UI.Threepenny.Core
 ------------------------------------------------------------------------------}
 -- | The @checked@ status of an input element of type checkbox.
 checked :: Attr Element Bool
-checked = fromProp "checked" (== "true") (\i -> if i then "true" else "false")
+checked = fromProp "checked" (== "true") JSBool
 
 -- | The @enabled@ status of an input element
 enabled :: Attr Element Bool
-enabled = fromProp "disabled" (== "false") (\i -> if not i then "true" else "false")
+enabled = fromProp "disabled" (== "false") (JSBool . not)
 
 -- | Index of the currently selected option of a @<select>@ element.
 --
 -- The index starts at @0@.
 -- If no option is selected, then the selection is 'Nothing'.
 selection :: Attr Element (Maybe Int)
-selection = fromProp "selectedIndex" fromString (maybe ("-1") show)
+selection = fromProp "selectedIndex" fromString (showJSON . maybe (-1) id)
     where
     fromString s = let x = read s in if x == -1 then Nothing else Just x
 
