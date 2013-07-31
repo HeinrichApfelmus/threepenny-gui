@@ -1,16 +1,9 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
--- | All Threepenny's types. See "Graphics.UI.Threepenny.Types" for only public
---   types. Non-public types can be manipulated at your own risk, if you
---   know what you're doing and you want to add something that the
---   library doesn't do.
+module Graphics.UI.Threepenny.Internal.Types where
 
-module Graphics.UI.Threepenny.Internal.Types
-  where
-
-import Prelude              hiding ((++),init)
+import Prelude              hiding (init)
 
 import Control.Applicative
 import Control.Concurrent
@@ -23,8 +16,9 @@ import Data.Time
 import Network.URI
 import Text.JSON.Generic
 
---------------------------------------------------------------------------------
--- Public types
+{-----------------------------------------------------------------------------
+    Public types
+------------------------------------------------------------------------------}
 
 -- | Reference to an element in the DOM of the client window.
 data Element = Element
@@ -87,22 +81,29 @@ data ConnectedState
 -- | Data from an event. At the moment it is empty.
 data EventData = EventData [Maybe String]
 
---------------------------------------------------------------------------------
--- Internal types
+-- | Record for configuring the Threepenny GUI server.
+data Config = Config
+  { tpPort       :: Int               -- ^ Port number.
+  , tpCustomHTML :: Maybe FilePath    -- ^ Custom HTML file to replace the default one.
+  , tpStatic     :: FilePath          -- ^ Directory that is served under @/static@.
+  }
+
+
+{-----------------------------------------------------------------------------
+    Communication between client and server
+------------------------------------------------------------------------------}
 
 -- | An instruction that is sent to the client as JSON.
 data Instruction
   = Debug String
   | Begin ()
   | End ()
-  | AudioPlay ElementId
   | SetToken Integer
   | Clear ()
   | GetElementsById [String]
   | GetElementsByTagName String
   | SetStyle ElementId [(String,String)]
   | SetAttr ElementId String String
-  | SetProp ElementId String JSValue
   | GetProp ElementId String
   | Append ElementId ElementId
   | SetText ElementId String
@@ -112,18 +113,16 @@ data Instruction
   | GetValues [ElementId]
   | SetTitle String
   | GetLocation ()
+  | RunJSCode String
   | CallFunction (String,[String])
   | CallDeferredFunction (Closure,String,[String])
   | EmptyEl ElementId
   | Delete ElementId
   deriving (Typeable,Data,Show)
 
-instance Data JSValue -- dummy instance
-
 instance JSON Instruction where
     readJSON _ = error "JSON.Instruction.readJSON: No method implemented."
-    showJSON (SetProp a b c) = makeObj [("SetProp",JSArray [toJSON a,toJSON b,c])]
-    showJSON x               = toJSON x 
+    showJSON x = toJSON x 
 
 -- | A signal (mostly events) that are sent from the client to the server.
 data Signal
@@ -161,11 +160,57 @@ nullable v      = Just <$> readJSON v
 -- | An opaque reference to a closure that the event manager uses to
 --   trigger events signalled by the client.
 data Closure = Closure (String,String)
-  deriving (Typeable,Data,Show)
+    deriving (Typeable,Data,Show)
 
--- | Record for configuring the Threepenny GUI server.
-data Config = Config
-  { tpPort       :: Int               -- ^ Port number.
-  , tpCustomHTML :: Maybe FilePath    -- ^ Custom HTML file to replace the default one.
-  , tpStatic     :: FilePath          -- ^ Directory that is served under @/static@.
-  }
+{-----------------------------------------------------------------------------
+    JavaScript Code and Foreign Function Interface
+------------------------------------------------------------------------------}
+
+-- | JavaScript code snippet.
+newtype JSCode = JSCode { unJSCode :: String }
+    deriving (Eq, Ord, Show, Data, Typeable)
+
+-- | Class for rendering Haskell types as JavaScript code.
+class Expr a where
+    render :: a -> JSCode
+
+instance Expr String    where render   = JSCode . show
+instance Expr Int       where render   = JSCode . show
+instance Expr Bool      where render b = JSCode $ if b then "false" else "true"
+instance Expr JSValue   where render x = JSCode $ showJSValue x ""
+instance Expr ElementId where
+    render (ElementId x) = apply "elidToElement(%1)" [render x]
+instance Expr Element   where render (Element e _) = render e
+
+
+-- | Substitute occurences of %1, %2 up to %9 with the argument strings.
+-- The types ensure that the % character has no meaning in the generated output.
+-- 
+-- > apply "%1 and %2" [x,y] = x ++ " and " ++ y
+apply :: String -> [JSCode] -> JSCode
+apply code args = JSCode $ go code
+    where
+    argument i = unJSCode (args !! i)
+    
+    go []         = []
+    go ('%':c:cs) = argument index ++ go cs
+        where index = fromEnum c - fromEnum '1'
+    go (c:cs)     = c : go cs
+
+
+-- | Helper class for making a simple JavaScript FFI
+class FFI a where
+    fancy :: ([JSCode] -> JSCode) -> a
+
+-- | Simple JavaScript FFI with string substitution.
+-- Taken from the Fay language.
+ffi :: FFI a => String -> a
+ffi macro = fancy (apply macro)
+
+instance FFI JSCode where fancy f = f []
+instance (Expr a, FFI b) => FFI (a -> b) where
+    fancy f a = fancy (f . (render a:))
+
+
+testFFI :: String -> Int -> JSCode
+testFFI = ffi "$(%1).prop('checked',%2)"

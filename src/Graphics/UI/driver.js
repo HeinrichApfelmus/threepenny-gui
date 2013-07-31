@@ -126,14 +126,7 @@ $.fn.livechange = function(ms,trigger){
     console_log("Event: %s",JSON.stringify(event));
     for(var key in event){
       switch(key){
-      case "AudioPlay" : {
-        var id = event.AudioPlay;
-        var el = elidToElement(id);
-        el.play();
-        continuation();
-        break;
-      }
-          
+                
       case "EmptyEl": {
         var id = event.EmptyEl;
         var el = elidToElement(id);
@@ -173,6 +166,11 @@ $.fn.livechange = function(ms,trigger){
             continuation();
           });
         }));
+        break;
+      }
+      case "RunJSCode": {
+        eval(event.RunJSCode);
+        continuation();
         break;
       }
       case "Delete": {

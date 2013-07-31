@@ -392,7 +392,8 @@ setProp :: String  -- ^ The property name.
         -> JSValue -- ^ The property value.
         -> Element -- ^ The element to update.
         -> IO ()
-setProp key value e@(Element el session) = run session $ SetProp el key value
+setProp key value e@(Element el session) =
+    runJSCode session $ ffi "$(%1).prop(%2,%3);" el key value
 
 -- | Set the text of the given element.
 setText :: String  -- ^ The plain text.
@@ -455,7 +456,7 @@ appendElementTo (Element parent session) e@(Element child _) =
 ------------------------------------------------------------------------------}
 -- | Invoke the JavaScript expression @audioElement.play();@.
 audioPlay :: Element -> IO ()
-audioPlay (Element audio session) = run session $ AudioPlay audio
+audioPlay (Element el session) = runJSCode session $ ffi "%1.play();" el
 
 {-----------------------------------------------------------------------------
     Querying the DOM
@@ -610,6 +611,10 @@ callFunction window func params =
     case signal of
       FunctionCallValues vs -> return (Just vs)
       _                     -> return Nothing
+
+-- | Run the given snippet of JavaScript code and carry on. Doesn't block.
+runJSCode :: Session -> JSCode -> IO ()
+runJSCode session = run session . RunJSCode . unJSCode
 
 -- | Call the given function and carry on. Doesn't block.
 runFunction
