@@ -246,16 +246,6 @@ $.fn.livechange = function(ms,trigger){
         continuation();
         break;
       }
-      case "SetProp": {
-        var set   = event.SetProp;
-        var id    = set[0];
-        var key   = set[1];
-        var value = set[2];
-        var el    = elidToElement(id);
-        $(el).prop(key,value);
-        continuation();
-        break;
-      }
       case "GetValue": {
         var id = event.GetValue;
         var el = elidToElement(id);
