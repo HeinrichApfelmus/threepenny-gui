@@ -32,8 +32,12 @@ setup window = do
         # set UI.height 400
         # set UI.width  400
         # set style [("border", "solid black 1px")]
+    clear  <- UI.button #+ [string "Clear the canvas."]
     
-    getBody window #+ [column [element canvas, string "Click to places images."]]
+    getBody window #+ [column
+        [element canvas, string "Click to places images."]
+        ,element clear
+        ]
     
     dir <- getStaticDir
     url <- loadFile window "image/png" (dir </> "game" </> "BlackMage" <.> "png")
@@ -42,4 +46,8 @@ setup window = do
     let positions = [(x,y) | x <- [0,20..300], y <- [0,20..300]] :: [(Int,Int)]
     on UI.click canvas $ const $ forM_ positions $
         \xy -> UI.drawImage img xy canvas
+
+    on UI.click clear  $ const $ do
+        UI.clearCanvas canvas
+
 

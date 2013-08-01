@@ -4,7 +4,7 @@ module Graphics.UI.Threepenny.Canvas (
     
     -- * Documentation
     Canvas,
-    drawImage,
+    drawImage, clearCanvas,
     ) where
 
 import Control.Event
@@ -25,3 +25,11 @@ drawImage eimage (x,y) = updateElement $ \(Core.Element canvas window) -> do
     image <- manifestElement window eimage
     runFunction window $
         ffi "%1.getContext('2d').drawImage(%2,%3,%4)" canvas image x y
+
+-- | Clear the canvas
+clearCanvas :: Canvas -> IO ()
+clearCanvas = updateElement $ \(Core.Element canvas window) -> do
+    runFunction window $
+        ffi "%1.getContext('2d').clear()" canvas
+
+
