@@ -35,10 +35,10 @@ module Graphics.UI.Threepenny.Core (
     set, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
     
     -- * JavaScript FFI
-    -- | A few raw JavaScript utilities.
+    -- | Direct interface to JavaScript in the browser window.
     debug, clear,
-    FFI, ffi, JSFunction, callFunction, runFunction, callDeferredFunction,
-    atomic,
+    ToJS, FFI, ffi, JSFunction, runFunction, callFunction,
+    callDeferredFunction, atomic,
     
     -- * Internal and oddball functions
     updateElement, audioPlay, fromProp,
@@ -60,7 +60,7 @@ import Text.JSON
 import qualified Graphics.UI.Threepenny.Internal.Core  as Core
 import Graphics.UI.Threepenny.Internal.Core
     (getRequestLocation,
-     FFI, ffi, JSFunction,
+     ToJS, FFI, ffi, JSFunction,
      debug, clear, callFunction, runFunction, callDeferredFunction, atomic, )
 import qualified Graphics.UI.Threepenny.Internal.Types as Core
 import Graphics.UI.Threepenny.Internal.Types (Window, Config, EventData)

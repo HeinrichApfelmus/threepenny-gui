@@ -172,19 +172,20 @@ newtype JSCode = JSCode { unJSCode :: String }
     deriving (Eq, Ord, Show, Data, Typeable)
 
 -- | Class for rendering Haskell types as JavaScript code.
-class Expr a where
+class ToJS a where
     render :: a -> JSCode
 
-instance Expr String    where render   = JSCode . show
-instance Expr Int       where render   = JSCode . show
-instance Expr Bool      where render b = JSCode $ if b then "false" else "true"
-instance Expr JSValue   where render x = JSCode $ showJSValue x ""
-instance Expr ElementId where
+instance ToJS String    where render   = JSCode . show
+instance ToJS Int       where render   = JSCode . show
+instance ToJS Bool      where render b = JSCode $ if b then "false" else "true"
+instance ToJS JSValue   where render x = JSCode $ showJSValue x ""
+instance ToJS ElementId where
     render (ElementId x) = apply "elidToElement(%1)" [render x]
-instance Expr Element   where render (Element e _) = render e
+instance ToJS Element   where render (Element e _) = render e
 
 
--- | JavaScript function with a given output type.
+-- | Representation of a JavaScript expression
+-- with a girven output type.
 data JSFunction a = JSFunction
     { code    :: JSCode                          -- code snippet
     , marshal :: Window -> JSValue -> Result a   -- convert to Haskell value
@@ -203,7 +204,7 @@ fromJSCode c = JSFunction { code = c, marshal = \_ _ -> Ok () }
 class FFI a where
     fancy :: ([JSCode] -> JSCode) -> a
 
-instance (Expr a, FFI b) => FFI (a -> b) where
+instance (ToJS a, FFI b) => FFI (a -> b) where
     fancy f a = fancy $ f . (render a:)
 
 instance FFI (JSFunction ())        where fancy f = fromJSCode $ f []

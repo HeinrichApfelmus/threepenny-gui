@@ -60,7 +60,7 @@ module Graphics.UI.Threepenny.Internal.Core
   ,atomic
 
   -- * JavaScript FFI
-  ,FFI, ffi, JSFunction
+  ,ToJS, FFI, ffi, JSFunction
   ,runFunction, callFunction
   
   -- * Oddball
@@ -600,10 +600,14 @@ clear :: Window -> IO ()
 clear window = run window $ Clear ()
 
 -- | Run the given JavaScript function and carry on. Doesn't block.
+--
+-- The client window uses JavaScript's @eval()@ function to run the code.
 runFunction :: Window -> JSFunction () -> IO ()
 runFunction session = run session . RunJSFunction . unJSCode . code
 
 -- | Run the given JavaScript function and wait for results. Blocks.
+--
+-- The client window uses JavaScript's @eval()@ function to run the code.
 callFunction :: Window -> JSFunction a -> IO a
 callFunction window (JSFunction code marshal) = 
     call window (CallJSFunction . unJSCode $ code) $ \signal ->
