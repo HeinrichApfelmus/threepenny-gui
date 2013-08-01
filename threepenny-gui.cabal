@@ -34,6 +34,7 @@ Data-files:          src/Graphics/UI/*.js
                     ,wwwroot/css/*.css
                     ,wwwroot/*.html
                     ,wwwroot/*.txt
+                    ,wwwroot/*.wav
 
 
 flag buildExamples
