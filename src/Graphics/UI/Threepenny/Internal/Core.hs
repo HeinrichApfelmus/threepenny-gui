@@ -56,10 +56,12 @@ module Graphics.UI.Threepenny.Internal.Core
   -- * Utilities
   ,debug
   ,clear
-  ,callFunction
-  ,runFunction
   ,callDeferredFunction
   ,atomic
+
+  -- * JavaScript FFI
+  ,FFI, ffi, JSFunction
+  ,runFunction, callFunction
   
   -- * Oddball
   ,audioPlay
@@ -393,7 +395,7 @@ setProp :: String  -- ^ The property name.
         -> Element -- ^ The element to update.
         -> IO ()
 setProp key value e@(Element el session) =
-    runJSCode session $ ffi "$(%1).prop(%2,%3);" el key value
+    runFunction session $ ffi "$(%1).prop(%2,%3);" el key value
 
 -- | Set the text of the given element.
 setText :: String  -- ^ The plain text.
@@ -456,7 +458,7 @@ appendElementTo (Element parent session) e@(Element child _) =
 ------------------------------------------------------------------------------}
 -- | Invoke the JavaScript expression @audioElement.play();@.
 audioPlay :: Element -> IO ()
-audioPlay (Element el session) = runJSCode session $ ffi "%1.play();" el
+audioPlay (Element el session) = runFunction session $ ffi "%1.play();" el
 
 {-----------------------------------------------------------------------------
     Querying the DOM
@@ -600,30 +602,19 @@ debug window = run window . Debug
 clear :: Window -> IO ()
 clear window = run window $ Clear ()
 
--- | Call the given function and wait for results. Blocks.
-callFunction
-  :: Window             -- ^ Browser window
-  -> String             -- ^ The function name.
-  -> [String]           -- ^ Parameters.
-  -> IO [Maybe String]  -- ^ Return tuple.
-callFunction window func params =
-  call window (CallFunction (func,params)) $ \signal ->
-    case signal of
-      FunctionCallValues vs -> return (Just vs)
-      _                     -> return Nothing
+-- | Run the given JavaScript function and carry on. Doesn't block.
+runFunction :: Window -> JSFunction () -> IO ()
+runFunction session = run session . RunJSFunction . unJSCode . code
 
--- | Run the given snippet of JavaScript code and carry on. Doesn't block.
-runJSCode :: Session -> JSCode -> IO ()
-runJSCode session = run session . RunJSCode . unJSCode
-
--- | Call the given function and carry on. Doesn't block.
-runFunction
-  :: Window            -- ^ Browser window
-  -> String            -- ^ The function name.
-  -> [String]          -- ^ Parameters.
-  -> IO ()
-runFunction window func params =
-  run window $ CallFunction (func,params)
+-- | Run the given JavaScript function and wait for results. Blocks.
+callFunction :: Window -> JSFunction a -> IO a
+callFunction window (JSFunction code marshal) = 
+    call window (CallJSFunction . unJSCode $ code) $ \signal ->
+        case signal of
+            FunctionResult v -> case marshal window v of
+                Ok    a -> return $ Just a
+                Error _ -> return Nothing
+            _ -> return Nothing
 
 -- | Call the given function with the given continuation. Doesn't block.
 callDeferredFunction

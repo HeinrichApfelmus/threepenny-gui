@@ -34,10 +34,10 @@ module Graphics.UI.Threepenny.Core (
     Attr, WriteAttr, ReadAttr, ReadWriteAttr(..),
     set, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
     
-    -- * Utilities
+    -- * JavaScript FFI
     -- | A few raw JavaScript utilities.
     debug, clear,
-    callFunction, runFunction, callDeferredFunction,
+    FFI, ffi, JSFunction, callFunction, runFunction, callDeferredFunction,
     atomic,
     
     -- * Internal and oddball functions
@@ -60,6 +60,7 @@ import Text.JSON
 import qualified Graphics.UI.Threepenny.Internal.Core  as Core
 import Graphics.UI.Threepenny.Internal.Core
     (getRequestLocation,
+     FFI, ffi, JSFunction,
      debug, clear, callFunction, runFunction, callDeferredFunction, atomic, )
 import qualified Graphics.UI.Threepenny.Internal.Types as Core
 import Graphics.UI.Threepenny.Internal.Types (Window, Config, EventData)

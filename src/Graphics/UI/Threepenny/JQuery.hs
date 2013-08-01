@@ -45,9 +45,9 @@ sendValue el = fmap f (domEvent "sendvalue" el)
 -- | Focus an element.
 setFocus :: Element -> IO ()
 setFocus = updateElement $ \(Core.Element el window) ->
-    runFunction window "jquery_setFocus" [encode el]
+    runFunction window (ffi "$(%1).focus()" el)
 
 -- | Scroll to the bottom of an element.
 scrollToBottom :: Element -> IO ()
 scrollToBottom = updateElement $ \(Core.Element area window) ->
-    runFunction window "jquery_scrollToBottom" [encode area]
+    runFunction window (ffi "jquery_scrollToBottom(%1)" area)

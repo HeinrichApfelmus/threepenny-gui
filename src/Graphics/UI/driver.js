@@ -68,16 +68,8 @@ $.fn.livechange = function(ms,trigger){
                   complete);
   }
 
-  window.jquery_scrollToBottom = function(el_id,cont){
-    var el = elidToElement(JSON.parse(el_id));
+  window.jquery_scrollToBottom = function(el){
     $(el).scrollTop(el.scrollHeight);
-    cont();
-  };
-
-  window.jquery_setFocus = function(el_id,cont){
-    var el = elidToElement(JSON.parse(el_id));
-    $(el).focus();
-    cont();
   };
   
   function waitForEvents(){
@@ -154,22 +146,8 @@ $.fn.livechange = function(ms,trigger){
         continuation();
         break;
       }
-      case "CallFunction": {
-        var call = event.CallFunction;
-        var theFunction = eval(call[0]);
-        var params = call[1];
-        theFunction.apply(window, params.concat(function(){
-          var args = Array.prototype.slice.call(arguments,0);
-          signal({
-            FunctionCallValues: args
-          },function(){
-            continuation();
-          });
-        }));
-        break;
-      }
-      case "RunJSCode": {
-        eval(event.RunJSCode);
+      case "RunJSFunction": {
+        eval(event.RunJSFunction);
         continuation();
         break;
       }

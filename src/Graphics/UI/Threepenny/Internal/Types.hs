@@ -113,8 +113,8 @@ data Instruction
   | GetValues [ElementId]
   | SetTitle String
   | GetLocation ()
-  | RunJSCode String
-  | CallFunction (String,[String])
+  | RunJSFunction String
+  | CallJSFunction String
   | CallDeferredFunction (Closure,String,[String])
   | EmptyEl ElementId
   | Delete ElementId
@@ -132,7 +132,8 @@ data Signal
   | Value String
   | Values [String]
   | Location String
-  | FunctionCallValues [Maybe String]
+  | FunctionCallValues [Maybe String]   -- FIXME: obsolete
+  | FunctionResult JSValue              -- FIXME: Deserialze!
   deriving (Show)
 
 instance JSON Signal where
@@ -165,7 +166,6 @@ data Closure = Closure (String,String)
 {-----------------------------------------------------------------------------
     JavaScript Code and Foreign Function Interface
 ------------------------------------------------------------------------------}
-
 -- | JavaScript code snippet.
 newtype JSCode = JSCode { unJSCode :: String }
     deriving (Eq, Ord, Show, Data, Typeable)
@@ -183,7 +183,65 @@ instance Expr ElementId where
 instance Expr Element   where render (Element e _) = render e
 
 
--- | Substitute occurences of %1, %2 up to %9 with the argument strings.
+-- | JavaScript function with a given output type.
+data JSFunction a = JSFunction
+    { code    :: JSCode                          -- code snippet
+    , marshal :: Window -> JSValue -> Result a   -- convert to Haskell value
+    }
+
+instance Functor JSFunction where
+    fmap f = fmapWindow (const f)
+
+fmapWindow :: (Window -> a -> b) -> JSFunction a -> JSFunction b
+fmapWindow f (JSFunction c m) = JSFunction c (\w v -> f w <$> m w v)
+
+fromJSCode :: JSCode -> JSFunction ()
+fromJSCode c = JSFunction { code = c, marshal = \_ _ -> Ok () }
+
+-- | Helper class for making a simple JavaScript FFI
+class FFI a where
+    fancy :: ([JSCode] -> JSCode) -> a
+
+instance (Expr a, FFI b) => FFI (a -> b) where
+    fancy f a = fancy $ f . (render a:)
+
+instance FFI (JSFunction ())        where fancy f = fromJSCode $ f []
+instance FFI (JSFunction String)    where fancy   = mkResult "%1.toString()"
+instance FFI (JSFunction ElementId) where
+    fancy   = mkResult "{ Element: elementToElid(%1) }"
+instance FFI (JSFunction Element)   where
+    fancy   = fmapWindow (\w elid -> Element elid w) . fancy
+
+mkResult :: JSON a => String -> ([JSCode] -> JSCode) -> JSFunction a
+mkResult client f = JSFunction
+    { code    = apply client [f []]
+    , marshal = \w -> readJSON
+    }
+
+-- | Simple JavaScript FFI with string substitution.
+--
+-- Inspired by the Fay language. <http://fay-lang.org/>
+--
+-- The 'ffi' function takes a string argument representing the JavaScript
+-- code to be executed on the client.
+-- Occurrences of the substrings @%1@ to @%9@ will be replaced by
+-- subequent arguments.
+--
+-- Note: Always specify a type signature! The types automate
+-- how values are marshalled between Haskell and JavaScript.
+-- The class instances for the 'FFI' class show which conversions are supported.
+--
+-- > example :: String -> Int -> JSFunction String
+-- > example = ffi "$(%1).prop('checked',%2)"
+--
+ffi :: FFI a => String -> a
+ffi macro = fancy (apply macro)
+
+testFFI :: String -> Int -> JSFunction String
+testFFI = ffi "$(%1).prop('checked',%2)"
+
+-- | String substitution.
+-- Substitute occurences of %1, %2 up to %9 with the argument strings.
 -- The types ensure that the % character has no meaning in the generated output.
 -- 
 -- > apply "%1 and %2" [x,y] = x ++ " and " ++ y
@@ -197,20 +255,3 @@ apply code args = JSCode $ go code
         where index = fromEnum c - fromEnum '1'
     go (c:cs)     = c : go cs
 
-
--- | Helper class for making a simple JavaScript FFI
-class FFI a where
-    fancy :: ([JSCode] -> JSCode) -> a
-
--- | Simple JavaScript FFI with string substitution.
--- Taken from the Fay language.
-ffi :: FFI a => String -> a
-ffi macro = fancy (apply macro)
-
-instance FFI JSCode where fancy f = f []
-instance (Expr a, FFI b) => FFI (a -> b) where
-    fancy f a = fancy (f . (render a:))
-
-
-testFFI :: String -> Int -> JSCode
-testFFI = ffi "$(%1).prop('checked',%2)"
