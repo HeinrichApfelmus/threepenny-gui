@@ -502,14 +502,11 @@ getValue e@(Element el window) =
 
 -- | Get the property of an element. Blocks.
 getProp
-    :: String    -- ^ The property name.
-    -> Element   -- ^ The element to get the value of.
-    -> IO String -- ^ The plain text value.
+    :: String     -- ^ The property name.
+    -> Element    -- ^ The element to get the value of.
+    -> IO JSValue -- ^ The plain text value.
 getProp prop e@(Element el window) =
-  call window (GetProp el prop) $ \signal ->
-    case signal of
-      Value str -> return (Just str)
-      _         -> return Nothing
+    callFunction window (ffi "$(%1).prop(%2)" el prop)
 
 -- | Get 'Window' associated to an 'Element'.
 getWindow :: Element -> Window

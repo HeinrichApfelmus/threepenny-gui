@@ -322,15 +322,15 @@ getElementsById window name =
 audioPlay = updateElement Core.audioPlay
 
 -- Turn a jQuery property @.prop()@ into an attribute.
-fromProp :: String -> (String -> a) -> (a -> JSValue) -> Attr Element a
-fromProp name fromString toString = mkReadWriteAttr get set
+fromProp :: String -> (JSValue -> a) -> (a -> JSValue) -> Attr Element a
+fromProp name from to = mkReadWriteAttr get set
     where
-    set x = updateElement (Core.setProp name $ toString x)
+    set x = updateElement (Core.setProp name $ to x)
     get (Element ref) = do
         me <- readMVar ref
         case me of
             Limbo _ _ -> error "'checked' attribute: element must be in a browser window"
-            Alive e   -> fromString <$> Core.getProp name e
+            Alive e   -> from <$> Core.getProp name e
 
 {-----------------------------------------------------------------------------
     Layout

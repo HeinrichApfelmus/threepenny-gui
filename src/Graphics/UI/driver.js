@@ -151,6 +151,11 @@ $.fn.livechange = function(ms,trigger){
         continuation();
         break;
       }
+      case "CallJSFunction": {
+        var result = eval(event.CallJSFunction);
+        signal({FunctionResult : result}, continuation);
+        break;
+      }
       case "Delete": {
         event_delete(event);
         continuation();
@@ -228,18 +233,6 @@ $.fn.livechange = function(ms,trigger){
         var id = event.GetValue;
         var el = elidToElement(id);
         var value = $(el).val();
-        signal({
-          Value: value
-        },function(){
-          continuation();
-        });
-        break;
-      }
-      case "GetProp": {
-        var get   = event.GetProp;
-        var el    = elidToElement(get[0]);
-        var key   = get[1];
-        var value = $(el).prop(key).toString();
         signal({
           Value: value
         },function(){

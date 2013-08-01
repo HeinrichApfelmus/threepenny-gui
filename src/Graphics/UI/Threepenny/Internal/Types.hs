@@ -104,7 +104,6 @@ data Instruction
   | GetElementsByTagName String
   | SetStyle ElementId [(String,String)]
   | SetAttr ElementId String String
-  | GetProp ElementId String
   | Append ElementId ElementId
   | SetText ElementId String
   | SetHtml ElementId String
@@ -132,8 +131,8 @@ data Signal
   | Value String
   | Values [String]
   | Location String
-  | FunctionCallValues [Maybe String]   -- FIXME: obsolete
-  | FunctionResult JSValue              -- FIXME: Deserialze!
+  | FunctionCallValues [Maybe String]
+  | FunctionResult JSValue
   deriving (Show)
 
 instance JSON Signal where
@@ -151,7 +150,9 @@ instance JSON Signal where
         values = Values <$> valFromObj "Values" obj
         fcallvalues = do
           FunctionCallValues <$> (valFromObj "FunctionCallValues" obj >>= mapM nullable)
-    init <|> elements <|> event <|> value <|> values <|> location <|> fcallvalues
+        fresult = FunctionResult <$> valFromObj "FunctionResult" obj
+    init <|> elements <|> event <|> value <|> values <|> location
+         <|> fcallvalues <|> fresult
 
 -- | Read a JSValue that may be null.
 nullable :: JSON a => JSValue -> Result (Maybe a)
@@ -207,6 +208,7 @@ instance (Expr a, FFI b) => FFI (a -> b) where
 
 instance FFI (JSFunction ())        where fancy f = fromJSCode $ f []
 instance FFI (JSFunction String)    where fancy   = mkResult "%1.toString()"
+instance FFI (JSFunction JSValue)   where fancy   = mkResult "%1"
 instance FFI (JSFunction ElementId) where
     fancy   = mkResult "{ Element: elementToElid(%1) }"
 instance FFI (JSFunction Element)   where
@@ -222,6 +224,9 @@ mkResult client f = JSFunction
 --
 -- Inspired by the Fay language. <http://fay-lang.org/>
 --
+-- > example :: String -> Int -> JSFunction String
+-- > example = ffi "$(%1).prop('checked',%2)"
+--
 -- The 'ffi' function takes a string argument representing the JavaScript
 -- code to be executed on the client.
 -- Occurrences of the substrings @%1@ to @%9@ will be replaced by
@@ -230,9 +235,6 @@ mkResult client f = JSFunction
 -- Note: Always specify a type signature! The types automate
 -- how values are marshalled between Haskell and JavaScript.
 -- The class instances for the 'FFI' class show which conversions are supported.
---
--- > example :: String -> Int -> JSFunction String
--- > example = ffi "$(%1).prop('checked',%2)"
 --
 ffi :: FFI a => String -> a
 ffi macro = fancy (apply macro)
