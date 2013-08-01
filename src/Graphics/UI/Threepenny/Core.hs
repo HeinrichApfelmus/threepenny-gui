@@ -41,7 +41,7 @@ module Graphics.UI.Threepenny.Core (
     callDeferredFunction, atomic,
     
     -- * Internal and oddball functions
-    updateElement, audioPlay, fromProp,
+    updateElement, manifestElement, audioPlay, fromProp,
     
     ) where
 

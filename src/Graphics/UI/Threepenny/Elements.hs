@@ -8,7 +8,7 @@ module Graphics.UI.Threepenny.Elements (
     -- * Primitive HTML elements
     address, a, anchor, applet, area, audio,
     basefont, big, blockquote, body, bold, br, button,
-    caption, center, cite, code,
+    canvas, caption, center, cite, code,
     ddef, define, div, dlist,
     dterm, emphasize, fieldset, font, form, frame, frameset,
     h1, h2, h3, h4, h5, h6, header, hr,
@@ -72,6 +72,7 @@ body                =  tag "body"
 bold                =  tag "b"
 br                  = itag "br"
 button              =  tag "button"
+canvas              =  tag "canvas"
 caption             =  tag "caption"
 center              =  tag "center"
 cite                =  tag "cite"
