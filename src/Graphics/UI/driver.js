@@ -327,6 +327,15 @@ $.fn.livechange = function(ms,trigger){
             });
             return true;
           });
+        } else if(eventType.match('keydown|keyup')) {
+          $(el).bind(eventType,function(e){
+            signal({
+              Event: handlerGuid.concat([[e.keyCode.toString()]])
+            },function(){
+              // no action
+            });
+            return true;
+          });
         } else {
           $(el).bind(eventType,function(e){
             signal({

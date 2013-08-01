@@ -28,9 +28,11 @@ setup w = do
     out  <- UI.span # set text "Coordinates: "
     wrap <- UI.div #. "wrap"
         # set style [("width","300px"),("height","300px"),("border","solid black 1px")]
+        # set (attr "tabindex") "1" -- allow key presses
         #+ [element out]
     getBody w #+ [element wrap]
     
-    on UI.mousemove wrap $ \xy -> void $ do
+    on UI.mousemove wrap $ \xy ->
         element out # set text ("Coordinates: " ++ show xy)
-
+    on UI.keydown   wrap $ \c ->
+        element out # set text ("Keycode: " ++ show c)

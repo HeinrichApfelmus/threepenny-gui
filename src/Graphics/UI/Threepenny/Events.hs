@@ -4,6 +4,7 @@ module Graphics.UI.Threepenny.Events (
     
     -- * Documentation
     click, mousemove, hover, blur, leave,
+    keyup, keydown,
     ) where
 
 import Graphics.UI.Threepenny.Core
@@ -37,3 +38,16 @@ leave = silence . domEvent "mouseleave"
 -- | Element loses focus.
 blur :: Element -> Event ()
 blur = silence . domEvent "blur"
+
+
+type KeyCode = Int
+
+-- | Key pressed while element has focus.
+keydown :: Element -> Event KeyCode
+keydown = fmap read1  . domEvent "keydown"
+
+-- | Key released while element has focus.
+keyup :: Element -> Event KeyCode
+keyup   = fmap read1 . domEvent "keyup"
+
+read1 (EventData (Just s:_)) = read s
