@@ -350,8 +350,8 @@ column = grid . map (:[])
 --
 -- >  <div class="table">
 -- >    <div class="table-row">
--- >      <div class="table-cell> ... </div>
--- >      <div class="table-cell> ... </div>
+-- >      <div class="table-cell"> ... </div>
+-- >      <div class="table-cell"> ... </div>
 -- >    </div>
 -- >    <div class="table-row">
 -- >      ...

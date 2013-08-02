@@ -32,6 +32,7 @@ Data-files:          src/Graphics/UI/*.js
                     ,src/Graphics/UI/*.html
                     ,src/Graphics/UI/*.css
                     ,wwwroot/css/*.css
+                    ,wwwroot/css/*.png
                     ,wwwroot/*.html
                     ,wwwroot/*.txt
                     ,wwwroot/*.wav
