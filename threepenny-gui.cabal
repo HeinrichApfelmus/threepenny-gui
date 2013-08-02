@@ -14,6 +14,16 @@ Description:
     Stability forecast: This is an experimental release! Send us your feedback!
     Basic functionality should work.
     Significant API changes are likely in future versions.
+    .
+    NOTE: This library contains examples, but they are not built by default.
+    To build and install the example, use the @buildExamples@ flag like this
+    .
+    @cabal install reactive-banana-threepenny -fbuildExamples@
+    .
+    Changelog:
+    .
+    * 0.2.0.0 - Snapshot release. First stab at easy JavaScript FFI.
+    * 0.1.0.0 - Initial release.
 
 License:             BSD3
 License-file:        LICENSE
