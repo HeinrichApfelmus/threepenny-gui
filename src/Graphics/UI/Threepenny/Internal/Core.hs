@@ -2,14 +2,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS -fno-warn-name-shadowing #-}
 
--- | The main Threepenny module.
-
-
---------------------------------------------------------------------------------
--- Exports
-
 module Graphics.UI.Threepenny.Internal.Core
   (
+  -- * Synopsis
+  -- | The main internal functionality.
+      
   -- * Server running
    serve
   ,loadFile
@@ -108,7 +105,7 @@ import           Text.JSON.Generic
 
 
 {-----------------------------------------------------------------------------
-    Server running
+    Server and and session management
 ------------------------------------------------------------------------------}
 newServerState :: IO ServerState
 newServerState = ServerState 
@@ -118,12 +115,14 @@ newServerState = ServerState
 
 -- | Run a TP server with Snap on the specified port and the given
 --   worker action.
-serve :: Config -> (Session -> IO ()) -> IO () -- ^ A TP server.
+serve :: Config -> (Session -> IO ()) -> IO ()
 serve Config{..} worker = do
-  server <- newServerState
-  _ <- forkIO $ custodian 30 (sSessions server)
-  httpServe config (router tpCustomHTML tpStatic worker server)
- where config = setPort tpPort defaultConfig
+    server <- newServerState
+    _      <- forkIO $ custodian 30 (sSessions server)
+    let config = setPort tpPort defaultConfig
+    httpServe config . route $
+        routeResources tpCustomHTML tpStatic server
+        ++ routeFFI worker server
 
 -- | Kill sessions after at least n seconds of disconnectedness.
 custodian :: Integer -> MVar Sessions -> IO ()
@@ -144,31 +143,180 @@ custodian seconds sessions = forever $ do
             
     return (M.filterWithKey (\k _ -> not (k `elem` killed)) sessions)
 
--- Route requests.  If the initFile is Nothing, then a default
--- file will be served at /.
-router
-    :: Maybe FilePath
-    -> FilePath
-    -> (Session -> IO a)
-    -> ServerState
-    -> Snap ()
-router customHTML wwwroot worker server =
-        route [("/static"                    , serveDirectory wwwroot)
-              ,("/"                          , root)
-              ,("/driver/threepenny-gui.js"  , writeText jsDriverCode )
-              ,("/driver/threepenny-gui.css" , writeText cssDriverCode)
-              ,("/init"                      , init worker server)
-              ,("/poll"                      , withSession  server poll  )
-              ,("/signal"                    , withSession  server signal)
-              ,("/file/:name"                ,
-                    withFilepath (sFiles server) (flip serveFileAs))
-              ,("/dir/:name"                 ,
-                    withFilepath (sDirs  server) (\path _ -> serveDirectory path))
-              ]
+-- | Route the communication between JavaScript and the server
+routeFFI :: (Session -> IO a) -> ServerState -> Routes
+routeFFI worker server =
+    [("/init"   , init worker server)
+    ,("/poll"   , withSession server poll  )
+    ,("/signal" , withSession server signal)
+    ]
+
+-- Run a snap action with the given session.
+withSession :: ServerState -> (Session -> Snap a) -> Snap a
+withSession server cont = do
+    token <- readInput "token"
+    case token of
+        Nothing    -> error $ "Invalid session token format."
+        Just token -> withGivenSession token server cont
+    
+-- Do something with the session given by its token id.
+withGivenSession :: Integer -> ServerState -> (Session -> Snap a) -> Snap a
+withGivenSession token ServerState{..} cont = do
+    sessions <- io $ withMVar sSessions return
+    case M.lookup token sessions of
+        Nothing -> error $ "Nonexistant token: " ++ show token
+        Just session -> cont session
+
+{-----------------------------------------------------------------------------
+    FFI communication
+------------------------------------------------------------------------------}
+-- Make a new session.
+newSession :: ServerState -> (URI,[(String, String)]) -> Integer -> IO Session
+newSession server info token = do
+    signals          <- newChan
+    instructions     <- newChan
+    (event, handler) <- newEventsTagged
+    ids      <- newMVar [0..]
+    mutex    <- newMVar ()
+    now      <- getCurrentTime
+    conState <- newMVar (Disconnected now)
+    threadId <- myThreadId
+    closures <- newMVar [0..]
+    return $ Session
+        { sSignals = signals
+        , sInstructions = instructions
+        , sEvent        = event
+        , sEventHandler = handler
+        , sElementIds = ids
+        , sToken = token
+        , sMutex = mutex
+        , sConnectedState = conState
+        , sThreadId    = threadId
+        , sClosures    = closures
+        , sStartInfo   = info
+        , sServerState = server
+        }
+
+-- Initialize the session.
+init :: (Session -> IO void) -> ServerState -> Snap ()
+init sessionThread server = do
+    uri    <- getRequestURI
+    params <- getRequestCookies
+    key    <- io $ modifyMVar (sSessions server) $ \sessions -> do
+        let newKey = maybe 0 (+1) (lastMay (M.keys sessions))
+        session <- newSession server (uri,params) newKey
+        _       <- forkIO $ do _ <- sessionThread session; return ()
+        return (M.insert newKey session sessions,newKey)
+    modifyResponse $ setHeader "Set-Token" (fromString (show key))
+    withGivenSession key server poll
+  where
+  getRequestURI = do
+    uri     <- getInput "info"
+    maybe (error ("Unable to parse request URI: " ++ show uri)) return (uri >>= parseURI)
+  getRequestCookies = do
+    cookies <- getsRequest rqCookies
+    return $ flip map cookies $ \Cookie{..} -> (toString cookieName,toString cookieValue)
+  
+-- Respond to poll requests.
+poll :: Session -> Snap ()
+poll Session{..} = do
+    let setDisconnected = do
+        now <- getCurrentTime
+        modifyMVar_ sConnectedState (const (return (Disconnected now)))
+    io $ modifyMVar_ sConnectedState (const (return Connected))
+    threadId <- io $ myThreadId
+    _ <- io $ forkIO $ do
+        delaySeconds $ 60 * 5 -- Force kill after 5 minutes.
+        killThread threadId
+    instructions <- io $ E.catch (readAvailableChan sInstructions) $ \e -> do
+        when (e == E.ThreadKilled) $ do
+            setDisconnected
+        E.throw e
+    writeJson instructions
+
+-- Handle signals sent from the client.
+signal :: Session -> Snap ()
+signal Session{..} = do
+    input <- getInput "signal"
+    case input of
+      Just signalJson -> do
+        let signal = decode signalJson
+        case signal of
+          Ok signal -> io $ writeChan sSignals signal
+          Error err -> error err
+      Nothing -> error $ "Unable to parse " ++ show input
+
+
+-- | Atomically execute the given computation in the context of a browser window
+atomic :: Window -> IO a -> IO a
+atomic window@(Session{..}) m = do
+  takeMVar sMutex
+  ret <- m
+  putMVar sMutex ()
+  return ret
+
+
+-- Send an instruction and read the signal response.
+call :: Session -> Instruction -> (Signal -> IO (Maybe a)) -> IO a
+call session@(Session{..}) instruction withSignal = do
+  takeMVar sMutex
+  run session $ instruction
+  newChan <- dupChan sSignals
+  go sMutex newChan
+
+  where
+    go mutex newChan = do
+      signal <- readChan newChan
+      result <- withSignal signal
+      case result of
+        Just signal -> do putMVar mutex ()
+                          return signal
+        Nothing     -> go mutex newChan
+            -- keep reading signals from the duplicated channel
+            -- until the function above succeeds
+
+-- Run the given instruction wihtout waiting for a response.
+run :: Session -> Instruction -> IO ()
+run (Session{..}) i = writeChan sInstructions i
+
+{-----------------------------------------------------------------------------
+    Snap utilities
+------------------------------------------------------------------------------}
+-- Write JSON to output.
+writeJson :: (MonadSnap m, JSON a) => a -> m ()
+writeJson json = do
+    modifyResponse $ setContentType "application/json"
+    (writeText . pack . (\x -> showJSValue x "") . showJSON) json
+
+-- Get a text input from snap.
+getInput :: (MonadSnap f) => ByteString -> f (Maybe String)
+getInput = fmap (fmap (unpack . decodeUtf8)) . getParam
+
+-- Read an input from snap.
+readInput :: (MonadSnap f,Read a) => ByteString -> f (Maybe a)
+readInput = fmap (>>= readMay) . getInput
+
+{-----------------------------------------------------------------------------
+    Resourcse
+------------------------------------------------------------------------------}
+type Routes = [(ByteString, Snap ())]
+
+routeResources :: Maybe FilePath -> FilePath -> ServerState -> Routes
+routeResources customHTML staticDir server =
+    [("/static"                    , serveDirectory staticDir)
+    ,("/"                          , root)
+    ,("/driver/threepenny-gui.js"  , writeText jsDriverCode )
+    ,("/driver/threepenny-gui.css" , writeText cssDriverCode)
+    ,("/file/:name"                ,
+        withFilepath (sFiles server) (flip serveFileAs))
+    ,("/dir/:name"                 ,
+        withFilepath (sDirs  server) (\path _ -> serveDirectory path))
+    ]
     where
     root = case customHTML of
-        Just file -> serveFile (wwwroot </> file)
+        Just file -> serveFile (staticDir </> file)
         Nothing   -> writeText defaultHtmlFile
+
 
 -- Get a filename from a URI
 withFilepath :: MVar Filepaths -> (FilePath -> MimeType -> Snap a) -> Snap a
@@ -201,116 +349,6 @@ loadDirectory :: Session -> FilePath -> IO String
 loadDirectory Session{..} path = do
     key <- newAssociation (sDirs sServerState) (path,"")
     return $ "/dir/" ++ key
-
--- Initialize the session.
-init :: (Session -> IO void) -> ServerState -> Snap ()
-init sessionThread server = do
-  uri <- getRequestURI
-  params <- getRequestCookies
-  key <- io $ modifyMVar (sSessions server) $ \sessions -> do
-    let newKey = maybe 0 (+1) (lastMay (M.keys sessions))
-    session <- newSession server (uri,params) newKey
-    _ <- forkIO $ do _ <- sessionThread session; return ()
-    return (M.insert newKey session sessions,newKey)
-  modifyResponse $ setHeader "Set-Token" (fromString (show key))
-  withGivenSession key server poll
-    
-  where getRequestURI = do
-          uri <- getInput "info"
-          maybe (error ("Unable to parse request URI: " ++ show uri)) return (uri >>= parseURI)
-        getRequestCookies = do
-          cookies <- getsRequest rqCookies
-          return $ flip map cookies $ \Cookie{..} -> (toString cookieName,toString cookieValue)
-
--- Make a new session.
-newSession :: ServerState -> (URI,[(String, String)]) -> Integer -> IO Session
-newSession server info token = do
-  signals <- newChan
-  instructions <- newChan
-  (event, handler) <- newEventsTagged
-  ids <- newMVar [0..]
-  mutex <- newMVar ()
-  now <- getCurrentTime
-  conState <- newMVar (Disconnected now)
-  threadId <- myThreadId
-  closures <- newMVar [0..]
-  return $ Session
-    { sSignals = signals
-    , sInstructions = instructions
-    , sEvent        = event
-    , sEventHandler = handler
-    , sElementIds = ids
-    , sToken = token
-    , sMutex = mutex
-    , sConnectedState = conState
-    , sThreadId    = threadId
-    , sClosures    = closures
-    , sStartInfo   = info
-    , sServerState = server
-    }
-  
--- Respond to poll requests.
-poll :: Session -> Snap ()
-poll Session{..} = do
-  let setDisconnected = do
-        now <- getCurrentTime
-        modifyMVar_ sConnectedState (const (return (Disconnected now)))
-  io $ modifyMVar_ sConnectedState (const (return Connected))
-  threadId <- io $ myThreadId
-  _ <- io $ forkIO $ do
-    delaySeconds $ 60 * 5 -- Force kill after 5 minutes.
-    killThread threadId
-  instructions <- io $ E.catch (readAvailableChan sInstructions) $ \e -> do
-    when (e == E.ThreadKilled) $ do
-      setDisconnected
-    E.throw e
-  writeJson instructions
-
--- Write JSON to output.
-writeJson :: (MonadSnap m, JSON a) => a -> m ()
-writeJson json = do
-    modifyResponse $ setContentType "application/json"
-    (writeString . (\x -> showJSValue x "") . showJSON) json
-
--- Write a string to output.
-writeString :: (MonadSnap m) => String -> m ()
-writeString = writeText . pack
-
--- Handle signals sent from the client.
-signal :: Session -> Snap ()
-signal Session{..} = do
-    input <- getInput "signal"
-    case input of
-      Just signalJson -> do
-        let signal = decode signalJson
-        case signal of
-          Ok signal -> io $ writeChan sSignals signal
-          Error err -> error err
-      Nothing -> error $ "Unable to parse " ++ show input
-
--- Get a text input from snap.
-getInput :: (MonadSnap f) => ByteString -> f (Maybe String)
-getInput = fmap (fmap (unpack . decodeUtf8)) . getParam
-
--- Run a snap action with the given session.
-withSession :: ServerState -> (Session -> Snap a) -> Snap a
-withSession server cont = do
-  token <- readInput "token"
-  case token of
-    Nothing    -> error $ "Invalid session token format."
-    Just token -> withGivenSession token server cont
-    
--- Do something with the session given by its token id.
-withGivenSession :: Integer -> ServerState -> (Session -> Snap a) -> Snap a
-withGivenSession token ServerState{..} cont = do
-  sessions <- io $ withMVar sSessions return
-  case M.lookup token sessions of
-    Nothing -> error $ "Nonexistant token: " ++ show token
-    Just session -> cont session
-
--- Read an input from snap.
-readInput :: (MonadSnap f,Read a) => ByteString -> f (Maybe a)
-readInput = fmap (>>= readMay) . getInput
 
 
 {-----------------------------------------------------------------------------
@@ -537,36 +575,6 @@ readValuesList
     => [Element]      -- ^ The element to read a value from.
     -> IO (Maybe [a]) -- ^ Maybe the read values. All or none.
 readValuesList = liftM (sequence . map readMay) . getValuesList
-
--- | Atomically execute the given computation in the context of a browser window
-atomic :: Window -> IO a -> IO a
-atomic window@(Session{..}) m = do
-  takeMVar sMutex
-  ret <- m
-  putMVar sMutex ()
-  return ret
-
-
--- Send an instruction and read the signal response.
-call :: Session -> Instruction -> (Signal -> IO (Maybe a)) -> IO a
-call session@(Session{..}) instruction withSignal = do
-  takeMVar sMutex
-  run session $ instruction
-  newChan <- dupChan sSignals
-  go sMutex newChan
-
-  where
-    go mutex newChan = do
-      signal <- readChan newChan
-      result <- withSignal signal
-      case result of
-        Just signal -> do putMVar mutex ()
-                          return signal
-        Nothing     -> go mutex newChan
-
--- Run the given instruction.
-run :: Session -> Instruction -> IO ()
-run (Session{..}) i = writeChan sInstructions i
 
 -- | Get the head of the page.
 getHead :: Window -> IO Element
