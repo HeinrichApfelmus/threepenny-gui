@@ -122,7 +122,7 @@ serve Config{..} worker = do
     let config = setPort tpPort defaultConfig
     httpServe config . route $
         routeResources tpCustomHTML tpStatic server
-        ++ routeFFI worker server
+        ++ routeCommunication worker server
 
 -- | Kill sessions after at least n seconds of disconnectedness.
 custodian :: Integer -> MVar Sessions -> IO ()
@@ -143,14 +143,6 @@ custodian seconds sessions = forever $ do
             
     return (M.filterWithKey (\k _ -> not (k `elem` killed)) sessions)
 
--- | Route the communication between JavaScript and the server
-routeFFI :: (Session -> IO a) -> ServerState -> Routes
-routeFFI worker server =
-    [("/init"   , init worker server)
-    ,("/poll"   , withSession server poll  )
-    ,("/signal" , withSession server signal)
-    ]
-
 -- Run a snap action with the given session.
 withSession :: ServerState -> (Session -> Snap a) -> Snap a
 withSession server cont = do
@@ -158,7 +150,7 @@ withSession server cont = do
     case token of
         Nothing    -> error $ "Invalid session token format."
         Just token -> withGivenSession token server cont
-    
+
 -- Do something with the session given by its token id.
 withGivenSession :: Integer -> ServerState -> (Session -> Snap a) -> Snap a
 withGivenSession token ServerState{..} cont = do
@@ -168,9 +160,17 @@ withGivenSession token ServerState{..} cont = do
         Just session -> cont session
 
 {-----------------------------------------------------------------------------
-    FFI communication
+    Implementation of two-way communication
 ------------------------------------------------------------------------------}
--- Make a new session.
+-- | Route the communication between JavaScript and the server
+routeCommunication :: (Session -> IO a) -> ServerState -> Routes
+routeCommunication worker server =
+    [("/init"   , init worker server)
+    ,("/poll"   , withSession server poll  )
+    ,("/signal" , withSession server signal)
+    ]
+
+-- | Make a new session.
 newSession :: ServerState -> (URI,[(String, String)]) -> Integer -> IO Session
 newSession server info token = do
     signals          <- newChan
@@ -183,13 +183,13 @@ newSession server info token = do
     threadId <- myThreadId
     closures <- newMVar [0..]
     return $ Session
-        { sSignals = signals
+        { sSignals      = signals
         , sInstructions = instructions
+        , sMutex        = mutex
         , sEvent        = event
         , sEventHandler = handler
         , sElementIds = ids
         , sToken = token
-        , sMutex = mutex
         , sConnectedState = conState
         , sThreadId    = threadId
         , sClosures    = closures
@@ -197,7 +197,7 @@ newSession server info token = do
         , sServerState = server
         }
 
--- Initialize the session.
+-- | Initialize the session.
 init :: (Session -> IO void) -> ServerState -> Snap ()
 init sessionThread server = do
     uri    <- getRequestURI
@@ -217,7 +217,7 @@ init sessionThread server = do
     cookies <- getsRequest rqCookies
     return $ flip map cookies $ \Cookie{..} -> (toString cookieName,toString cookieValue)
   
--- Respond to poll requests.
+-- | Respond to poll requests.
 poll :: Session -> Snap ()
 poll Session{..} = do
     let setDisconnected = do
@@ -234,7 +234,7 @@ poll Session{..} = do
         E.throw e
     writeJson instructions
 
--- Handle signals sent from the client.
+-- | Handle signals sent from the client.
 signal :: Session -> Snap ()
 signal Session{..} = do
     input <- getInput "signal"
@@ -247,6 +247,9 @@ signal Session{..} = do
       Nothing -> error $ "Unable to parse " ++ show input
 
 
+{-----------------------------------------------------------------------------
+    FFI implementation on top of the communication channel
+------------------------------------------------------------------------------}
 -- | Atomically execute the given computation in the context of a browser window
 atomic :: Window -> IO a -> IO a
 atomic window@(Session{..}) m = do
@@ -255,8 +258,7 @@ atomic window@(Session{..}) m = do
   putMVar sMutex ()
   return ret
 
-
--- Send an instruction and read the signal response.
+-- | Send an instruction and read the signal response.
 call :: Session -> Instruction -> (Signal -> IO (Maybe a)) -> IO a
 call session@(Session{..}) instruction withSignal = do
   takeMVar sMutex
@@ -278,6 +280,37 @@ call session@(Session{..}) instruction withSignal = do
 -- Run the given instruction wihtout waiting for a response.
 run :: Session -> Instruction -> IO ()
 run (Session{..}) i = writeChan sInstructions i
+
+-- | Call the given function with the given continuation. Doesn't block.
+callDeferredFunction
+  :: Window                    -- ^ Browser window
+  -> String                    -- ^ The function name.
+  -> [String]                  -- ^ Parameters.
+  -> ([Maybe String] -> IO ()) -- ^ The continuation to call if/when the function completes.
+  -> IO ()
+callDeferredFunction session@(Session{..}) func params closure = do
+  cid      <- modifyMVar sClosures (\(x:xs) -> return (xs,x))
+  closure' <- newClosure session func (show cid) closure
+  run session $ CallDeferredFunction (closure',func,params)
+
+-- | Run the given JavaScript function and carry on. Doesn't block.
+--
+-- The client window uses JavaScript's @eval()@ function to run the code.
+runFunction :: Window -> JSFunction () -> IO ()
+runFunction session = run session . RunJSFunction . unJSCode . code
+
+-- | Run the given JavaScript function and wait for results. Blocks.
+--
+-- The client window uses JavaScript's @eval()@ function to run the code.
+callFunction :: Window -> JSFunction a -> IO a
+callFunction window (JSFunction code marshal) = 
+    call window (CallJSFunction . unJSCode $ code) $ \signal ->
+        case signal of
+            FunctionResult v -> case marshal window v of
+                Ok    a -> return $ Just a
+                Error _ -> return Nothing
+            _ -> return Nothing
+
 
 {-----------------------------------------------------------------------------
     Snap utilities
@@ -606,33 +639,3 @@ debug window = run window . Debug
 -- | Clear the client's DOM.
 clear :: Window -> IO ()
 clear window = run window $ Clear ()
-
--- | Run the given JavaScript function and carry on. Doesn't block.
---
--- The client window uses JavaScript's @eval()@ function to run the code.
-runFunction :: Window -> JSFunction () -> IO ()
-runFunction session = run session . RunJSFunction . unJSCode . code
-
--- | Run the given JavaScript function and wait for results. Blocks.
---
--- The client window uses JavaScript's @eval()@ function to run the code.
-callFunction :: Window -> JSFunction a -> IO a
-callFunction window (JSFunction code marshal) = 
-    call window (CallJSFunction . unJSCode $ code) $ \signal ->
-        case signal of
-            FunctionResult v -> case marshal window v of
-                Ok    a -> return $ Just a
-                Error _ -> return Nothing
-            _ -> return Nothing
-
--- | Call the given function with the given continuation. Doesn't block.
-callDeferredFunction
-  :: Window                    -- ^ Browser window
-  -> String                    -- ^ The function name.
-  -> [String]                  -- ^ Parameters.
-  -> ([Maybe String] -> IO ()) -- ^ The continuation to call if/when the function completes.
-  -> IO ()
-callDeferredFunction session@(Session{..}) func params closure = do
-  cid      <- modifyMVar sClosures (\(x:xs) -> return (xs,x))
-  closure' <- newClosure session func (show cid) closure
-  run session $ CallDeferredFunction (closure',func,params)

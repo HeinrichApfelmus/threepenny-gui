@@ -44,12 +44,12 @@ instance JSON ElementId where
 data Session = Session
   { sSignals        :: Chan Signal
   , sInstructions   :: Chan Instruction
+  , sMutex          :: MVar ()
   , sEvent          :: EventKey -> E.Event EventData
   , sEventHandler   :: E.Handler (EventKey, EventData)
   , sClosures       :: MVar [Integer]
   , sElementIds     :: MVar [Integer]
   , sToken          :: Integer
-  , sMutex          :: MVar ()
   , sConnectedState :: MVar ConnectedState
   , sThreadId       :: ThreadId
   , sStartInfo      :: (URI,[(String,String)])
