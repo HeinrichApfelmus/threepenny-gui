@@ -683,4 +683,4 @@ debug window = run window . Debug
 
 -- | Clear the client's DOM.
 clear :: Window -> IO ()
-clear window = run window $ Clear ()
+clear window = runFunction window $ ffi "$('body').contents().detach()"

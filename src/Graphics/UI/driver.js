@@ -228,11 +228,6 @@ $.fn.livechange = function(ms,trigger){
         reply();
         break;
       }
-      case "Clear": {
-        $('body').contents().detach();
-        reply();
-        break;
-      }
       case "GetElementsByTagName": {
         var elements = document.getElementsByTagName(event.GetElementsByTagName);
         var els = [];
