@@ -57,6 +57,7 @@ $.fn.livechange = function(ms,trigger){
 
   ////////////////////////////////////////////////////////////////////////////////
   // Client-server communication
+  // - GET and POST requests
   
   // Main entry point
   $(document).ready(function(){
@@ -85,8 +86,8 @@ $.fn.livechange = function(ms,trigger){
           console_log('Event list:');
           runMultipleEvents(events);
         } else {
-          runEvent(events,function(){
-            waitForEvents();
+          runEvent(events, signalEvent, function(response){
+            maybeReply(response, waitForEvents);
           });
         }
       },
@@ -103,9 +104,22 @@ $.fn.livechange = function(ms,trigger){
     if(events.length == 0) {
       return waitForEvents();
     }
-    runEvent(events.shift(),function(){
-      runMultipleEvents(events);
+    runEvent(events.shift(), signalEvent, function(response){
+      maybeReply(response, function(){
+        runMultipleEvents(events);
+      });
     });
+  }
+  
+  // Send an event to the server.
+  function signalEvent(value) {
+    signal({ Event: value}, function (){});
+  }
+  
+  // Send a reply to the server if necessary.
+  function maybeReply(response, continuation) {
+    if (response != undefined) { signal(response, continuation); }
+    else { continuation(); }
   }
   
   // Send response back to the server.
@@ -129,7 +143,11 @@ $.fn.livechange = function(ms,trigger){
   ////////////////////////////////////////////////////////////////////////////////
   // FFI - Execute and reply to commands from the server
   
-  function runEvent(event,continuation){
+  function runEvent(event,sendEvent,reply){
+    // reply();      -- Continue without replying to the server.
+    // reply(value); -- Send  value  back to the server.
+    // sendEvent     -- Function that sends a message { Event : value } to the server.
+  
     console_log("Event: %s",JSON.stringify(event));
     for(var key in event){
       switch(key){
@@ -141,7 +159,7 @@ $.fn.livechange = function(ms,trigger){
         // It is not correct to remove the child elements from the el_table
         // because they may still be present on the server side.
         $(el).contents().detach();
-        continuation();
+        reply();
         break;
       }
       case "CallDeferredFunction": {
@@ -152,39 +170,35 @@ $.fn.livechange = function(ms,trigger){
         theFunction.apply(window, params.concat(function(){
           console_log(this);
           var args = Array.prototype.slice.call(arguments,0);
-          signal({
-            Event: closure.concat([args])
-          },function(){
-            // No action.
-          });
+          sendEvent(closure.concat([args]));
         }));
-        continuation();
+        reply();
         break;
       }
       case "RunJSFunction": {
         eval(event.RunJSFunction);
-        continuation();
+        reply();
         break;
       }
       case "CallJSFunction": {
         var result = eval(event.CallJSFunction);
-        signal({FunctionResult : result}, continuation);
+        reply({FunctionResult : result});
         break;
       }
       case "Delete": {
         event_delete(event);
-        continuation();
+        reply();
         break;
       }
       case "Debug": {
         if(window.console)
           console.log("Server debug: %o",event.Debug);
-        continuation();
+        reply();
         break;
       }
       case "Clear": {
         $('body').contents().detach();
-        continuation();
+        reply();
         break;
       }
       case "GetElementsByTagName": {
@@ -196,11 +210,7 @@ $.fn.livechange = function(ms,trigger){
             Element: elementToElid(elements[i])
           });
         }
-        signal({
-          Elements: els
-        },function(){
-          continuation();
-        });
+        reply({ Elements: els });
         break;
       }
       case "GetElementsById": {
@@ -215,11 +225,7 @@ $.fn.livechange = function(ms,trigger){
                 });
             }
         }
-        signal({
-          Elements: els
-        },function(){
-          continuation();
-        });
+        reply({ Elements: els });
         break;
       }
       case "SetStyle": {
@@ -231,7 +237,7 @@ $.fn.livechange = function(ms,trigger){
         for(var i = 0; i < len; i++){
           el.style[style[i][0]] = style[i][1];
         }
-        continuation();
+        reply();
         break;
       }
       case "SetAttr": {
@@ -241,26 +247,18 @@ $.fn.livechange = function(ms,trigger){
         var value = set[2];
         var el    = elidToElement(id);
         $(el).attr(key,value);
-        continuation();
+        reply();
         break;
       }
       case "GetValue": {
         var id = event.GetValue;
         var el = elidToElement(id);
         var value = $(el).val();
-        signal({
-          Value: value
-        },function(){
-          continuation();
-        });
+        reply({ Value: value });
         break;
       }
       case "GetLocation": {
-        signal({
-          Location: window.location.href
-        },function(){
-          continuation();
-        });
+        reply({ Location: window.location.href });
         break;
       }
       case "GetValues": {
@@ -270,34 +268,30 @@ $.fn.livechange = function(ms,trigger){
         for(var i = 0; i < len; i++) {
           values.push($(elidToElement(ids[i])).val());
         }
-        signal({
-          Values: values
-        },function(){
-          continuation();
-        });
+        reply({ Values: values });
         break;
       }
       case "Append": {
         var append = event.Append;
         $(elidToElement(append[0])).append($(elidToElement(append[1])));
-        continuation();
+        reply();
         break;
       }
       case "SetText": {
         var set = event.SetText;
         $(elidToElement(set[0])).text(set[1]);
-        continuation();
+        reply();
         break;
       }
       case "SetTitle": {
         document.title = event.SetTitle;
-        continuation();
+        reply();
         break;
       }
       case "SetHtml": {
         var set = event.SetHtml;
         $(elidToElement(set[0])).html(set[1]);
-        continuation();
+        reply();
         break;
       }
       case "Bind": {
@@ -308,63 +302,42 @@ $.fn.livechange = function(ms,trigger){
         console_log('event type: ' + eventType);
         if(eventType == 'livechange') {
           $(el).livechange(300,function(e){
-            signal({
-              Event: handlerGuid.concat([[$(el).val()]])
-            },function(){
-              // no action
-            });
+            sendEvent( handlerGuid.concat([[$(el).val()]]) );
             return true;
           });
         } else if(eventType == 'sendvalue') {
           $(el).sendvalue(function(x){
-            signal({
-              Event: handlerGuid.concat([[x]])
-            },function(){});
+            sendEvent( handlerGuid.concat([[x]]) );
           });
         } else if(eventType.match('dragstart|dragenter|dragover|dragleave|drag|drop|dragend')) {
           $(el).bind(eventType,function(e){
-            signal({
-              Event: handlerGuid.concat([
+            sendEvent( handlerGuid.concat([
                 e.originalEvent.dataTransfer
                     ?[e.originalEvent.dataTransfer.getData("dragData")]
                     :[]])
-            },function(){
-              // no action
-            });
+              );
             return true;
           });
         } else if(eventType.match('mousemove')) {
           $(el).bind(eventType,function(e){
-            signal({
-              Event: handlerGuid.concat([[e.pageX.toString(), e.pageY.toString()]])
-            },function(){
-              // no action
-            });
+            sendEvent( handlerGuid.concat([[e.pageX.toString(), e.pageY.toString()]]) );
             return true;
           });
         } else if(eventType.match('keydown|keyup')) {
           $(el).bind(eventType,function(e){
-            signal({
-              Event: handlerGuid.concat([[e.keyCode.toString()]])
-            },function(){
-              // no action
-            });
+            sendEvent( handlerGuid.concat([[e.keyCode.toString()]]) );
             return true;
           });
         } else {
           $(el).bind(eventType,function(e){
-            signal({
-              Event: handlerGuid.concat([e.which?[e.which.toString()]:[]])
-            },function(){
-              // no action
-            });
+            sendEvent( handlerGuid.concat([e.which?[e.which.toString()]:[]]) );
             return true;
           });
         }
-        continuation();
+        reply();
         break;
       }
-      default: continuation();
+      default: reply();
       }
     }
   }
