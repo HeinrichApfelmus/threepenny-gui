@@ -110,7 +110,6 @@ data Instruction
   | GetValue ElementId
   | GetValues [ElementId]
   | SetTitle String
-  | GetLocation ()
   | RunJSFunction String
   | CallJSFunction String
   | CallDeferredFunction (Closure,String,[String])
@@ -129,7 +128,6 @@ data Signal
   | Event (String,String,[Maybe String])
   | Value String
   | Values [String]
-  | Location String
   | FunctionCallValues [Maybe String]
   | FunctionResult JSValue
   deriving (Show)
@@ -145,12 +143,11 @@ instance JSON Signal where
           args <- mapM nullable arguments
           return $ Event (cid,typ,args)
         value = Value <$> valFromObj "Value" obj
-        location = Location <$> valFromObj "Location" obj
         values = Values <$> valFromObj "Values" obj
         fcallvalues = do
           FunctionCallValues <$> (valFromObj "FunctionCallValues" obj >>= mapM nullable)
         fresult = FunctionResult <$> valFromObj "FunctionResult" obj
-    init <|> elements <|> event <|> value <|> values <|> location
+    init <|> elements <|> event <|> value <|> values
          <|> fcallvalues <|> fresult
 
 -- | Read a JSValue that may be null.

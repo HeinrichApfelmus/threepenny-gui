@@ -289,10 +289,6 @@ $.fn.livechange = function(ms,trigger){
         reply({ Value: value });
         break;
       }
-      case "GetLocation": {
-        reply({ Location: window.location.href });
-        break;
-      }
       case "GetValues": {
         var ids = event.GetValues;
         var len = ids.length;
