@@ -56,15 +56,22 @@ $.fn.livechange = function(ms,trigger){
   }
 
   ////////////////////////////////////////////////////////////////////////////////
+  // Main entry point
+  $(document).ready(function(){
+    // initCommunicationHTTP();
+    initCommunicationWebSockets();
+  });
+
+  ////////////////////////////////////////////////////////////////////////////////
   // Client-server communication
   // - GET and POST requests
   
-  // Main entry point
-  $(document).ready(function(){
+  // Initialize communication via HTTP requests.
+  function initCommunicationHTTP() {
     setTimeout(function(){
       waitForEvents();
     })
-  });
+  }
   
   // Poll instruction from the server.
   function waitForEvents(){
@@ -137,6 +144,31 @@ $.fn.livechange = function(ms,trigger){
         console_log("Error: %o",reply);
       }
     });
+  }
+  
+  ////////////////////////////////////////////////////////////////////////////////
+  // Client-server communication
+  // - WebSockets
+  
+  // Initialize client-server communication via WebSockets.
+  function initCommunicationWebSockets() {
+    var url = 'ws:' + window.location.href.toString().slice(5) + 'websocket';
+    var ws  = new WebSocket(url);
+    
+    var sendEvent = function (e) {
+      ws.send(JSON.stringify({ Event : e}));
+    }
+    var reply     = function (response) {
+      if (response != undefined)
+        ws.send(JSON.stringify(response));
+    }
+    
+    ws.onopen = function (e){
+      ws.onmessage = function (msg) {
+        console_log("WebSocket message: %o",msg);
+        runEvent(JSON.parse(msg.data), sendEvent, reply);        
+      }
+    }
   }
 
 

@@ -93,6 +93,8 @@ import qualified Data.Text                     as Text
 import           Data.Text.Encoding
 import           Data.Time
 import           Network.URI
+import qualified Network.WebSockets as WS
+import qualified Network.WebSockets.Snap as WS
 import           Prelude                       hiding (init)
 import           Safe
 import           Snap.Core
@@ -121,7 +123,8 @@ serve Config{..} worker = do
     let config = setPort tpPort defaultConfig
     httpServe config . route $
         routeResources tpCustomHTML tpStatic server
-        ++ routeCommunication worker server
+        -- ++ routeCommunication worker server
+        ++ routeWebsockets worker server
 
 -- | Kill sessions after at least n seconds of disconnectedness.
 custodian :: Integer -> MVar Sessions -> IO ()
@@ -200,7 +203,8 @@ newSession server info token = do
 -- | Make a new session and add it to the server
 createSession :: (Session -> IO void) -> ServerState -> Snap Session
 createSession worker server = do
-    uri    <- snapRequestURI
+    -- uri    <- snapRequestURI
+    let uri = undefined -- FIXME: No URI for WebSocket requests.
     params <- snapRequestCookies
     liftIO $ modifyMVar (sSessions server) $ \sessions -> do
         let newKey = maybe 0 (+1) (lastMay (M.keys sessions))
@@ -255,6 +259,36 @@ signal Session{..} = do
           Error err -> error err
       Nothing -> error $ "Unable to parse " ++ show input
 
+{-----------------------------------------------------------------------------
+    Implementation of two-way communication
+    - WebSockets
+------------------------------------------------------------------------------}
+-- | Route the communication between JavaScript and the server
+routeWebsockets :: (Session -> IO a) -> ServerState -> Routes
+routeWebsockets worker server =
+    [("websocket", response)]
+    where
+    response = do
+        session <- createSession worker server
+        WS.runWebSocketsSnap $ webSocket session
+
+
+webSocket :: Session -> WS.Request -> WS.WebSockets WS.Hybi10 ()
+webSocket Session{..} req = void $ do
+    WS.acceptRequest req
+
+    -- write data (in another thread)
+    send <- WS.getSink
+    liftIO . forkIO . forever $ do
+        x <- readChan sInstructions 
+        WS.sendSink send . WS.textData . Text.pack . JSON.encode $ x
+
+    -- read data
+    forever $ do
+        input <- WS.receiveData
+        case JSON.decode . Text.unpack $ input of
+            Ok signal -> io $ writeChan sSignals signal
+            Error err -> error err
 
 {-----------------------------------------------------------------------------
     FFI implementation on top of the communication channel
