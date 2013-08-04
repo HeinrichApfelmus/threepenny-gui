@@ -70,9 +70,7 @@ module Graphics.UI.Threepenny.Internal.Core
   ,EventData(..)
   ) where
 
-
---------------------------------------------------------------------------------
--- Imports
+
 
 import           Graphics.UI.Threepenny.Internal.Types     as Threepenny
 import           Graphics.UI.Threepenny.Internal.Resources
@@ -101,6 +99,7 @@ import           Snap.Core
 import           Snap.Http.Server              hiding (Config)
 import           Snap.Util.FileServe
 import           System.FilePath
+import qualified Text.JSON as JSON
 import           Text.JSON.Generic
 
 
@@ -161,6 +160,7 @@ withGivenSession token ServerState{..} cont = do
 
 {-----------------------------------------------------------------------------
     Implementation of two-way communication
+    - POST and GET requests
 ------------------------------------------------------------------------------}
 -- | Route the communication between JavaScript and the server
 routeCommunication :: (Session -> IO a) -> ServerState -> Routes
@@ -188,8 +188,8 @@ newSession server info token = do
         , sMutex        = mutex
         , sEvent        = event
         , sEventHandler = handler
-        , sElementIds = ids
-        , sToken = token
+        , sElementIds   = ids
+        , sToken        = token
         , sConnectedState = conState
         , sThreadId    = threadId
         , sClosures    = closures
@@ -197,26 +197,35 @@ newSession server info token = do
         , sServerState = server
         }
 
--- | Initialize the session.
-init :: (Session -> IO void) -> ServerState -> Snap ()
-init sessionThread server = do
-    uri    <- getRequestURI
-    params <- getRequestCookies
-    key    <- io $ modifyMVar (sSessions server) $ \sessions -> do
+-- | Make a new session and add it to the server
+createSession :: (Session -> IO void) -> ServerState -> Snap Session
+createSession worker server = do
+    uri    <- snapRequestURI
+    params <- snapRequestCookies
+    liftIO $ modifyMVar (sSessions server) $ \sessions -> do
         let newKey = maybe 0 (+1) (lastMay (M.keys sessions))
         session <- newSession server (uri,params) newKey
-        _       <- forkIO $ do _ <- sessionThread session; return ()
-        return (M.insert newKey session sessions,newKey)
-    modifyResponse $ setHeader "Set-Token" (fromString (show key))
-    withGivenSession key server poll
-  where
-  getRequestURI = do
+        _       <- forkIO $ void $ worker session
+        return (M.insert newKey session sessions, session)
+
+-- | Respond to initialization request.
+init :: (Session -> IO void) -> ServerState -> Snap ()
+init worker server = do
+    session <- createSession worker server
+    modifyResponse . setHeader "Set-Token" . fromString . show . sToken $ session
+    poll session
+
+snapRequestURI :: Snap URI
+snapRequestURI = do
     uri     <- getInput "info"
     maybe (error ("Unable to parse request URI: " ++ show uri)) return (uri >>= parseURI)
-  getRequestCookies = do
+
+snapRequestCookies :: Snap [(String, String)]
+snapRequestCookies = do
     cookies <- getsRequest rqCookies
     return $ flip map cookies $ \Cookie{..} -> (toString cookieName,toString cookieValue)
-  
+
+
 -- | Respond to poll requests.
 poll :: Session -> Snap ()
 poll Session{..} = do
@@ -240,7 +249,7 @@ signal Session{..} = do
     input <- getInput "signal"
     case input of
       Just signalJson -> do
-        let signal = decode signalJson
+        let signal = JSON.decode signalJson
         case signal of
           Ok signal -> io $ writeChan sSignals signal
           Error err -> error err
