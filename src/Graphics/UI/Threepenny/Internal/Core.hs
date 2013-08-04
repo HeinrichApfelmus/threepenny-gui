@@ -81,8 +81,8 @@ import           Control.Concurrent.Chan.Extra
 import           Control.Concurrent.Delay
 import qualified Control.Exception             as E
 import           Control.Event
-import           Control.Monad.IO
-import           Control.Monad.Reader
+import           Control.Monad
+import           Control.Monad.IO.Class
 import           Data.ByteString               (ByteString)
 import           Data.ByteString.UTF8          (toString,fromString)
 import           Data.Map                      (Map)
@@ -156,7 +156,7 @@ withSession server cont = do
 -- Do something with the session given by its token id.
 withGivenSession :: Integer -> ServerState -> (Session -> Snap a) -> Snap a
 withGivenSession token ServerState{..} cont = do
-    sessions <- io $ withMVar sSessions return
+    sessions <- liftIO $ withMVar sSessions return
     case M.lookup token sessions of
         Nothing -> error $ "Nonexistant token: " ++ show token
         Just session -> cont session
@@ -236,15 +236,17 @@ poll Session{..} = do
     let setDisconnected = do
         now <- getCurrentTime
         modifyMVar_ sConnectedState (const (return (Disconnected now)))
-    io $ modifyMVar_ sConnectedState (const (return Connected))
-    threadId <- io $ myThreadId
-    _ <- io $ forkIO $ do
-        delaySeconds $ 60 * 5 -- Force kill after 5 minutes.
-        killThread threadId
-    instructions <- io $ E.catch (readAvailableChan sInstructions) $ \e -> do
-        when (e == E.ThreadKilled) $ do
-            setDisconnected
-        E.throw e
+    
+    instructions <- liftIO $ do
+        modifyMVar_ sConnectedState (const (return Connected))
+        threadId <- myThreadId
+        forkIO $ do
+            delaySeconds $ 60 * 5 -- Force kill after 5 minutes.
+            killThread threadId
+        E.catch (readAvailableChan sInstructions) $ \e -> do
+            when (e == E.ThreadKilled) $ setDisconnected
+            E.throw e
+    
     writeJson instructions
 
 -- | Handle signals sent from the client.
@@ -255,7 +257,7 @@ signal Session{..} = do
       Just signalJson -> do
         let signal = JSON.decode signalJson
         case signal of
-          Ok signal -> io $ writeChan sSignals signal
+          Ok signal -> liftIO $ writeChan sSignals signal
           Error err -> error err
       Nothing -> error $ "Unable to parse " ++ show input
 
@@ -287,7 +289,7 @@ webSocket Session{..} req = void $ do
     forever $ do
         input <- WS.receiveData
         case JSON.decode . Text.unpack $ input of
-            Ok signal -> io $ writeChan sSignals signal
+            Ok signal -> liftIO $ writeChan sSignals signal
             Error err -> error err
 
 {-----------------------------------------------------------------------------
@@ -398,7 +400,7 @@ routeResources customHTML staticDir server =
 withFilepath :: MVar Filepaths -> (FilePath -> MimeType -> Snap a) -> Snap a
 withFilepath rDict cont = do
     mName    <- getParam "name"
-    (_,dict) <- io $ withMVar rDict return
+    (_,dict) <- liftIO $ withMVar rDict return
     case (\key -> M.lookup key dict) =<< mName of
         Just (path,mimetype) -> cont path mimetype
         Nothing              -> error $ "File not loaded: " ++ show mName

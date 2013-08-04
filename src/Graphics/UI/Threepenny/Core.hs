@@ -53,7 +53,6 @@ import Control.Concurrent.MVar
 import Control.Event
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Reader as Reader
 import Network.URI
 import Text.JSON
 

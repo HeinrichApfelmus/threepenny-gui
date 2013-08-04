@@ -8,7 +8,6 @@ import Prelude              hiding (init)
 import Control.Applicative
 import Control.Concurrent
 import qualified Control.Event as E
-import Control.Monad.Reader
 import Data.ByteString               (ByteString)
 import Data.Map             (Map)
 import Data.Time
