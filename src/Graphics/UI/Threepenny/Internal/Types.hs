@@ -95,8 +95,6 @@ data Config = Config
 -- | An instruction that is sent to the client as JSON.
 data Instruction
   = Debug String
-  | Begin ()
-  | End ()
   | SetToken Integer
   | Clear ()
   | GetElementsById [String]
