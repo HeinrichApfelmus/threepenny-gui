@@ -46,20 +46,26 @@ $.fn.livechange = function(ms,trigger){
   document.head = document.head || document.getElementsByTagName('head')[0];
 
   ////////////////////////////////////////////////////////////////////////////////
+  // Logging
+  window.do_logging = function(x){
+    $.cookie('tp_log',x.toString());
+  };
+
+  function console_log(){
+    if (tp_enable_log) { window.console.log.apply(window.console,arguments); }
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Client-server communication
+  
   // Main entry point
   $(document).ready(function(){
     setTimeout(function(){
       waitForEvents();
     })
   });
-
-  ////////////////////////////////////////////////////////////////////////////////
-  // Running instructions
-
-  window.do_logging = function(x){
-    $.cookie('tp_log',x.toString());
-  };
-    
+  
+  // Poll instruction from the server.
   function waitForEvents(){
     console_log("Polling… (%d signals so far)",signal_count);
     var data = { token: sessionToken };
@@ -101,7 +107,28 @@ $.fn.livechange = function(ms,trigger){
       runMultipleEvents(events);
     });
   }
+  
+  // Send response back to the server.
+  function signal(signal,continuation){
+    signal_count++;
+    console_log('Signal: %s',JSON.stringify(signal));
+    $.ajax({
+      dataType: 'json',
+      url:'signal',
+      data: { token: sessionToken, signal: JSON.stringify(signal) },
+      success: function(){
+        continuation();
+      },
+      error: function(reply){
+        console_log("Error: %o",reply);
+      }
+    });
+  }
 
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // FFI - Execute and reply to commands from the server
+  
   function runEvent(event,continuation){
     console_log("Event: %s",JSON.stringify(event));
     for(var key in event){
@@ -342,32 +369,8 @@ $.fn.livechange = function(ms,trigger){
     }
   }
 
-  function event_delete(event){
-    var id = event.Delete;
-    var el = elidToElement(id);
-    // TODO: Think whether it is correct to remove element ids
-    $(el).detach();
-    deleteElementTable(id);
-  }
-
   ////////////////////////////////////////////////////////////////////////////////
-  // Signalling events
-
-  function signal(signal,continuation){
-    signal_count++;
-    console_log('Signal: %s',JSON.stringify(signal));
-    $.ajax({
-      dataType: 'json',
-      url:'signal',
-      data: { token: sessionToken, signal: JSON.stringify(signal) },
-      success: function(){
-        continuation();
-      },
-      error: function(reply){
-        console_log("Error: %o",reply);
-      }
-    });
-  }
+  // FFI - marshaling
 
   // When the server creates elements, it assigns them a string "elid".  
   // This elidToElement function is used to sync the elids on the server with the 
@@ -420,16 +423,16 @@ $.fn.livechange = function(ms,trigger){
     }
   }
 
-  // A log
-  function console_log(){
-    if (tp_enable_log) {
-      window.console.log.apply(window.console,arguments);
-    }
-  };
-
-
   ////////////////////////////////////////////////////////////////////////////////
-  // Additional functions
+  // FFI - additional primitive functions
+  
+  function event_delete(event){
+    var id = event.Delete;
+    var el = elidToElement(id);
+    // TODO: Think whether it is correct to remove element ids
+    $(el).detach();
+    deleteElementTable(id);
+  }
   
   window.jquery_animate = function(el_id,props,duration,easing,complete){
     var el = elidToElement(JSON.parse(el_id));
