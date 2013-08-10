@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 module Graphics.UI.Threepenny.Core (
     -- * Guide
     -- $guide
@@ -45,6 +46,7 @@ module Graphics.UI.Threepenny.Core (
     
     ) where
 
+import Data.Dynamic
 import Data.IORef
 import Data.Maybe (listToMaybe)
 import Data.Functor
@@ -145,7 +147,7 @@ cookies = mkReadAttr Core.getRequestCookies
 type Value = String
 
 -- | Reference to an element in the DOM of the client window.
-newtype Element = Element (MVar Elem)
+newtype Element = Element (MVar Elem) deriving (Typeable)
 data    Elem
     = Alive Core.Element                       -- element exists in a window
     | Limbo Value (Window -> IO Core.Element)  -- still needs to be created
