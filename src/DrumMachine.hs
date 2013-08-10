@@ -69,7 +69,7 @@ setup w = void $ do
         sequence_ $ map (!! beat) kit
     
     -- allow user to set BPM
-    on (domEvent "livechange") elBpm $ const $ void $ do
+    on UI.keydown elBpm $ \keycode -> when (keycode == 13) $ void $ do
         bpm <- read <$> get value elBpm
         return timer # set UI.interval (bpm2ms bpm)
     
