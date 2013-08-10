@@ -120,21 +120,19 @@ instance JSON Instruction where
 
 -- | A signal (mostly events) that are sent from the client to the server.
 data Signal
-  = Init ()
-  | Elements [ElementId]
+  = Elements [ElementId]
   | Event (String,String,[Maybe String])
   | Value String
   | Values [String]
   | FunctionCallValues [Maybe String]
   | FunctionResult JSValue
-  deriving (Show)
+  deriving (Typeable,Show)
 
 instance JSON Signal where
   showJSON _ = error "JSON.Signal.showJSON: No method implemented."
   readJSON obj = do
     obj <- readJSON obj
-    let init = Init <$> valFromObj "Init" obj
-        elements = Elements <$> valFromObj "Elements" obj
+    let elements = Elements <$> valFromObj "Elements" obj
         event = do
           (cid,typ,arguments) <- valFromObj "Event" obj
           args <- mapM nullable arguments
@@ -144,8 +142,7 @@ instance JSON Signal where
         fcallvalues = do
           FunctionCallValues <$> (valFromObj "FunctionCallValues" obj >>= mapM nullable)
         fresult = FunctionResult <$> valFromObj "FunctionResult" obj
-    init <|> elements <|> event <|> value <|> values
-         <|> fcallvalues <|> fresult
+    elements <|> event <|> value <|> values <|> fcallvalues <|> fresult
 
 -- | Read a JSValue that may be null.
 nullable :: JSON a => JSValue -> Result (Maybe a)
