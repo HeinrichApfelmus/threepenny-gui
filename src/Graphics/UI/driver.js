@@ -456,6 +456,11 @@ $.fn.livechange = function(ms,trigger){
     $(el).scrollTop(el.scrollHeight);
   };
 
+  function prim_audio_stop(audio){
+    audio.pause();
+    audio.currentTime = 0;
+  }
+
   // see http://stackoverflow.com/a/9722502/403805
   CanvasRenderingContext2D.prototype.clear = 
     CanvasRenderingContext2D.prototype.clear || function (preserveTransform) {

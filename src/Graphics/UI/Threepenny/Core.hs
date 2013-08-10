@@ -42,7 +42,8 @@ module Graphics.UI.Threepenny.Core (
     callDeferredFunction, atomic,
     
     -- * Internal and oddball functions
-    updateElement, manifestElement, audioPlay, fromProp,
+    updateElement, manifestElement, fromProp,
+    audioPlay, audioStop,
     
     ) where
 
@@ -320,7 +321,13 @@ getElementsById window name =
 {-----------------------------------------------------------------------------
     Oddball
 ------------------------------------------------------------------------------}
-audioPlay = updateElement Core.audioPlay
+-- | Invoke the JavaScript expression @audioElement.play();@.
+audioPlay = updateElement $ \el -> Core.runFunction (Core.getWindow el) $
+    ffi "%1.play()" el
+
+-- | Invoke the JavaScript expression @audioElement.stop();@.
+audioStop = updateElement $ \el -> Core.runFunction (Core.getWindow el) $
+    ffi "prim_audio_stop(%1)" el
 
 -- Turn a jQuery property @.prop()@ into an attribute.
 fromProp :: String -> (JSValue -> a) -> (a -> JSValue) -> Attr Element a

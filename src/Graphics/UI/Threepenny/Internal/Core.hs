@@ -60,9 +60,6 @@ module Graphics.UI.Threepenny.Internal.Core
   ,ToJS, FFI, ffi, JSFunction
   ,runFunction, callFunction
   
-  -- * Oddball
-  ,audioPlay
-  
   -- * Types
   ,Window
   ,Element
@@ -573,14 +570,6 @@ appendElementTo (Element parent session) e@(Element child _) =
     -- TODO: Right now, parent and child need to be from the same session/browser window
     --       Implement transfer of elements across browser windows
     run session $ Append parent child
-
-
-{-----------------------------------------------------------------------------
-    Oddball
-------------------------------------------------------------------------------}
--- | Invoke the JavaScript expression @audioElement.play();@.
-audioPlay :: Element -> IO ()
-audioPlay (Element el session) = runFunction session $ ffi "%1.play();" el
 
 {-----------------------------------------------------------------------------
     Querying the DOM
