@@ -162,11 +162,25 @@ $.fn.livechange = function(ms,trigger){
       if (response != undefined)
         ws.send(JSON.stringify(response));
     }
+    // Send ping message in regular intervals.
+    // We expect pong messages in return to keep the connection alive.
+    function ping(){
+      ws.send("ping");
+      window.setTimeout(ping,2000);
+    }
     
     ws.onopen = function (e){
+      ping();
       ws.onmessage = function (msg) {
-        console_log("WebSocket message: %o",msg);
-        runEvent(JSON.parse(msg.data), sendEvent, reply);        
+        // console_log("WebSocket message: %o",msg);
+        if (msg.data != "pong")
+          { runEvent(JSON.parse(msg.data), sendEvent, reply); }
+      }
+      ws.onclose = function (e) {
+        console_log("WebSocket closed: %o", e);
+      }
+      ws.onerror = function (e) {
+        console_log("WebSocket error: %o", e);
       }
     }
   }

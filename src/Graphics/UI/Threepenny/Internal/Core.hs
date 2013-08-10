@@ -138,11 +138,13 @@ custodian seconds sessions = forever $ do
         Disconnected time -> do
           now <- getCurrentTime
           let dcSeconds = diffUTCTime now time
+          -- session is disconnected for more than  seconds
           if (dcSeconds > fromIntegral seconds)
              then do killThread sThreadId
                      return (Just key)
              else return Nothing
-            
+    
+    -- remove killed sessions from the map
     return (M.filterWithKey (\k _ -> not (k `elem` killed)) sessions)
 
 -- Run a snap action with the given session.
@@ -158,7 +160,7 @@ withGivenSession :: Integer -> ServerState -> (Session -> Snap a) -> Snap a
 withGivenSession token ServerState{..} cont = do
     sessions <- liftIO $ withMVar sSessions return
     case M.lookup token sessions of
-        Nothing -> error $ "Nonexistant token: " ++ show token
+        Nothing      -> error $ "Nonexistant token: " ++ show token
         Just session -> cont session
 
 {-----------------------------------------------------------------------------
@@ -244,6 +246,7 @@ poll Session{..} = do
             delaySeconds $ 60 * 5 -- Force kill after 5 minutes.
             killThread threadId
         E.catch (readAvailableChan sInstructions) $ \e -> do
+            -- no instructions available after some time
             when (e == E.ThreadKilled) $ setDisconnected
             E.throw e
     
@@ -274,23 +277,26 @@ routeWebsockets worker server =
         session <- createSession worker server
         WS.runWebSocketsSnap $ webSocket session
 
-
-webSocket :: Session -> WS.Request -> WS.WebSockets WS.Hybi10 ()
+webSocket :: Session -> WS.Request -> WS.WebSockets WS.Hybi00 ()
 webSocket Session{..} req = void $ do
     WS.acceptRequest req
+    -- websockets are always connected, don't let the custodian kill you.
+    liftIO $ modifyMVar_ sConnectedState (const (return Connected))
 
     -- write data (in another thread)
     send <- WS.getSink
     liftIO . forkIO . forever $ do
-        x <- readChan sInstructions 
+        x <- readChan sInstructions
         WS.sendSink send . WS.textData . Text.pack . JSON.encode $ x
 
     -- read data
     forever $ do
         input <- WS.receiveData
-        case JSON.decode . Text.unpack $ input of
-            Ok signal -> liftIO $ writeChan sSignals signal
-            Error err -> error err
+        if input == "ping"
+            then liftIO . WS.sendSink send . WS.textData . Text.pack $ "pong"
+            else case JSON.decode . Text.unpack $ input of
+                Ok signal -> liftIO $ writeChan sSignals signal
+                Error err -> error err
 
 {-----------------------------------------------------------------------------
     FFI implementation on top of the communication channel
@@ -454,7 +460,7 @@ handleEvent window@(Session{..}) = do
     case signal of
         Threepenny.Event (elid,eventType,params) -> do
             sEventHandler ((elid,eventType), EventData params)
-        _ -> return ()
+        _       -> return ()
 
 -- Get the latest signal sent from the client.
 getSignal :: Window -> IO Signal
