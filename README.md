@@ -28,7 +28,7 @@ This project was originally called Ji in its earliest iterations.
 * [Buttons.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Buttons.hs) - Simple buttons to click on.
 * [Chat.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs) - Multi-user chat.
 * [DragNDropExample.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/DragNDropExample.hs) - Simple drag'N'drop demo.
-* [DrumMachine.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs) - Specify rhythm by activating and deactivating checkboxes.
+* [DrumMachine.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/DrumMachine.hs) - Specify rhythm by activating and deactivating checkboxes.
 * [MissingDollars.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/MissingDollars.hs) - Text with configurable values.
 * [UseWords.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/UseWords.hs)  - Text with configurable words. (Apologies for the male-centric story.)
 
