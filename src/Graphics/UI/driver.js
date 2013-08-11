@@ -155,6 +155,11 @@ $.fn.livechange = function(ms,trigger){
     var url = 'ws:' + window.location.href.toString().slice(5) + 'websocket';
     var ws  = new WebSocket(url);
     
+    $(window).unload( function () {
+      // Make sure that the WebSocket is closed when the browser window is closed.
+      ws.close();
+    });
+    
     var sendEvent = function (e) {
       ws.send(JSON.stringify({ Event : e}));
     }

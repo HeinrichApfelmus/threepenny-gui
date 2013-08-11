@@ -8,6 +8,7 @@ import Control.Monad
 import Data.Functor
 import Data.List.Extra
 import Data.Time
+import Data.IORef
 import Prelude hiding (catch)
 
 import Control.Monad.Trans.Reader as Reader
@@ -39,15 +40,15 @@ main = do
 type Message = (UTCTime, String, String)
 
 setup :: Chan Message -> Window -> IO ()
-setup globalMsgs w = do
+setup globalMsgs window = do
     msgs <- Chan.dupChan globalMsgs
 
-    return w # set title "Chat"
+    return window # set title "Chat"
     
-    (nick, nickname) <- mkNickname
-    messageArea      <- mkMessageArea msgs nick
+    (nickRef, nickname) <- mkNickname
+    messageArea         <- mkMessageArea msgs nickRef
 
-    getBody w #+
+    getBody window #+
         [ UI.div #. "header"   #+ [string "Threepenny Chat"]
         , UI.div #. "gradient"
         , viewSource
@@ -55,11 +56,15 @@ setup globalMsgs w = do
         , element messageArea
         ]
     
-    void $ forkIO $ receiveMessages w msgs messageArea
+    messageReceiver <- forkIO $ receiveMessages window msgs messageArea
 
---    io $ catch (runTP session handleEvents)
---             (\e -> do killThread messageReceiver
---                       throw (e :: SomeException))
+    on UI.disconnect window $ const $ do
+        putStrLn "Disconnected!"
+        killThread messageReceiver
+        now   <- getCurrentTime
+        nick  <- readIORef nickRef
+        Chan.writeChan msgs (now,nick,"( left the conversation )")
+
 
 receiveMessages w msgs messageArea = do
     messages <- Chan.getChanContents msgs
@@ -68,14 +73,14 @@ receiveMessages w msgs messageArea = do
           element messageArea #+ [mkMessage msg]
           UI.scrollToBottom messageArea
 
-mkMessageArea :: Chan Message -> Element -> IO Element
+mkMessageArea :: Chan Message -> IORef String -> IO Element
 mkMessageArea msgs nickname = do
     input <- UI.textarea #. "send-textarea"
     
     on UI.sendValue input $ (. trim) $ \content -> do
         when (not (null content)) $ do
             now  <- getCurrentTime
-            nick <- trim <$> get value nickname
+            nick <- readIORef nickname
             element input # set value ""
             when (not (null nick)) $
                 Chan.writeChan msgs (now,nick,content)
@@ -83,15 +88,18 @@ mkMessageArea msgs nickname = do
     UI.div #. "message-area" #+ [UI.div #. "send-area" #+ [element input]]
 
 
-mkNickname :: IO (Element, Element)
+mkNickname :: IO (IORef String, Element)
 mkNickname = do
-    i  <- UI.input #. "name-input"
-    el <- UI.div   #. "name-area"  #+
-        [ UI.span  #. "name-label" #+ [string "Your name "]
-        , element i
-        ]
-    UI.setFocus i
-    return (i,el)
+    input  <- UI.input #. "name-input"
+    el     <- UI.div   #. "name-area"  #+
+                [ UI.span  #. "name-label" #+ [string "Your name "]
+                , element input
+                ]
+    UI.setFocus input
+    
+    nick <- newIORef ""
+    on UI.keyup input $ \_ -> writeIORef nick . trim =<< get value input
+    return (nick,el)
 
 mkMessage :: Message -> IO Element
 mkMessage (timestamp, nick, content) =

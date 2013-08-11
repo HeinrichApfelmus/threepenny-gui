@@ -26,7 +26,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * Events
     -- | For a list of predefined events, see "Graphics.UI.Threepenny.Events".
-    EventData(..), domEvent, on,
+    EventData(..), domEvent, on, disconnect,
     module Control.Event,
     
     -- * Attributes
@@ -115,8 +115,7 @@ startGUI
     :: Config               -- ^ Server configuration.
     -> (Window -> IO ())    -- ^ Action to run whenever a client browser connects.
     -> IO ()
-startGUI config handler =
-    Core.serve config $ \w -> handler w >> Core.handleEvents w
+startGUI config handler = Core.serve config handler
 
 
 -- | Make a local file available as a relative URI.
@@ -409,6 +408,15 @@ domEvent name element = Control.Event.Event $ \handler -> do
     
     register'
     return unregister'
+
+
+-- | Event that occurs whenever the client has disconnected,
+-- be it by closing the browser window or by exception.
+--
+-- Note: DOM Elements in the browser window that has been closed
+-- can no longer be manipulated.
+disconnect :: Window -> Event ()
+disconnect = Core.disconnect
 
 -- | Convenience function to register 'Event's for 'Element's.
 --

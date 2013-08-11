@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, PackageImports #-}
 {-# OPTIONS -fno-warn-name-shadowing #-}
 
 module Graphics.UI.Threepenny.Internal.Core
@@ -15,8 +15,7 @@ module Graphics.UI.Threepenny.Internal.Core
   -- * Event handling
   -- $eventhandling
   ,bind
-  ,handleEvent
-  ,handleEvents
+  ,disconnect
   ,module Control.Event
   
   -- * Setting attributes
@@ -76,10 +75,11 @@ import           Control.Applicative
 import           Control.Concurrent
 import           Control.Concurrent.Chan.Extra
 import           Control.Concurrent.Delay
-import qualified Control.Exception             as E
+import qualified Control.Exception
 import           Control.Event
 import           Control.Monad
 import           Control.Monad.IO.Class
+import qualified "MonadCatchIO-transformers" Control.Monad.CatchIO as E
 import           Data.ByteString               (ByteString)
 import           Data.ByteString.UTF8          (toString,fromString)
 import           Data.Map                      (Map)
@@ -90,8 +90,9 @@ import qualified Data.Text                     as Text
 import           Data.Text.Encoding
 import           Data.Time
 import           Network.URI
-import qualified Network.WebSockets as WS
-import qualified Network.WebSockets.Snap as WS
+import qualified Network.WebSockets            as WS
+import qualified Network.WebSockets.Snap       as WS
+import qualified Data.Attoparsec.Enumerator    as Atto
 import           Prelude                       hiding (init)
 import           Safe
 import           Snap.Core
@@ -208,7 +209,7 @@ createSession worker server = do
     liftIO $ modifyMVar (sSessions server) $ \sessions -> do
         let newKey = maybe 0 (+1) (lastMay (M.keys sessions))
         session <- newSession server (uri,params) newKey
-        _       <- forkIO $ void $ worker session
+        _       <- forkIO $ void $ worker session >> handleEvents session
         return (M.insert newKey session sessions, session)
 
 -- | Respond to initialization request.
@@ -244,7 +245,7 @@ poll Session{..} = do
             killThread threadId
         E.catch (readAvailableChan sInstructions) $ \e -> do
             -- no instructions available after some time
-            when (e == E.ThreadKilled) $ setDisconnected
+            when (e == Control.Exception.ThreadKilled) $ setDisconnected
             E.throw e
     
     writeJson instructions
@@ -272,7 +273,9 @@ routeWebsockets worker server =
     where
     response = do
         session <- createSession worker server
-        WS.runWebSocketsSnap $ webSocket session
+        WS.runWebSocketsSnap (webSocket session)
+        error "Threepenny.Internal.Core: runWebSocketsSnap should never return."
+
 
 webSocket :: Session -> WS.Request -> WS.WebSockets WS.Hybi00 ()
 webSocket Session{..} req = void $ do
@@ -281,19 +284,25 @@ webSocket Session{..} req = void $ do
     liftIO $ modifyMVar_ sConnectedState (const (return Connected))
 
     -- write data (in another thread)
-    send <- WS.getSink
-    liftIO . forkIO . forever $ do
+    send     <- WS.getSink
+    sendData <- liftIO . forkIO . forever $ do
         x <- readChan sInstructions
         WS.sendSink send . WS.textData . Text.pack . JSON.encode $ x
 
     -- read data
-    forever $ do
-        input <- WS.receiveData
-        if input == "ping"
-            then liftIO . WS.sendSink send . WS.textData . Text.pack $ "pong"
-            else case JSON.decode . Text.unpack $ input of
-                Ok signal -> liftIO $ writeChan sSignals signal
-                Error err -> error err
+    let readData = do
+            input <- WS.receiveData
+            case input of
+                "ping" -> liftIO . WS.sendSink send . WS.textData . Text.pack $ "pong"
+                "quit" -> WS.throwWsError WS.ConnectionClosed
+                input  -> case JSON.decode . Text.unpack $ input of
+                    Ok signal -> liftIO $ writeChan sSignals signal
+                    Error err -> WS.throwWsError . WS.ParseError $ Atto.ParseError [] err
+    
+    forever readData `WS.catchWsError`
+        \_ -> liftIO $ do
+            killThread sendData             -- kill sending thread when done
+            writeChan sSignals $ Quit ()    -- signal  Quit  event
 
 {-----------------------------------------------------------------------------
     FFI implementation on top of the communication channel
@@ -448,17 +457,18 @@ loadDirectory Session{..} path = do
 
 -- | Handle events signalled from the client.
 handleEvents :: Window -> IO ()
-handleEvents window = forever $ handleEvent window
-
--- | Handle one event.
-handleEvent :: Window -> IO ()
-handleEvent window@(Session{..}) = do
+handleEvents window@(Session{..}) = do
     signal <- getSignal window
     case signal of
         Threepenny.Event (elid,eventType,params) -> do
             sEventHandler ((elid,eventType), EventData params)
-        _       -> return ()
-
+            handleEvents window
+        Quit () -> do
+            sEventHandler (("","quit"), EventData [])
+            -- do not continue handling events
+        _       -> do
+            handleEvents window
+            
 -- Get the latest signal sent from the client.
 getSignal :: Window -> IO Signal
 getSignal (Session{..}) = readChan sSignals
@@ -478,6 +488,10 @@ bind eventType (Element el@(ElementId elid) session) =
         -- register with client
         run session $ Bind eventType el (Closure key)
         return unregister
+
+-- | Event that occurs when the client has disconnected.
+disconnect :: Window -> Event ()
+disconnect window = () <$ sEvent window ("","quit")
 
 -- Make a uniquely numbered event handler.
 newClosure :: Window -> String -> String -> ([Maybe String] -> IO ()) -> IO Closure
