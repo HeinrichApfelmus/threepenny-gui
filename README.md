@@ -24,12 +24,14 @@ This project was originally called Ji in its earliest iterations.
 
 ## Examples
 
-* [Simple buttons](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Buttons.hs)
-* [Missing dollars question](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/MissingDollars.hs)
-* [Multi-user chat](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs)
-* [Replace words in a text](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/UseWords.hs) (Apologies for the male-centric story)
-* [BarTab - dynamic creation of widgets](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/BarTab.hs)
-* [Drag'N'Drop example](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/DragNDropExample.hs)
+* [BarTab.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/BarTab.hs) - Dynamic creation of widgets.
+* [Buttons.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Buttons.hs) - Simple buttons to click on.
+* [Chat.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs) - Multi-user chat.
+* [DragNDropExample.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/DragNDropExample.hs) - Simple drag'N'drop demo.
+* [DrumMachine.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs) - Specify rhythm by activating and deactivating checkboxes.
+* [MissingDollars.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/MissingDollars.hs) - Text with configurable values.
+* [UseWords.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/UseWords.hs)  - Text with configurable words. (Apologies for the male-centric story.)
+
 
 
 ## Challenges
@@ -38,6 +40,8 @@ This project was originally called Ji in its earliest iterations.
 
 As indicated, the frequent communication between browser and server
 means that Threepenny is best used as a GUI server running on localhost.
+
+The communication is done over a persistent connection using WebSockets.
 
 If you want to reduce latency, the best option is to generate JavaScript
 code and run it on the client. Consider this approach similar to [a
