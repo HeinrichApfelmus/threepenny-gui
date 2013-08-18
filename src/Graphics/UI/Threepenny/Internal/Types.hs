@@ -96,6 +96,7 @@ data Config = Config
 data Instruction
   = Debug String
   | SetToken Integer
+  | GetElementsByClassName String
   | GetElementsById [String]
   | GetElementsByTagName String
   | SetStyle ElementId [(String,String)]

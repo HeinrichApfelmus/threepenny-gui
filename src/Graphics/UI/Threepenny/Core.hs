@@ -17,7 +17,9 @@ module Graphics.UI.Threepenny.Core (
         getHead, getBody,
         children, text, html, attr, style, value,
     getValuesList,
-    getElementsByTagName, getElementByTagName, getElementsById, getElementById,
+    getElementsByTagName, getElementByTagName, 
+    getElementsById, getElementById,
+    getElementsByClassName,
     
     -- * Layout
     -- | Combinators for quickly creating layouts.
@@ -316,6 +318,14 @@ getElementsById
     -> IO [Element]  -- ^ Elements with given ID.
 getElementsById window name =
     mapM fromAlive =<< Core.getElementsById window name
+
+-- | Get a list of elements by particular class.  Blocks.
+getElementsByClassName
+    :: Window        -- ^ Browser window
+    -> String        -- ^ The class string.
+    -> IO [Element]  -- ^ Elements with given class.
+getElementsByClassName window cls =
+    mapM fromAlive =<< Core.getElementsByClassName window cls
 
 {-----------------------------------------------------------------------------
     Oddball

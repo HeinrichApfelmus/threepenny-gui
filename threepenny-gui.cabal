@@ -97,6 +97,8 @@ Library
                     ,data-default
                     ,transformers
                     ,stm
+                    ,attoparsec-enumerator
+                    ,MonadCatchIO-transformers
                     
 Executable threepenny-examples-bartab
     if flag(buildExamples)
