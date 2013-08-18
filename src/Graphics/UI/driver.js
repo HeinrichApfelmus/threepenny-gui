@@ -274,6 +274,18 @@ $.fn.livechange = function(ms,trigger){
         reply({ Elements: els });
         break;
       }
+      case "GetElementsByClassName": {
+        var elements = document.getElementsByClassName(event.GetElementsByClassName);
+        var els = [];
+        var len = elements.length;
+        for(var i = 0; i < len; i++) {
+          els.push({
+            Element: elementToElid(elements[i])
+          });
+        }
+        reply({ Elements: els });
+        break;
+      }
       case "SetStyle": {
         var set = event.SetStyle;
         var id = set[0];

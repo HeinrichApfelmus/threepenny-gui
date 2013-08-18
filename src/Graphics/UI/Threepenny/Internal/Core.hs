@@ -40,6 +40,7 @@ module Graphics.UI.Threepenny.Internal.Core
   ,getBody
   ,getElementsByTagName
   ,getElementsById
+  ,getElementsByClassName
   ,getWindow
   ,getProp
   ,getValue
@@ -611,6 +612,17 @@ getElementsById
     -> IO [Element]  -- ^ Elements with given ID.
 getElementsById window ids =
   call window (GetElementsById ids) $ \signal ->
+    case signal of
+      Elements els -> return $ Just [Element el window | el <- els]
+      _            -> return Nothing
+
+-- | Get a list of elements by particular class.  Blocks.
+getElementsByClassName
+    :: Window        -- ^ Browser window
+    -> String        -- ^ The class string.
+    -> IO [Element]  -- ^ Elements with given class.
+getElementsByClassName window cls =
+  call window (GetElementsByClassName cls) $ \signal ->
     case signal of
       Elements els -> return $ Just [Element el window | el <- els]
       _            -> return Nothing
