@@ -1,7 +1,6 @@
 {-# OPTIONS -fno-warn-wrong-do-bind #-}
 module Graphics.UI.Threepenny.JQuery where
 
-import Control.Event
 import Control.Arrow
 import Data.Char
 import Data.Default
@@ -10,6 +9,7 @@ import Graphics.UI.Threepenny.Core
 import qualified Graphics.UI.Threepenny.Internal.Core as Core
 import qualified Graphics.UI.Threepenny.Internal.Types as Core
 import Text.JSON
+import Reactive.Threepenny
 
 data Easing = Swing | Linear
   deriving (Eq,Enum,Show)

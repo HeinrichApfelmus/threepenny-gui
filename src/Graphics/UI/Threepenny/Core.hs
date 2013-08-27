@@ -29,7 +29,7 @@ module Graphics.UI.Threepenny.Core (
     -- * Events
     -- | For a list of predefined events, see "Graphics.UI.Threepenny.Events".
     EventData(..), domEvent, on, disconnect,
-    module Control.Event,
+    module Reactive.Threepenny,
     
     -- * Attributes
     -- | For a list of predefined attributes, see "Graphics.UI.Threepenny.Attributes".
@@ -55,11 +55,11 @@ import Data.Maybe (listToMaybe)
 import Data.Functor
 import Data.String (fromString)
 import Control.Concurrent.MVar
-import Control.Event
 import Control.Monad
 import Control.Monad.IO.Class
 import Network.URI
 import Text.JSON
+import Reactive.Threepenny
 
 import qualified Graphics.UI.Threepenny.Internal.Core  as Core
 import Graphics.UI.Threepenny.Internal.Core
@@ -404,7 +404,12 @@ domEvent
         --   the name is @click@ and so on.
     -> Element          -- ^ Element where the event is to occur.
     -> Event EventData
-domEvent name element = Control.Event.Event $ \handler -> do
+domEvent name element =
+    Core.newEventDelayed $ \(e,handler) ->
+        flip updateElement element $ \el -> void $ do
+            register (Core.bind name el) handler
+
+{-   
     ref <- newIORef $ return ()
     let
         -- register handler and remember unregister function
@@ -418,7 +423,7 @@ domEvent name element = Control.Event.Event $ \handler -> do
     
     register'
     return unregister'
-
+-}
 
 -- | Event that occurs whenever the client has disconnected,
 -- be it by closing the browser window or by exception.

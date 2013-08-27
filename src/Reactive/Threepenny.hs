@@ -10,10 +10,10 @@ module Reactive.Threepenny (
     -- ("dynamic event switching").
     
     -- * Types
-    Event,
-    newEvent, register,
+    Handler, Event,
+    newEvent, newEventDelayed, register,
     
-    Behavior, readValue,
+    Behavior, currentValue,
     
     -- * Combinators
     never, filterJust, unionWith,
@@ -47,10 +47,21 @@ type Handler a = a -> IO ()
 
 -- | Create a new event.
 -- Also returns a function that triggers an event occurrence.
-newEvent :: IO (Event a, a -> IO ())
+newEvent :: IO (Event a, Handler a)
 newEvent = do
     (p, fire) <- Prim.newPulse
     return (E $ fromPure p, fire)
+
+
+-- | Create a new event with some delayed initialization procedure.
+--
+-- The argument will be called when a handler is registered at the event.
+-- This happens only once for each shared instance of the event.
+newEventDelayed :: Handler (Event a, Handler a) -> Event a
+newEventDelayed handler = E $ memoize $ do
+    (p, fire) <- Prim.newPulse
+    handler (E $ fromPure p, fire)
+    return p
 
 -- | Register an event 'Handler' for an 'Event'.
 -- All registered handlers will be called whenever the event occurs.
@@ -80,8 +91,8 @@ onChange b h = do
     Prim.addHandler p (\_ -> h =<< Prim.readLatch l)
 
 -- | Read the current value of a 'Behavior'.
-readValue :: Behavior a -> IO a
-readValue b = do
+currentValue :: Behavior a -> IO a
+currentValue b = do
     (l, p) <- at (unB b)
     Prim.readLatch l
 
@@ -135,7 +146,7 @@ test :: IO (Int -> IO ())
 test = do
     (e1,fire) <- newEvent
     let e2 = accumE 0 ((+) <$> e1)
-    register e2 print
+    _ <- register e2 print
     
     return fire
 

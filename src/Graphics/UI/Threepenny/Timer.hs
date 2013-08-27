@@ -14,9 +14,9 @@ module Graphics.UI.Threepenny.Timer (
 
 import Data.Typeable
 import Control.Monad (when, forever, void)
-import Control.Event
 import Control.Concurrent
 import Control.Concurrent.STM
+import Reactive.Threepenny
 
 import Graphics.UI.Threepenny.Core
 
