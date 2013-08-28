@@ -18,11 +18,14 @@ Description:
     NOTE: This library contains examples, but they are not built by default.
     To build and install the example, use the @buildExamples@ flag like this
     .
-    @cabal install reactive-banana-threepenny -fbuildExamples@
+    @cabal install threepenny-gui -fbuildExamples@
     .
     Changelog:
     .
+    * 0.3.0.0 - Snapshot release. Browser communication with WebSockets. First stab at FRP integration.
+    .
     * 0.2.0.0 - Snapshot release. First stab at easy JavaScript FFI.
+    .
     * 0.1.0.0 - Initial release.
 
 License:             BSD3
@@ -60,7 +63,7 @@ Source-repository head
 Library
   Hs-source-dirs:    src
   Exposed-modules:
-                     Control.Event
+                     Reactive.Threepenny
                     ,Graphics.UI.Threepenny
                     ,Graphics.UI.Threepenny.Attributes
                     ,Graphics.UI.Threepenny.Core
@@ -72,12 +75,15 @@ Library
                     ,Graphics.UI.Threepenny.Timer
   Other-modules:
                      Control.Concurrent.Chan.Extra
+                    ,Control.Event
                     ,Control.Monad.Extra
                     ,Control.Monad.IO
                     ,Control.Concurrent.Delay
                     ,Graphics.UI.Threepenny.Internal.Core
                     ,Graphics.UI.Threepenny.Internal.Resources
                     ,Graphics.UI.Threepenny.Internal.Types
+                    ,Reactive.Threepenny.PulseLatch
+                    ,Reactive.Threepenny.Memo
                     ,Paths_threepenny_gui
   CPP-Options:      -DCABAL
   Build-depends:     base                      >= 4     && < 5
@@ -88,6 +94,9 @@ Library
                     ,text
                     ,safe
                     ,containers
+                    ,unordered-containers
+                    ,hashable
+                    ,vault == 0.3.*
                     ,bytestring
                     ,json >= 0.4.4 && < 0.6
                     ,time
