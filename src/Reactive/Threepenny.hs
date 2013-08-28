@@ -11,7 +11,7 @@ module Reactive.Threepenny (
     
     -- * Types
     Handler, Event,
-    newEvent, newEventDelayed, register,
+    newEvent, newEventsNamed, register,
     
     Behavior, currentValue,
     
@@ -25,12 +25,15 @@ module Reactive.Threepenny (
     ) where
 
 import Control.Applicative
+import Data.IORef
+import qualified Data.Map as Map
 
 import           Reactive.Threepenny.Memo       as Memo
 import qualified Reactive.Threepenny.PulseLatch as Prim
 
 type Pulse = Prim.Pulse
 type Latch = Prim.Latch
+type Map   = Map.Map
 
 {-----------------------------------------------------------------------------
     Types
@@ -53,15 +56,26 @@ newEvent = do
     return (E $ fromPure p, fire)
 
 
--- | Create a new event with some delayed initialization procedure.
+-- | Create a series of events with delayed initialization.
 --
--- The argument will be called when a handler is registered at the event.
--- This happens only once for each shared instance of the event.
-newEventDelayed :: Handler (Event a, Handler a) -> Event a
-newEventDelayed handler = E $ memoize $ do
-    (p, fire) <- Prim.newPulse
-    handler (E $ fromPure p, fire)
-    return p
+-- For each name, the initialization handler will be called
+-- exactly once when the event is first "brought to life",
+-- e.g. when an event handler is registered to it.
+newEventsNamed :: Ord name
+    => Handler (name, Event a, Handler a)   -- ^ Initialization procedure.
+    -> IO (name -> Event a)                 -- ^ Series of events.
+newEventsNamed init = do
+    eventsRef <- newIORef Map.empty
+    return $ \name -> E $ memoize $ do
+        events <- readIORef eventsRef
+        case Map.lookup name events of
+            Just p  -> return p
+            Nothing -> do
+                (p, fire) <- Prim.newPulse
+                writeIORef eventsRef $ Map.insert name p events
+                init (name, E $ fromPure p, fire)
+                return p
+
 
 -- | Register an event 'Handler' for an 'Event'.
 -- All registered handlers will be called whenever the event occurs.

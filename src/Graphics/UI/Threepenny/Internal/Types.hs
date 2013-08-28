@@ -45,6 +45,8 @@ data Session = Session
   , sInstructions   :: Chan Instruction
   , sMutex          :: MVar ()
   , sEventHandlers  :: MVar (Map EventKey (E.Handler EventData))
+  , sElementEvents  :: MVar (Map ElementId ElementEvents)
+  , sEventQuit      :: (E.Event (), E.Handler ())
   , sClosures       :: MVar [Integer]
   , sElementIds     :: MVar [Integer]
   , sToken          :: Integer
@@ -54,10 +56,12 @@ data Session = Session
   , sServerState    :: ServerState
   }
 
-type Sessions     = Map Integer Session
-type EventKey     = (String, String)
-type MimeType     = ByteString
-type Filepaths    = (Integer, Map ByteString (FilePath, MimeType))
+type Sessions      = Map Integer Session
+type MimeType      = ByteString
+type Filepaths     = (Integer, Map ByteString (FilePath, MimeType))
+
+type EventKey      = (String, String)
+type ElementEvents = String -> E.Event EventData
 
 data ServerState = ServerState
     { sSessions :: MVar Sessions

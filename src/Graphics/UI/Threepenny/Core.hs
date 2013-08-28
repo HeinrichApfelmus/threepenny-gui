@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
 module Graphics.UI.Threepenny.Core (
     -- * Guide
     -- $guide
@@ -51,6 +51,7 @@ module Graphics.UI.Threepenny.Core (
 
 import Data.Dynamic
 import Data.IORef
+import qualified Data.Map as Map
 import Data.Maybe (listToMaybe)
 import Data.Functor
 import Data.String (fromString)
@@ -67,7 +68,7 @@ import Graphics.UI.Threepenny.Internal.Core
      ToJS, FFI, ffi, JSFunction,
      debug, clear, callFunction, runFunction, callDeferredFunction, atomic, )
 import qualified Graphics.UI.Threepenny.Internal.Types as Core
-import Graphics.UI.Threepenny.Internal.Types (Window, Config, EventData)
+import Graphics.UI.Threepenny.Internal.Types (Window, Config, EventData, Session(..))
 
 {-----------------------------------------------------------------------------
     Guide
@@ -149,7 +150,10 @@ cookies = mkReadAttr Core.getRequestCookies
 type Value = String
 
 -- | Reference to an element in the DOM of the client window.
-newtype Element = Element (MVar Elem) deriving (Typeable)
+data Element = Element Core.ElementEvents (MVar Elem) deriving (Typeable)
+-- Element events mvar
+--      events = Events associated to this element
+--      mvar   = Current state of the MVar
 data    Elem
     = Alive Core.Element                       -- element exists in a window
     | Limbo Value (Window -> IO Core.Element)  -- still needs to be created
@@ -158,11 +162,13 @@ data    Elem
 -- Note that multiple MVars may now point to the same live reference,
 -- but this is ok since live references never change.
 fromAlive :: Core.Element -> IO Element
-fromAlive e = Element <$> newMVar (Alive e)
+fromAlive e@(Core.Element elid Session{..}) = do
+    Just events <- Map.lookup elid <$> readMVar sElementEvents
+    Element events <$> newMVar (Alive e)
 
 -- Update an element that may be in Limbo.
 updateElement :: (Core.Element -> IO ()) -> Element -> IO ()
-updateElement f (Element me) = do
+updateElement f (Element _ me) = do
     e <- takeMVar me
     case e of
         Alive e -> do   -- update immediately
@@ -175,13 +181,22 @@ updateElement f (Element me) = do
 -- TODO: 1. Throw exception if the element exists in another window.
 --       2. Don't throw exception, but move the element across windows.
 manifestElement :: Window -> Element -> IO Core.Element
-manifestElement w (Element me) = do
-    e1 <- takeMVar me
-    e2 <- case e1 of
-        Alive e        -> return e
-        Limbo v create -> do { e2 <- create w; Core.setAttr "value" v e2; return e2 }
-    putMVar me $ Alive e2
-    return e2
+manifestElement w (Element events me) = do
+        e1 <- takeMVar me
+        e2 <- case e1 of
+            Alive e        -> return e
+            Limbo v create -> do
+                e2 <- create w
+                Core.setAttr "value" v e2
+                rememberEvents events e2    -- save events in session data
+                return e2
+        putMVar me $ Alive e2
+        return e2
+    
+    where
+    rememberEvents events (Core.Element elid Session{..}) =
+        modifyMVar_ sElementEvents $ return . Map.insert elid events
+
 
 -- Append a child element to a parent element. Non-blocking.
 appendTo
@@ -197,9 +212,18 @@ appendTo parent child = do
 mkElement
     :: String           -- ^ Tag name
     -> IO Element
-mkElement tag = Element <$> newMVar (Limbo "" $ \w -> Core.newElement w tag)
+mkElement tag = do
+    -- create element in Limbo
+    ref <- newMVar (Limbo "" $ \w -> Core.newElement w tag)
+    -- create events and initialize them when element becomes Alive
+    let
+        initializeEvent (name,_,handler) = 
+            flip updateElement (Element undefined ref) $ \e -> do
+                Core.bind name e handler
+    events  <- newEventsNamed initializeEvent
+    return $ Element events ref
 
--- | Retreive the browser 'Window' in which the element resides.
+-- | Retrieve the browser 'Window' in which the element resides.
 -- 
 -- Note that elements do not reside in any browser window when they are first created.
 -- To move the element to a particular browser window,
@@ -208,7 +232,7 @@ mkElement tag = Element <$> newMVar (Limbo "" $ \w -> Core.newElement w tag)
 -- WARNING: The ability to move elements from one browser window to another
 -- is currently not implemented yet.
 getWindow :: Element -> IO (Maybe Window)
-getWindow (Element ref) = do
+getWindow (Element _ ref) = do
     e1 <- readMVar ref
     return $ case e1 of
         Alive e   -> Just $ Core.getWindow e
@@ -251,8 +275,8 @@ style = mkWriteAttr (updateElement . Core.setStyle)
 value :: Attr Element String
 value = mkReadWriteAttr get set
     where
-    get   (Element ref) = getValue =<< readMVar ref
-    set v (Element ref) = updateMVar (setValue v) ref
+    get   (Element _ ref) = getValue =<< readMVar ref
+    set v (Element _ ref) = updateMVar (setValue v) ref
     
     getValue (Limbo v _) = return v
     getValue (Alive e  ) = Core.getValue e
@@ -343,7 +367,7 @@ fromProp :: String -> (JSValue -> a) -> (a -> JSValue) -> Attr Element a
 fromProp name from to = mkReadWriteAttr get set
     where
     set x = updateElement (Core.setProp name $ to x)
-    get (Element ref) = do
+    get (Element _ ref) = do
         me <- readMVar ref
         case me of
             Limbo _ _ -> error "'checked' attribute: element must be in a browser window"
@@ -404,10 +428,7 @@ domEvent
         --   the name is @click@ and so on.
     -> Element          -- ^ Element where the event is to occur.
     -> Event EventData
-domEvent name element =
-    Core.newEventDelayed $ \(e,handler) ->
-        flip updateElement element $ \el -> void $ do
-            register (Core.bind name el) handler
+domEvent name (Element events _) = events name
 
 {-   
     ref <- newIORef $ return ()

@@ -181,12 +181,16 @@ newSession sServerState sStartInfo sToken = do
     sInstructions     <- newChan
     sMutex            <- newMVar ()
     sEventHandlers    <- newMVar M.empty
+    sElementEvents    <- newMVar M.empty
+    sEventQuit        <- newEvent
     sElementIds       <- newMVar [0..]
     now               <- getCurrentTime
     sConnectedState   <- newMVar (Disconnected now)
     sThreadId         <- myThreadId
     sClosures         <- newMVar [0..]
-    return $ Session {..}
+    let session = Session {..}
+    initializeElementEvents session    
+    return session
 
 -- | Make a new session and add it to the server
 createSession :: (Session -> IO void) -> ServerState -> Snap Session
@@ -452,7 +456,7 @@ handleEvents window@(Session{..}) = do
             handleEvent1 window ((elid,eventType),EventData params)
             handleEvents window
         Quit () -> do
-            handleEvent1 window (("","quit"),EventData [])
+            snd sEventQuit ()
             -- do not continue handling events
         _       -> do
             handleEvents window
@@ -462,6 +466,7 @@ addEventHandler :: Window -> (EventKey, Handler EventData) -> IO ()
 addEventHandler Session{..} (key,handler) =
     modifyMVar_ sEventHandlers $ return .
         M.insertWith (\h1 h a -> h1 a >> h a) key handler        
+
 
 -- | Handle a single event
 handleEvent1 :: Window -> (EventKey,EventData) -> IO ()
@@ -475,27 +480,34 @@ handleEvent1 Session{..} (key,params) = do
 getSignal :: Window -> IO Signal
 getSignal (Session{..}) = readChan sSignals
 
--- | Return an 'Event' associated to an 'Element'.
+-- | Bind an event handler for a dom event to an 'Element'.
 bind
     :: String               -- ^ The eventType, see any DOM documentation for a list of these.
     -> Element              -- ^ The element to bind to.
-    -> Event EventData      -- ^ The event handler.
-bind eventType (Element el@(ElementId elid) session) =
-    newEventDelayed $ \(_,fire) -> do
-        let key = (elid, eventType)
-        -- register with client if it has never been registered on the server
-        handlers <- readMVar $ sEventHandlers session
-        when (not $ key `M.member` handlers) $
-            run session $ Bind eventType el (Closure key)
-        -- register with server
-        addEventHandler session (key, fire)
+    -> Handler EventData    -- ^ The event handler to bind.
+    -> IO ()
+bind eventType (Element el@(ElementId elid) session) handler = do
+    let key = (elid, eventType)
+    -- register with client if it has never been registered on the server
+    handlers <- readMVar $ sEventHandlers session
+    when (not $ key `M.member` handlers) $
+        run session $ Bind eventType el (Closure key)
+    -- register with server
+    addEventHandler session (key, handler)
 
--- | Event that occurs when the client has disconnected.
+-- | Register event handler that occurs when the client has disconnected.
 disconnect :: Window -> Event ()
-disconnect window = () <$ e
+disconnect = fst . sEventQuit
+
+
+initializeElementEvents :: Window -> IO ()
+initializeElementEvents session@(Session{..}) = do
+        initEvents =<< getHead session
+        initEvents =<< getBody session
     where
-    e = newEventDelayed $ \(_,fire) ->
-        addEventHandler window (("", "quit"), fire)
+    initEvents el@(Element elid _) = do
+        x <- newEventsNamed $ \(name,_,handler) -> bind name el handler
+        modifyMVar_ sElementEvents $ return . M.insert elid x
 
 -- Make a uniquely numbered event handler.
 newClosure :: Window -> String -> String -> ([Maybe String] -> IO ()) -> IO Closure
