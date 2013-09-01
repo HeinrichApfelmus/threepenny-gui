@@ -27,7 +27,7 @@ at (Memoized r) = do
         Right a -> return a
         Left ma -> mdo
             writeIORef r $ Right a
-            a <- ma     -- FIXME: IO is not a good MonadFix instance
+            a <- ma    -- allow some recursion
             return a
 
 memoize :: IO a -> Memo a

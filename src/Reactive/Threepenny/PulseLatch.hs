@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, RecursiveDo #-}
 module Reactive.Threepenny.PulseLatch (
     Pulse, newPulse, addHandler,
     neverP, mapP, filterJustP, unionWithP,
@@ -207,11 +207,19 @@ applyL l1 l2 = return $ Latch { readL = readL l1 <*> readL l2 }
 test :: IO (Int -> IO ())
 test = do
     (p1, fire) <- newPulse
-    p2 <- mapP (+) p1
+    p2     <- mapP (+) p1
     (l1,_) <- accumL 0 p2
-    l2 <- mapL const l1
-    p3 <- applyP l2 p1
+    l2     <- mapL const l1
+    p3     <- applyP l2 p1
     addHandler p3 print
-    
     return fire
 
+test_recursion1 :: IO (IO ())
+test_recursion1 = mdo
+    (p1, fire) <- newPulse
+    p2      <- applyP l2 p1
+    p3      <- mapP (const (+1)) p2
+    ~(l1,_) <- accumL (0::Int) p3
+    l2      <- mapL const l1
+    addHandler p2 print
+    return $ fire ()

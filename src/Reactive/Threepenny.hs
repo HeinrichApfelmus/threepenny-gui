@@ -1,3 +1,4 @@
+{-# LANGUAGE RecursiveDo  #-}
 module Reactive.Threepenny (
     -- * Synopsis
     -- | Functional reactive programming.
@@ -169,7 +170,15 @@ test = do
     _  <- register e2 print
     
     return fire
-
-
+    
+test_recursion1 :: IO (IO ())
+test_recursion1 = mdo
+    (e1, fire) <- newEvent
+    b  <- accumB 0 $ (+1) <$ e2
+    let e2 :: Event Int
+        e2 = apply (const <$> b) e1
+    _  <- register e2 print
+    
+    return $ fire ()
 
 
