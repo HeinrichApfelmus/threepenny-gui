@@ -124,18 +124,24 @@ filterJust e      = E $ liftMemo1 Prim.filterJustP    (unE e)
 unionWith f e1 e2 = E $ liftMemo2 (Prim.unionWithP f) (unE e1) (unE e2)
 
 apply  f x  = E $ liftMemo2 (\(l,_) p -> Prim.applyP l p) (unB f) (unE x)
-accumB a e  = B $ liftMemo1 (accumL a) (unE e)
+
+accumB :: a -> Event (a -> a) -> IO (Behavior a)
+accumB a e  = do
+        b <- accumL a =<< at (unE e)   -- ensure that starting time for behavior is now
+        return $ B $ fromPure b
     where
     accumL a p1 = do
         (l,p2) <- Prim.accumL a p1
         p3     <- Prim.mapP (const ()) p2
         return (l,p3)
 
-stepper :: a -> Event a -> Behavior a
+stepper :: a -> Event a -> IO (Behavior a)
 stepper a e = accumB a (const <$> e)
 
-accumE :: a -> Event (a -> a) -> Event a
-accumE a e = E $ liftMemo1 (fmap snd . Prim.accumL a) (unE e)
+accumE :: a -> Event (a -> a) -> IO (Event a)
+accumE a e = do
+    p <- fmap snd . Prim.accumL a =<< at (unE e)
+    return $ E $ fromPure p
 
 instance Functor Behavior where
     fmap f b = B $ memoize $ do
@@ -159,8 +165,8 @@ instance Applicative Behavior where
 test :: IO (Int -> IO ())
 test = do
     (e1,fire) <- newEvent
-    let e2 = accumE 0 ((+) <$> e1)
-    _ <- register e2 print
+    e2 <- accumE 0 $ (+) <$> e1
+    _  <- register e2 print
     
     return fire
 
