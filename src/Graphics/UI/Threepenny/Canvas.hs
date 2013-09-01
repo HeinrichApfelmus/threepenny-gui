@@ -4,7 +4,7 @@ module Graphics.UI.Threepenny.Canvas (
     
     -- * Documentation
     Canvas,
-    drawImage, clearCanvas,
+    Vector, drawImage, clearCanvas,
     ) where
 
 import Control.Event
