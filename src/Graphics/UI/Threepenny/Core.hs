@@ -35,7 +35,7 @@ module Graphics.UI.Threepenny.Core (
     -- | For a list of predefined attributes, see "Graphics.UI.Threepenny.Attributes".
     (#), (#.), element,
     Attr, WriteAttr, ReadAttr, ReadWriteAttr(..),
-    set, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
+    set, sink, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
     
     -- * JavaScript FFI
     -- | Direct interface to JavaScript in the browser window.
@@ -516,6 +516,19 @@ data ReadWriteAttr x i o = ReadWriteAttr
 -- Best used in conjunction with '#'.
 set :: MonadIO m => ReadWriteAttr x i o -> i -> m x -> m x
 set attr i mx = do { x <- mx; liftIO (set' attr i x); return x; }
+
+-- | Set the value of an attribute to a 'Behavior', that is a time-varying value.
+--
+-- Note: For reasons of efficiency, the attribute is only
+-- updated when the value changes.
+sink :: ReadWriteAttr x i o -> Behavior i -> IO x -> IO x
+sink attr bi mx = do
+    x <- mx
+    do
+        i <- currentValue bi
+        set' attr i x
+        onChange bi $ \i -> set' attr i x  
+    return x
 
 -- | Get attribute value.
 get :: ReadWriteAttr x i o -> x -> IO o

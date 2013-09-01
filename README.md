@@ -27,6 +27,7 @@ This project was originally called Ji in its earliest iterations.
 * [BarTab.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/BarTab.hs) - Dynamic creation of widgets.
 * [Buttons.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Buttons.hs) - Simple buttons to click on.
 * [Chat.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs) - Multi-user chat.
+* [CurrencyConverter.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Buttons.hs) - Simple demonstration of two reactive input elements.
 * [DragNDropExample.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/DragNDropExample.hs) - Simple drag'N'drop demo.
 * [DrumMachine.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/DrumMachine.hs) - Specify rhythm by activating and deactivating checkboxes.
 * [MissingDollars.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/MissingDollars.hs) - Text with configurable values.

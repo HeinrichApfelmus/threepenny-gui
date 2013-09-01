@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards, RecursiveDo #-}
 module Reactive.Threepenny.PulseLatch (
     Pulse, newPulse, addHandler,
-    neverP, mapP, filterJustP, unionWithP,
+    neverP, mapP, filterJustP, unionWithP, unsafeMapIOP,
     
     Latch,
     pureL, mapL, applyL, accumL, applyP,
@@ -139,6 +139,14 @@ neverP = Pulse
 -- | Map a function over pulses.
 mapP :: (a -> b) -> Pulse a -> Build (Pulse b)
 mapP f p = (`dependOn` p) <$> cacheEval (return . fmap f =<< evalP p)
+
+-- | Map an IO function over pulses. Is only executed once.
+unsafeMapIOP :: (a -> IO b) -> Pulse a -> Build (Pulse b)
+unsafeMapIOP f p = (`dependOn` p) <$> cacheEval (traverse . fmap f =<< evalP p)
+    where
+    traverse :: Maybe (IO a) -> EvalP (Maybe a)
+    traverse Nothing  = return Nothing
+    traverse (Just m) = Just <$> lift m
 
 -- | Filter occurrences. Only keep those of the form 'Just'.
 filterJustP :: Pulse (Maybe a) -> Build (Pulse a)

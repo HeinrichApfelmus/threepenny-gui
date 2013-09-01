@@ -18,7 +18,7 @@ module Reactive.Threepenny (
     -- $recursion
     
     -- * Internal
-    onChange,
+    onChange, unsafeMapIO,
     ) where
 
 import Control.Applicative
@@ -83,7 +83,7 @@ newEventsNamed init = do
 -- 
 -- > do unregisterMyHandler <- register event myHandler
 --
--- FIXME: This does not currently work.
+-- FIXME: Unregistering event handlers does not work yet.
 register :: Event a -> Handler a -> IO (IO ())
 register e h = do
     p <- at (unE e)     -- evaluate the memoized action
@@ -112,6 +112,7 @@ currentValue (B l _) = Prim.readLatch l
 instance Functor Event where
     fmap f e = E $ liftMemo1 (Prim.mapP f) (unE e)
 
+unsafeMapIO f e   = E $ liftMemo1 (Prim.unsafeMapIOP f) (unE e)
 never             = E $ fromPure Prim.neverP
 
 -- | Keep only those event values that are of the form 'Just'.
