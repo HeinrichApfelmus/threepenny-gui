@@ -2,13 +2,6 @@
 module Reactive.Threepenny (
     -- * Synopsis
     -- | Functional reactive programming.
-    --
-    -- Note: Basic functionality should work,
-    -- but recursion does not work yet
-    -- and there may be some unexpected surprises
-    -- when attaching new behaviors amd events after some
-    -- events have already occured
-    -- ("dynamic event switching").
     
     -- * Types
     Handler, Event,
@@ -18,14 +11,18 @@ module Reactive.Threepenny (
     
     -- * Combinators
     never, filterJust, unionWith,
-    accumE, accumB, stepper, apply,
+    accumE, accumB, stepper, apply, (<@>), (<@),
     module Control.Applicative,
+
+    -- * Additional Notes
+    -- $recursion
     
     -- * Internal
     onChange,
     ) where
 
 import Control.Applicative
+import Control.Monad (void)
 import Data.IORef
 import qualified Data.Map as Map
 
@@ -39,8 +36,8 @@ type Map   = Map.Map
 {-----------------------------------------------------------------------------
     Types
 ------------------------------------------------------------------------------}
-newtype Event    a = E { unE :: Memo (Pulse a)           }
-newtype Behavior a = B { unB :: Memo (Latch a, Pulse ()) }
+newtype Event    a = E { unE :: Memo (Pulse a) }
+data    Behavior a = B { latch :: Latch a, changes :: Event () }
 
 {-----------------------------------------------------------------------------
     IO
@@ -100,16 +97,13 @@ register e h = do
 -- as behaviors may change continuously.
 -- Consequently, handlers should be idempotent.
 onChange :: Behavior a -> Handler a -> IO ()
-onChange b h = do
-    (l,p) <- at (unB b)
+onChange (B l e) h = void $ do
     -- This works because latches are updated before the handlers are being called.
-    Prim.addHandler p (\_ -> h =<< Prim.readLatch l)
+    register e (\_ -> h =<< Prim.readLatch l)
 
 -- | Read the current value of a 'Behavior'.
 currentValue :: Behavior a -> IO a
-currentValue b = do
-    (l, p) <- at (unB b)
-    Prim.readLatch l
+currentValue (B l _) = Prim.readLatch l
 
 
 {-----------------------------------------------------------------------------
@@ -124,17 +118,47 @@ never             = E $ fromPure Prim.neverP
 filterJust e      = E $ liftMemo1 Prim.filterJustP    (unE e)
 unionWith f e1 e2 = E $ liftMemo2 (Prim.unionWithP f) (unE e1) (unE e2)
 
-apply  f x  = E $ liftMemo2 (\(l,_) p -> Prim.applyP l p) (unB f) (unE x)
+{- $recursion
+Recursion in the 'IO' monad is possible, but somewhat limited.
+The main rule is that the sequence of IO actions must be known
+in advance, only the values may be recursive.
+
+Good:
+
+> mdo
+>     let e2 = apply (const <$> b) e1   -- applying a behavior is not an IO action
+>     b <- accumB $ (+1) <$ e2
+
+Bad:
+ 
+> mdo
+>     b <- accumB $ (+1) <$ e2          -- actions executed here could depend ...
+>     let e2 = apply (const <$> b) e1   -- ... on this value
+-}
+
+-- | Apply the current value of the behavior whenever the event occurs.
+--
+-- Note that behaviors created with 'stepper' or 'accumB' are not updated
+-- until shortly /after/ their creating event has occurred.
+-- This allows for recursive use.
+apply :: Behavior (a -> b) -> Event a -> Event b
+apply  f x        = E $ liftMemo1 (\p -> Prim.applyP (latch f) p) (unE x)
+
+infixl 4 <@>, <@
+
+-- | Infix synonym for 'apply', similar to '<$>'.
+(<@>) :: Behavior (a -> b) -> Event a -> Event b
+(<@>) = apply
+
+-- | Variant of 'apply' similar to '<$'
+(<@) :: Behavior a -> Event b -> Event a
+b <@ e = (const <$> b) <@> e
 
 accumB :: a -> Event (a -> a) -> IO (Behavior a)
-accumB a e  = do
-        b <- accumL a =<< at (unE e)   -- ensure that starting time for behavior is now
-        return $ B $ fromPure b
-    where
-    accumL a p1 = do
-        (l,p2) <- Prim.accumL a p1
-        p3     <- Prim.mapP (const ()) p2
-        return (l,p3)
+accumB a e = do
+    (l1,p1) <- Prim.accumL a =<< at (unE e)
+    p2      <- Prim.mapP (const ()) p1
+    return $ B l1 (E $ fromPure p2)
 
 stepper :: a -> Event a -> IO (Behavior a)
 stepper a e = accumB a (const <$> e)
@@ -145,20 +169,12 @@ accumE a e = do
     return $ E $ fromPure p
 
 instance Functor Behavior where
-    fmap f b = B $ memoize $ do
-        (l1,p1) <- at (unB b)
-        l2      <- Prim.mapL f l1
-        return (l2,p1)
+    fmap f ~(B l e) = B (Prim.mapL f l) e
 
 instance Applicative Behavior where
-    pure a  = B $ fromPure (Prim.pureL a,Prim.neverP)
-    f <*> x = B $ liftMemo2 applyB (unB f) (unB x)
-        where
-        applyB (l1,p1) (l2,p2) = do
-            p3 <- Prim.unionWithP const p1 p2
-            l3 <- Prim.applyL l1 l2
-            return (l3,p3)
-
+    pure a  = B (Prim.pureL a) never
+    ~(B lf ef) <*> ~(B lx ex) =
+        B (Prim.applyL lf lx) (unionWith const ef ex)
 
 {-----------------------------------------------------------------------------
     Test
@@ -174,9 +190,9 @@ test = do
 test_recursion1 :: IO (IO ())
 test_recursion1 = mdo
     (e1, fire) <- newEvent
-    b  <- accumB 0 $ (+1) <$ e2
     let e2 :: Event Int
         e2 = apply (const <$> b) e1
+    b  <- accumB 0 $ (+1) <$ e2
     _  <- register e2 print
     
     return $ fire ()

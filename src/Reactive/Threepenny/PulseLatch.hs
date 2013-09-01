@@ -175,7 +175,7 @@ accumL a p1 = do
     let l1 = Latch { readL = readIORef latch }
 
     -- calculate new pulse from old value
-    l2 <- mapL (flip ($)) l1
+    let l2 = mapL (flip ($)) l1
     p2 <- applyP l2 p1
 
     -- register handler to update latch
@@ -192,14 +192,14 @@ pureL a = Latch { readL = return a }
 -- | Map a function over latches.
 --
 -- Evaluated only when needed, result is not cached.
-mapL :: (a -> b) -> Latch a -> Build (Latch b)
-mapL f l = return $ Latch { readL = f <$> readL l } 
+mapL :: (a -> b) -> Latch a -> Latch b
+mapL f l = Latch { readL = f <$> readL l } 
 
 -- | Apply two current latch values
 --
 -- Evaluated only when needed, result is not cached.
-applyL :: Latch (a -> b) -> Latch a -> Build (Latch b)
-applyL l1 l2 = return $ Latch { readL = readL l1 <*> readL l2 }
+applyL :: Latch (a -> b) -> Latch a -> Latch b
+applyL l1 l2 = Latch { readL = readL l1 <*> readL l2 }
 
 {-----------------------------------------------------------------------------
     Test
@@ -209,7 +209,7 @@ test = do
     (p1, fire) <- newPulse
     p2     <- mapP (+) p1
     (l1,_) <- accumL 0 p2
-    l2     <- mapL const l1
+    let l2 =  mapL const l1
     p3     <- applyP l2 p1
     addHandler p3 print
     return fire
@@ -220,6 +220,6 @@ test_recursion1 = mdo
     p2      <- applyP l2 p1
     p3      <- mapP (const (+1)) p2
     ~(l1,_) <- accumL (0::Int) p3
-    l2      <- mapL const l1
+    let l2  =  mapL const l1
     addHandler p2 print
     return $ fire ()
