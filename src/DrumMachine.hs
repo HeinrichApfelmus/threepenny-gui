@@ -55,10 +55,9 @@ setup w = void $ do
                       ,[UI.string "Beat:", element elTick]]
     getBody w #+ [UI.div #. "wrap" #+ (status : map element elInstruments)]
     
-    timer   <- UI.timer # set UI.interval (bpm2ms defaultBpm)
-    let
-        eBeat :: Event Int
-        eBeat = accumE 0 $ (\beat -> (beat + 1) `mod` (beats * bars)) <$ UI.tick timer
+    timer <- UI.timer # set UI.interval (bpm2ms defaultBpm)
+    eBeat <- accumE (0::Int) $
+        (\beat -> (beat + 1) `mod` (beats * bars)) <$ UI.tick timer
     _ <- register eBeat $ \beat -> do
         -- display beat count
         element elTick # set text (show $ beat + 1)
