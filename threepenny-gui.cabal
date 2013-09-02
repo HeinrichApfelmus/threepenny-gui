@@ -75,9 +75,6 @@ Library
                     ,Graphics.UI.Threepenny.Timer
   Other-modules:
                      Control.Concurrent.Chan.Extra
-                    ,Control.Event
-                    ,Control.Monad.Extra
-                    ,Control.Monad.IO
                     ,Control.Concurrent.Delay
                     ,Graphics.UI.Threepenny.Internal.Core
                     ,Graphics.UI.Threepenny.Internal.Resources
