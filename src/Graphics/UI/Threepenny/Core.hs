@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
 module Graphics.UI.Threepenny.Core (
-    -- * Guide
-    -- $guide
+    -- * Synopsis
+    -- | Core functionality of the Threepenny GUI library.
     
     -- * Server
     -- $server
@@ -71,37 +71,6 @@ import qualified Graphics.UI.Threepenny.Internal.Types as Core
 import Graphics.UI.Threepenny.Internal.Types (Window, Config, EventData, Session(..))
 
 {-----------------------------------------------------------------------------
-    Guide
-------------------------------------------------------------------------------}
-{- $guide
-
-Threepenny runs a small web server that displays the user interface
-as a web page to any browser that connects to it.
-To start the web server, use the 'startGUI' function.
-
-Creating of DOM elements is easy,
-the '(#+)' combinator allows a style similar to HTML combinator libraries.
-
-Existing DOM elements can be accessed much in the same way they are
-accessed from JavaScript; they can be searched, updated, moved and
-inspected. Events can be bound to DOM elements and handled.
-
-
-Applications written in Threepenny are multithreaded. Each client (user)
-has a separate thread which runs with no awareness of the asynchronous
-protocol below. Each session should only be accessed from one
-thread. There is not yet any clever architecture for accessing the
-(single threaded) web browser from multi-threaded Haskell. That's
-my recommendation. You can choose to ignore it, but don't blame me
-when you run an element search and you get a click event as a
-result.
-
-This project was originally called Ji.
-
--}
-
-
-{-----------------------------------------------------------------------------
     Server
 ------------------------------------------------------------------------------}
 {- $server
@@ -110,6 +79,13 @@ To display the user interface, you have to start a server using 'startGUI'.
 Then, visit the URL <http://localhost:10000/> in your browser
 (assuming that you have set the port number to @tpPort=10000@
 in the server configuration).
+
+The server is multithreaded,
+a separate thread is used to communicate with a single browser 'Window'.
+However, each window should only be accessed from a single thread,
+otherwise the behavior will be undefined,
+i.e. you could run an element search and get a click event as a result
+if you don't access each window in a single-threaded fashion.
 
 -}
 
