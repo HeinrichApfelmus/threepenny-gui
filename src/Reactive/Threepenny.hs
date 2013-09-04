@@ -26,6 +26,8 @@ module Reactive.Threepenny (
     (<@>), (<@),
     -- ** Filtering
     filterE, filterApply, whenE, split,
+    -- ** Union
+    unions, concatenate,
     -- ** Accumulation
     -- $accumulation
     accumB, mapAccum,
@@ -303,6 +305,17 @@ split e = (filterJust $ fromLeft <$> e, filterJust $ fromRight <$> e)
     fromLeft  (Right b) = Nothing
     fromRight (Left  a) = Nothing
     fromRight (Right b) = Just b
+
+-- | Collect simultaneous event occurrences in a list.
+unions :: [Event a] -> Event [a]
+unions = foldr (unionWith (++)) never . map (fmap (:[]))
+
+-- | Apply a list of functions in succession.
+-- Useful in conjunction with 'unions'.
+--
+-- > concatenate [f,g,h] = f . g . h 
+concatenate :: [a -> a] -> (a -> a)
+concatenate = foldr (.) id
 
 {- $accumulation
 
