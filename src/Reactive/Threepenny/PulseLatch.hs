@@ -42,7 +42,8 @@ runEvalP pulses m = do
 type Handler  = EvalP (IO ())
 data Priority = DoLatch | DoIO deriving (Eq,Show,Ord,Enum)
 
-instance Hashable Priority where hash = fromEnum
+instance Hashable Priority where
+    hashWithSalt salt = hashWithSalt salt . fromEnum
 
 data Pulse a = Pulse
     { addHandlerP :: ((Unique, Priority), Handler) -> Build ()
