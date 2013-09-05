@@ -3,7 +3,7 @@ module Graphics.UI.Threepenny.Events (
     -- | Events on DOM elements.
     
     -- * Convenience events
-    valueChange, selectionChange,
+    valueChange, selectionChange, checkedChange,
     
     -- * Standard DOM events
     click, mousemove, hover, blur, leave,
@@ -25,6 +25,11 @@ valueChange el = unsafeMapIO (const $ get value el) (domEvent "keydown" el)
 -- | Event that occurs when the /user/ changes the selection of a @<select>@ element.
 selectionChange :: Element -> Event (Maybe Int)
 selectionChange el = unsafeMapIO (const $ get selection el) (click el)
+
+-- | Event that occurs when the /user/ changes the checked status of an input
+-- element of type checkbox.
+checkedChange :: Element -> Event Bool
+checkedChange el = unsafeMapIO (const $ get checked el) (click el)
 
 {-----------------------------------------------------------------------------
     DOM Events
