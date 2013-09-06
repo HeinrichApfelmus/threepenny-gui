@@ -16,7 +16,7 @@ module Graphics.UI.Threepenny.Internal.Core
   -- $eventhandling
   ,bind
   ,disconnect
-  ,module Control.Event
+  ,module Reactive.Threepenny
   
   -- * Setting attributes
   -- $settingattributes
@@ -77,7 +77,7 @@ import           Control.Concurrent
 import           Control.Concurrent.Chan.Extra
 import           Control.Concurrent.Delay
 import qualified Control.Exception
-import           Control.Event
+import           Reactive.Threepenny
 import           Control.Monad
 import           Control.Monad.IO.Class
 import qualified "MonadCatchIO-transformers" Control.Monad.CatchIO as E
@@ -176,30 +176,21 @@ routeCommunication worker server =
 
 -- | Make a new session.
 newSession :: ServerState -> (URI,[(String, String)]) -> Integer -> IO Session
-newSession server info token = do
-    signals          <- newChan
-    instructions     <- newChan
-    (event, handler) <- newEventsTagged
-    ids      <- newMVar [0..]
-    mutex    <- newMVar ()
-    now      <- getCurrentTime
-    conState <- newMVar (Disconnected now)
-    threadId <- myThreadId
-    closures <- newMVar [0..]
-    return $ Session
-        { sSignals      = signals
-        , sInstructions = instructions
-        , sMutex        = mutex
-        , sEvent        = event
-        , sEventHandler = handler
-        , sElementIds   = ids
-        , sToken        = token
-        , sConnectedState = conState
-        , sThreadId    = threadId
-        , sClosures    = closures
-        , sStartInfo   = info
-        , sServerState = server
-        }
+newSession sServerState sStartInfo sToken = do
+    sSignals          <- newChan
+    sInstructions     <- newChan
+    sMutex            <- newMVar ()
+    sEventHandlers    <- newMVar M.empty
+    sElementEvents    <- newMVar M.empty
+    sEventQuit        <- newEvent
+    sElementIds       <- newMVar [0..]
+    now               <- getCurrentTime
+    sConnectedState   <- newMVar (Disconnected now)
+    sThreadId         <- myThreadId
+    sClosures         <- newMVar [0..]
+    let session = Session {..}
+    initializeElementEvents session    
+    return session
 
 -- | Make a new session and add it to the server
 createSession :: (Session -> IO void) -> ServerState -> Snap Session
@@ -462,43 +453,67 @@ handleEvents window@(Session{..}) = do
     signal <- getSignal window
     case signal of
         Threepenny.Event (elid,eventType,params) -> do
-            sEventHandler ((elid,eventType), EventData params)
+            handleEvent1 window ((elid,eventType),EventData params)
             handleEvents window
         Quit () -> do
-            sEventHandler (("","quit"), EventData [])
+            snd sEventQuit ()
             -- do not continue handling events
         _       -> do
             handleEvents window
-            
+
+-- | Add a new event handler for a given key
+addEventHandler :: Window -> (EventKey, Handler EventData) -> IO () 
+addEventHandler Session{..} (key,handler) =
+    modifyMVar_ sEventHandlers $ return .
+        M.insertWith (\h1 h a -> h1 a >> h a) key handler        
+
+
+-- | Handle a single event
+handleEvent1 :: Window -> (EventKey,EventData) -> IO ()
+handleEvent1 Session{..} (key,params) = do
+    handlers <- readMVar sEventHandlers
+    case M.lookup key handlers of
+        Just handler -> handler params
+        Nothing      -> return ()
+
 -- Get the latest signal sent from the client.
 getSignal :: Window -> IO Signal
 getSignal (Session{..}) = readChan sSignals
 
--- | Return an 'Event' associated to an 'Element'.
+-- | Bind an event handler for a dom event to an 'Element'.
 bind
     :: String               -- ^ The eventType, see any DOM documentation for a list of these.
     -> Element              -- ^ The element to bind to.
-    -> Event EventData      -- ^ The event handler.
-bind eventType (Element el@(ElementId elid) session) =
-    Control.Event.Event register
-    where
-    key        = (elid, eventType)
-    register h = do
-        -- register with server
-        unregister <- Control.Event.register (sEvent session key) h
-        -- register with client
+    -> Handler EventData    -- ^ The event handler to bind.
+    -> IO ()
+bind eventType (Element el@(ElementId elid) session) handler = do
+    let key = (elid, eventType)
+    -- register with client if it has never been registered on the server
+    handlers <- readMVar $ sEventHandlers session
+    when (not $ key `M.member` handlers) $
         run session $ Bind eventType el (Closure key)
-        return unregister
+    -- register with server
+    addEventHandler session (key, handler)
 
--- | Event that occurs when the client has disconnected.
+-- | Register event handler that occurs when the client has disconnected.
 disconnect :: Window -> Event ()
-disconnect window = () <$ sEvent window ("","quit")
+disconnect = fst . sEventQuit
+
+
+initializeElementEvents :: Window -> IO ()
+initializeElementEvents session@(Session{..}) = do
+        initEvents =<< getHead session
+        initEvents =<< getBody session
+    where
+    initEvents el@(Element elid _) = do
+        x <- newEventsNamed $ \(name,_,handler) -> bind name el handler
+        modifyMVar_ sElementEvents $ return . M.insert elid x
 
 -- Make a uniquely numbered event handler.
 newClosure :: Window -> String -> String -> ([Maybe String] -> IO ()) -> IO Closure
-newClosure window@(Session{..}) eventType elid thunk = do
+newClosure window eventType elid thunk = do
     let key = (elid, eventType)
-    _ <- register (sEvent key) $ \(EventData xs) -> thunk xs
+    addEventHandler window (key, \(EventData xs) -> thunk xs)
     return (Closure key)
 
 {-----------------------------------------------------------------------------
@@ -571,7 +586,6 @@ newElement :: Window      -- ^ Browser window in which context to create the ele
            -> String      -- ^ The tag name.
            -> IO Element  -- ^ A tag reference. Non-blocking.
 newElement session@(Session{..}) tagName = do
-    -- TODO: Remove the need to specify in which browser window is to be created
     elid <- modifyMVar sElementIds $ \elids ->
         return (tail elids,"*" ++ show (head elids) ++ ":" ++ tagName)
     return (Element (ElementId elid) session)

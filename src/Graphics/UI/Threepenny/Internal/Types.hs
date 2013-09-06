@@ -7,7 +7,7 @@ import Prelude              hiding (init)
 
 import Control.Applicative
 import Control.Concurrent
-import qualified Control.Event as E
+import qualified Reactive.Threepenny as E
 import Data.ByteString               (ByteString)
 import Data.Map             (Map)
 import Data.Time
@@ -30,7 +30,7 @@ instance Show Element where
 
 -- | An opaque reference to an element in the DOM.
 data ElementId = ElementId String
-  deriving (Data,Typeable,Show)
+  deriving (Data,Typeable,Show,Eq,Ord)
 
 instance JSON ElementId where
   showJSON (ElementId o) = showJSON o
@@ -38,14 +38,15 @@ instance JSON ElementId where
     obj <- readJSON obj
     ElementId <$> valFromObj "Element" obj
 
-  
+
 -- | A client session. This type is opaque, you don't need to inspect it.
 data Session = Session
   { sSignals        :: Chan Signal
   , sInstructions   :: Chan Instruction
   , sMutex          :: MVar ()
-  , sEvent          :: EventKey -> E.Event EventData
-  , sEventHandler   :: E.Handler (EventKey, EventData)
+  , sEventHandlers  :: MVar (Map EventKey (E.Handler EventData))
+  , sElementEvents  :: MVar (Map ElementId ElementEvents)
+  , sEventQuit      :: (E.Event (), E.Handler ())
   , sClosures       :: MVar [Integer]
   , sElementIds     :: MVar [Integer]
   , sToken          :: Integer
@@ -55,9 +56,12 @@ data Session = Session
   , sServerState    :: ServerState
   }
 
-type Sessions  = Map Integer Session
-type MimeType  = ByteString
-type Filepaths = (Integer, Map ByteString (FilePath, MimeType))
+type Sessions      = Map Integer Session
+type MimeType      = ByteString
+type Filepaths     = (Integer, Map ByteString (FilePath, MimeType))
+
+type EventKey      = (String, String)
+type ElementEvents = String -> E.Event EventData
 
 data ServerState = ServerState
     { sSessions :: MVar Sessions
@@ -65,7 +69,6 @@ data ServerState = ServerState
     , sDirs     :: MVar Filepaths
     }
 
-type EventKey = (String, String)
 
 -- | The client browser window.
 type Window = Session
@@ -154,7 +157,7 @@ nullable v      = Just <$> readJSON v
 
 -- | An opaque reference to a closure that the event manager uses to
 --   trigger events signalled by the client.
-data Closure = Closure (String,String)
+data Closure = Closure EventKey
     deriving (Typeable,Data,Show)
 
 {-----------------------------------------------------------------------------

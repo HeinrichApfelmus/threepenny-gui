@@ -1,7 +1,6 @@
 {-# LANGUAGE CPP, PackageImports #-}
 
 import Control.Monad
-import Control.Monad.Extra
 import Safe
 
 #ifdef CABAL

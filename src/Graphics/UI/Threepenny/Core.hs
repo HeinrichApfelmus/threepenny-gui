@@ -1,7 +1,7 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
 module Graphics.UI.Threepenny.Core (
-    -- * Guide
-    -- $guide
+    -- * Synopsis
+    -- | Core functionality of the Threepenny GUI library.
     
     -- * Server
     -- $server
@@ -29,13 +29,13 @@ module Graphics.UI.Threepenny.Core (
     -- * Events
     -- | For a list of predefined events, see "Graphics.UI.Threepenny.Events".
     EventData(..), domEvent, on, disconnect,
-    module Control.Event,
+    module Reactive.Threepenny,
     
     -- * Attributes
     -- | For a list of predefined attributes, see "Graphics.UI.Threepenny.Attributes".
     (#), (#.), element,
     Attr, WriteAttr, ReadAttr, ReadWriteAttr(..),
-    set, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
+    set, sink, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
     
     -- * JavaScript FFI
     -- | Direct interface to JavaScript in the browser window.
@@ -51,15 +51,16 @@ module Graphics.UI.Threepenny.Core (
 
 import Data.Dynamic
 import Data.IORef
+import qualified Data.Map as Map
 import Data.Maybe (listToMaybe)
 import Data.Functor
 import Data.String (fromString)
 import Control.Concurrent.MVar
-import Control.Event
 import Control.Monad
 import Control.Monad.IO.Class
 import Network.URI
 import Text.JSON
+import Reactive.Threepenny
 
 import qualified Graphics.UI.Threepenny.Internal.Core  as Core
 import Graphics.UI.Threepenny.Internal.Core
@@ -67,38 +68,7 @@ import Graphics.UI.Threepenny.Internal.Core
      ToJS, FFI, ffi, JSFunction,
      debug, clear, callFunction, runFunction, callDeferredFunction, atomic, )
 import qualified Graphics.UI.Threepenny.Internal.Types as Core
-import Graphics.UI.Threepenny.Internal.Types (Window, Config, EventData)
-
-{-----------------------------------------------------------------------------
-    Guide
-------------------------------------------------------------------------------}
-{- $guide
-
-Threepenny runs a small web server that displays the user interface
-as a web page to any browser that connects to it.
-To start the web server, use the 'startGUI' function.
-
-Creating of DOM elements is easy,
-the '(#+)' combinator allows a style similar to HTML combinator libraries.
-
-Existing DOM elements can be accessed much in the same way they are
-accessed from JavaScript; they can be searched, updated, moved and
-inspected. Events can be bound to DOM elements and handled.
-
-
-Applications written in Threepenny are multithreaded. Each client (user)
-has a separate thread which runs with no awareness of the asynchronous
-protocol below. Each session should only be accessed from one
-thread. There is not yet any clever architecture for accessing the
-(single threaded) web browser from multi-threaded Haskell. That's
-my recommendation. You can choose to ignore it, but don't blame me
-when you run an element search and you get a click event as a
-result.
-
-This project was originally called Ji.
-
--}
-
+import Graphics.UI.Threepenny.Internal.Types (Window, Config, EventData, Session(..))
 
 {-----------------------------------------------------------------------------
     Server
@@ -109,6 +79,13 @@ To display the user interface, you have to start a server using 'startGUI'.
 Then, visit the URL <http://localhost:10000/> in your browser
 (assuming that you have set the port number to @tpPort=10000@
 in the server configuration).
+
+The server is multithreaded,
+a separate thread is used to communicate with a single browser 'Window'.
+However, each window should only be accessed from a single thread,
+otherwise the behavior will be undefined,
+i.e. you could run an element search and get a click event as a result
+if you don't access each window in a single-threaded fashion.
 
 -}
 
@@ -149,7 +126,10 @@ cookies = mkReadAttr Core.getRequestCookies
 type Value = String
 
 -- | Reference to an element in the DOM of the client window.
-newtype Element = Element (MVar Elem) deriving (Typeable)
+data Element = Element Core.ElementEvents (MVar Elem) deriving (Typeable)
+-- Element events mvar
+--      events = Events associated to this element
+--      mvar   = Current state of the MVar
 data    Elem
     = Alive Core.Element                       -- element exists in a window
     | Limbo Value (Window -> IO Core.Element)  -- still needs to be created
@@ -158,11 +138,13 @@ data    Elem
 -- Note that multiple MVars may now point to the same live reference,
 -- but this is ok since live references never change.
 fromAlive :: Core.Element -> IO Element
-fromAlive e = Element <$> newMVar (Alive e)
+fromAlive e@(Core.Element elid Session{..}) = do
+    Just events <- Map.lookup elid <$> readMVar sElementEvents
+    Element events <$> newMVar (Alive e)
 
 -- Update an element that may be in Limbo.
 updateElement :: (Core.Element -> IO ()) -> Element -> IO ()
-updateElement f (Element me) = do
+updateElement f (Element _ me) = do
     e <- takeMVar me
     case e of
         Alive e -> do   -- update immediately
@@ -175,13 +157,22 @@ updateElement f (Element me) = do
 -- TODO: 1. Throw exception if the element exists in another window.
 --       2. Don't throw exception, but move the element across windows.
 manifestElement :: Window -> Element -> IO Core.Element
-manifestElement w (Element me) = do
-    e1 <- takeMVar me
-    e2 <- case e1 of
-        Alive e        -> return e
-        Limbo v create -> do { e2 <- create w; Core.setAttr "value" v e2; return e2 }
-    putMVar me $ Alive e2
-    return e2
+manifestElement w (Element events me) = do
+        e1 <- takeMVar me
+        e2 <- case e1 of
+            Alive e        -> return e
+            Limbo v create -> do
+                e2 <- create w
+                Core.setAttr "value" v e2
+                rememberEvents events e2    -- save events in session data
+                return e2
+        putMVar me $ Alive e2
+        return e2
+    
+    where
+    rememberEvents events (Core.Element elid Session{..}) =
+        modifyMVar_ sElementEvents $ return . Map.insert elid events
+
 
 -- Append a child element to a parent element. Non-blocking.
 appendTo
@@ -197,9 +188,18 @@ appendTo parent child = do
 mkElement
     :: String           -- ^ Tag name
     -> IO Element
-mkElement tag = Element <$> newMVar (Limbo "" $ \w -> Core.newElement w tag)
+mkElement tag = do
+    -- create element in Limbo
+    ref <- newMVar (Limbo "" $ \w -> Core.newElement w tag)
+    -- create events and initialize them when element becomes Alive
+    let
+        initializeEvent (name,_,handler) = 
+            flip updateElement (Element undefined ref) $ \e -> do
+                Core.bind name e handler
+    events  <- newEventsNamed initializeEvent
+    return $ Element events ref
 
--- | Retreive the browser 'Window' in which the element resides.
+-- | Retrieve the browser 'Window' in which the element resides.
 -- 
 -- Note that elements do not reside in any browser window when they are first created.
 -- To move the element to a particular browser window,
@@ -208,7 +208,7 @@ mkElement tag = Element <$> newMVar (Limbo "" $ \w -> Core.newElement w tag)
 -- WARNING: The ability to move elements from one browser window to another
 -- is currently not implemented yet.
 getWindow :: Element -> IO (Maybe Window)
-getWindow (Element ref) = do
+getWindow (Element _ ref) = do
     e1 <- readMVar ref
     return $ case e1 of
         Alive e   -> Just $ Core.getWindow e
@@ -251,8 +251,8 @@ style = mkWriteAttr (updateElement . Core.setStyle)
 value :: Attr Element String
 value = mkReadWriteAttr get set
     where
-    get   (Element ref) = getValue =<< readMVar ref
-    set v (Element ref) = updateMVar (setValue v) ref
+    get   (Element _ ref) = getValue =<< readMVar ref
+    set v (Element _ ref) = updateMVar (setValue v) ref
     
     getValue (Limbo v _) = return v
     getValue (Alive e  ) = Core.getValue e
@@ -343,7 +343,7 @@ fromProp :: String -> (JSValue -> a) -> (a -> JSValue) -> Attr Element a
 fromProp name from to = mkReadWriteAttr get set
     where
     set x = updateElement (Core.setProp name $ to x)
-    get (Element ref) = do
+    get (Element _ ref) = do
         me <- readMVar ref
         case me of
             Limbo _ _ -> error "'checked' attribute: element must be in a browser window"
@@ -404,7 +404,9 @@ domEvent
         --   the name is @click@ and so on.
     -> Element          -- ^ Element where the event is to occur.
     -> Event EventData
-domEvent name element = Control.Event.Event $ \handler -> do
+domEvent name (Element events _) = events name
+
+{-   
     ref <- newIORef $ return ()
     let
         -- register handler and remember unregister function
@@ -418,7 +420,7 @@ domEvent name element = Control.Event.Event $ \handler -> do
     
     register'
     return unregister'
-
+-}
 
 -- | Event that occurs whenever the client has disconnected,
 -- be it by closing the browser window or by exception.
@@ -490,6 +492,19 @@ data ReadWriteAttr x i o = ReadWriteAttr
 -- Best used in conjunction with '#'.
 set :: MonadIO m => ReadWriteAttr x i o -> i -> m x -> m x
 set attr i mx = do { x <- mx; liftIO (set' attr i x); return x; }
+
+-- | Set the value of an attribute to a 'Behavior', that is a time-varying value.
+--
+-- Note: For reasons of efficiency, the attribute is only
+-- updated when the value changes.
+sink :: ReadWriteAttr x i o -> Behavior i -> IO x -> IO x
+sink attr bi mx = do
+    x <- mx
+    do
+        i <- currentValue bi
+        set' attr i x
+        onChange bi $ \i -> set' attr i x  
+    return x
 
 -- | Get attribute value.
 get :: ReadWriteAttr x i o -> x -> IO o
