@@ -385,16 +385,22 @@ type Routes = [(ByteString, Snap ())]
 
 routeResources :: Maybe FilePath -> FilePath -> ServerState -> Routes
 routeResources customHTML staticDir server =
-    [("/static"                    , serveDirectory staticDir)
-    ,("/"                          , root)
-    ,("/driver/threepenny-gui.js"  , writeText jsDriverCode )
-    ,("/driver/threepenny-gui.css" , writeText cssDriverCode)
-    ,("/file/:name"                ,
-        withFilepath (sFiles server) (flip serveFileAs))
-    ,("/dir/:name"                 ,
-        withFilepath (sDirs  server) (\path _ -> serveDirectory path))
-    ]
+    fixHandlers noCache $
+        [("/static"                    , serveDirectory staticDir)
+        ,("/"                          , root)
+        ,("/driver/threepenny-gui.js"  , writeText jsDriverCode )
+        ,("/driver/threepenny-gui.css" , writeText cssDriverCode)
+        ,("/file/:name"                ,
+            withFilepath (sFiles server) (flip serveFileAs))
+        ,("/dir/:name"                 ,
+            withFilepath (sDirs  server) (\path _ -> serveDirectory path))
+        ]
     where
+    fixHandlers f routes = [(a,f b) | (a,b) <- routes]
+    noCache h = do
+        modifyResponse $ setHeader "Cache-Control" "no-cache"
+        h
+    
     root = case customHTML of
         Just file -> serveFile (staticDir </> file)
         Nothing   -> writeText defaultHtmlFile
