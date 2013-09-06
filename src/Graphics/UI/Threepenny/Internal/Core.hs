@@ -97,7 +97,7 @@ import qualified Data.Attoparsec.Enumerator    as Atto
 import           Prelude                       hiding (init)
 import           Safe
 import           Snap.Core
-import           Snap.Http.Server              hiding (Config)
+import qualified Snap.Http.Server              as Snap
 import           Snap.Util.FileServe
 import           System.FilePath
 import qualified Text.JSON as JSON
@@ -119,8 +119,11 @@ serve :: Config -> (Session -> IO ()) -> IO ()
 serve Config{..} worker = do
     server <- newServerState
     _      <- forkIO $ custodian 30 (sSessions server)
-    let config = setPort tpPort defaultConfig
-    httpServe config . route $
+    let config = Snap.setPort tpPort
+               $ Snap.setErrorLog (Snap.ConfigIoLog tpLog)
+               $ Snap.setAccessLog (Snap.ConfigIoLog tpLog)
+               $ Snap.defaultConfig
+    Snap.httpServe config . route $
         routeResources tpCustomHTML tpStatic server
         -- ++ routeCommunication worker server
         ++ routeWebsockets worker server
@@ -383,11 +386,11 @@ readInput = fmap (>>= readMay) . getInput
 ------------------------------------------------------------------------------}
 type Routes = [(ByteString, Snap ())]
 
-routeResources :: Maybe FilePath -> FilePath -> ServerState -> Routes
+routeResources :: Maybe FilePath -> Maybe FilePath -> ServerState -> Routes
 routeResources customHTML staticDir server =
     fixHandlers noCache $
-        [("/static"                    , serveDirectory staticDir)
-        ,("/"                          , root)
+        static ++
+        [("/"                          , root)
         ,("/driver/threepenny-gui.js"  , writeText jsDriverCode )
         ,("/driver/threepenny-gui.css" , writeText cssDriverCode)
         ,("/file/:name"                ,
@@ -397,12 +400,14 @@ routeResources customHTML staticDir server =
         ]
     where
     fixHandlers f routes = [(a,f b) | (a,b) <- routes]
-    noCache h = do
-        modifyResponse $ setHeader "Cache-Control" "no-cache"
-        h
+    noCache h = modifyResponse (setHeader "Cache-Control" "no-cache") >> h
+    
+    static = maybe [] (\dir -> [("/static", serveDirectory dir)]) staticDir
     
     root = case customHTML of
-        Just file -> serveFile (staticDir </> file)
+        Just file -> case staticDir of
+            Just dir -> serveFile (dir </> file)
+            Nothing  -> logError "Graphics.UI.Threepenny: Cannot use tpCustomHTML file without tpStatic"
         Nothing   -> writeText defaultHtmlFile
 
 

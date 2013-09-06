@@ -31,10 +31,10 @@ main :: IO ()
 main = do
     static   <- getStaticDir
     messages <- Chan.newChan
-    startGUI Config
+    startGUI defaultConfig
         { tpPort       = 10000
         , tpCustomHTML = Just "chat.html"
-        , tpStatic     = static
+        , tpStatic     = Just static
         } $ setup messages
 
 type Message = (UTCTime, String, String)

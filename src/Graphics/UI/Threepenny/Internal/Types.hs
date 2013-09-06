@@ -8,12 +8,14 @@ import Prelude              hiding (init)
 import Control.Applicative
 import Control.Concurrent
 import qualified Reactive.Threepenny as E
-import Data.ByteString               (ByteString)
-import Data.Map             (Map)
+import Data.ByteString               (ByteString, hPut)
+import Data.Map                      (Map)
+import Data.String                   (fromString)
 import Data.Time
 
 import Network.URI
 import Text.JSON.Generic
+import System.IO (stderr)
 
 {-----------------------------------------------------------------------------
     Public types
@@ -85,10 +87,22 @@ data EventData = EventData [Maybe String]
 
 -- | Record for configuring the Threepenny GUI server.
 data Config = Config
-  { tpPort       :: Int               -- ^ Port number.
-  , tpCustomHTML :: Maybe FilePath    -- ^ Custom HTML file to replace the default one.
-  , tpStatic     :: FilePath          -- ^ Directory that is served under @/static@.
+  { tpPort       :: Int                 -- ^ Port number.
+  , tpCustomHTML :: Maybe FilePath      -- ^ Custom HTML file to replace the default one.
+  , tpStatic     :: Maybe FilePath      -- ^ Directory that is served under @/static@.
+  , tpLog        :: ByteString -> IO () -- ^ Print a single log message.
   }
+
+-- | Default configuration.
+--
+-- Port 10000, no custom HTML, no static directory, logging to stderr.
+defaultConfig :: Config
+defaultConfig = Config
+    { tpPort       = 10000
+    , tpCustomHTML = Nothing
+    , tpStatic     = Nothing
+    , tpLog        = \s -> hPut stderr s >> hPut stderr (fromString "\n")
+    }
 
 
 {-----------------------------------------------------------------------------

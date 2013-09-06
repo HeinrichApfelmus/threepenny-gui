@@ -5,7 +5,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * Server
     -- $server
-    Config(..), startGUI,
+    Config(..), defaultConfig, startGUI,
     loadFile, loadDirectory,
     
     -- * Browser Window
@@ -68,7 +68,8 @@ import Graphics.UI.Threepenny.Internal.Core
      ToJS, FFI, ffi, JSFunction,
      debug, clear, callFunction, runFunction, callDeferredFunction, atomic, )
 import qualified Graphics.UI.Threepenny.Internal.Types as Core
-import Graphics.UI.Threepenny.Internal.Types (Window, Config, EventData, Session(..))
+import Graphics.UI.Threepenny.Internal.Types
+    (Window, Config, defaultConfig, EventData, Session(..))
 
 {-----------------------------------------------------------------------------
     Server

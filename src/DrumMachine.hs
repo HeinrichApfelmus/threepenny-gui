@@ -38,10 +38,9 @@ loadInstrumentSample w name = do
 main :: IO ()
 main = do
     static <- getStaticDir
-    startGUI Config
+    startGUI defaultConfig
         { tpPort       = 10000
-        , tpCustomHTML = Nothing
-        , tpStatic     = static
+        , tpStatic     = Just static
         } setup
 
 setup :: Window -> IO ()
