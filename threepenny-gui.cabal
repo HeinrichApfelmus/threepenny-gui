@@ -130,6 +130,16 @@ Executable threepenny-examples-buttons
     other-modules:     Paths_threepenny_gui, Paths
     hs-source-dirs:    src
 
+Executable threepenny-examples-currencyconverter
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,threepenny-gui
+    else
+        buildable: False
+    main-is:           CurrencyConverter.hs
+    hs-source-dirs:    src
+
 Executable threepenny-examples-dragndropexample
     if flag(buildExamples)
         cpp-options:       -DCABAL

@@ -59,10 +59,9 @@ Additional static content is served from the @../wwwroot@ directory.
 
 > main :: IO ()
 > main = do
->     startGUI Config
+>     startGUI defaultConfig
 >         { tpPort       = 10000
->         , tpCustomHTML = Nothing
->         , tpStatic     = "../wwwroot"
+>         , tpStatic     = Just "../wwwroot"
 >         } setup
 
 Whenever a browser connects to the server,
