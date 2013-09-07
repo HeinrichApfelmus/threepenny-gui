@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE TemplateHaskell, CPP #-}
 module Graphics.UI.Threepenny.Internal.Include (include) where
  
 import Data.Functor

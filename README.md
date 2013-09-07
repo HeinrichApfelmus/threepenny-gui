@@ -1,4 +1,6 @@
-Use the web browser as a GUI, controllable from Haskell.
+Threepenny-gui is a GUI framework that uses the web browser as a display.
+
+* [Project homepage](http://www.haskell.org/haskellwiki/Threepenny-gui)
 
 ## Introduction
 
@@ -12,8 +14,8 @@ What is more, Threepenny is controlled entirely from within Haskell code,
 relieving the user of writing client-side Javascript by hand.
 
 Threepenny comes with a simple web server that is preconfigured to host a 
-client-side JS file called threepenny-gui.js.  The Threepenny API communicates
-with this JS to create new elements, respond to events, and more.  This frequent
+client-side JS file called `threepenny-gui.js`. The Threepenny API communicates
+with this JS to create new elements, respond to events, and more. This frequent
 communication precludes Threepenny from use in high-latency environments.
 
 Users can, however, write their own Javascript if they wish, and invoke that
@@ -24,12 +26,15 @@ This project was originally called Ji in its earliest iterations.
 
 ## Examples
 
-* [Simple buttons](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Buttons.hs)
-* [Missing dollars question](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/MissingDollars.hs)
-* [Multi-user chat](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs)
-* [Replace words in a text](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/UseWords.hs) (Apologies for the male-centric story)
-* [BarTab - dynamic creation of widgets](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/BarTab.hs)
-* [Drag'N'Drop example](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/DragNDropExample.hs)
+* [BarTab.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/BarTab.hs) - Dynamic creation of widgets.
+* [Buttons.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Buttons.hs) - Simple buttons to click on.
+* [Chat.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs) - Multi-user chat.
+* [CurrencyConverter.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/CurrencyConverter.hs) - Simple demonstration of two reactive input elements.
+* [DragNDropExample.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/DragNDropExample.hs) - Simple drag'N'drop demo.
+* [DrumMachine.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/DrumMachine.hs) - Specify rhythm by activating and deactivating checkboxes.
+* [MissingDollars.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/MissingDollars.hs) - Text with configurable values.
+* [UseWords.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/UseWords.hs)  - Text with configurable words. (Apologies for the male-centric story.)
+
 
 
 ## Challenges
@@ -38,6 +43,8 @@ This project was originally called Ji in its earliest iterations.
 
 As indicated, the frequent communication between browser and server
 means that Threepenny is best used as a GUI server running on localhost.
+
+The communication is done over a persistent connection using WebSockets.
 
 If you want to reduce latency, the best option is to generate JavaScript
 code and run it on the client. Consider this approach similar to [a
@@ -82,3 +89,17 @@ can read the pages.
 
 There are plenty more like this, but this is the first that springs to
 mind that is good.
+
+## Contributors
+
+Many thanks to everyone who contributed, provided feedback or simply wrote an application using Threepenny!
+
+* *Heinrich Apfelmus*
+* *Daniel Austin*
+* Daniel Díaz
+* *Daniel Mlot*
+* Luke Palmer
+* Jens Petersen
+* rnons
+
+Special thanks to *Chris Done* for starting the precursor project Ji.

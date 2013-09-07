@@ -6,3 +6,4 @@ TAGS
 log
 *.DS_Store
 /Material/
+/haddocks.html

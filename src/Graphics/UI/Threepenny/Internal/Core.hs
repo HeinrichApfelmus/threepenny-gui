@@ -1,15 +1,12 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, PackageImports #-}
 {-# OPTIONS -fno-warn-name-shadowing #-}
-
--- | The main Threepenny module.
-
-
---------------------------------------------------------------------------------
--- Exports
 
 module Graphics.UI.Threepenny.Internal.Core
   (
+  -- * Synopsis
+  -- | The main internal functionality.
+      
   -- * Server running
    serve
   ,loadFile
@@ -18,9 +15,8 @@ module Graphics.UI.Threepenny.Internal.Core
   -- * Event handling
   -- $eventhandling
   ,bind
-  ,handleEvent
-  ,handleEvents
-  ,module Control.Event
+  ,disconnect
+  ,module Reactive.Threepenny
   
   -- * Setting attributes
   -- $settingattributes
@@ -44,6 +40,7 @@ module Graphics.UI.Threepenny.Internal.Core
   ,getBody
   ,getElementsByTagName
   ,getElementsById
+  ,getElementsByClassName
   ,getWindow
   ,getProp
   ,getValue
@@ -63,9 +60,6 @@ module Graphics.UI.Threepenny.Internal.Core
   ,ToJS, FFI, ffi, JSFunction
   ,runFunction, callFunction
   
-  -- * Oddball
-  ,audioPlay
-  
   -- * Types
   ,Window
   ,Element
@@ -73,9 +67,7 @@ module Graphics.UI.Threepenny.Internal.Core
   ,EventData(..)
   ) where
 
-
---------------------------------------------------------------------------------
--- Imports
+
 
 import           Graphics.UI.Threepenny.Internal.Types     as Threepenny
 import           Graphics.UI.Threepenny.Internal.Resources
@@ -84,10 +76,11 @@ import           Control.Applicative
 import           Control.Concurrent
 import           Control.Concurrent.Chan.Extra
 import           Control.Concurrent.Delay
-import qualified Control.Exception             as E
-import           Control.Event
-import           Control.Monad.IO
-import           Control.Monad.Reader
+import qualified Control.Exception
+import           Reactive.Threepenny
+import           Control.Monad
+import           Control.Monad.IO.Class
+import qualified "MonadCatchIO-transformers" Control.Monad.CatchIO as E
 import           Data.ByteString               (ByteString)
 import           Data.ByteString.UTF8          (toString,fromString)
 import           Data.Map                      (Map)
@@ -98,17 +91,21 @@ import qualified Data.Text                     as Text
 import           Data.Text.Encoding
 import           Data.Time
 import           Network.URI
+import qualified Network.WebSockets            as WS
+import qualified Network.WebSockets.Snap       as WS
+import qualified Data.Attoparsec.Enumerator    as Atto
 import           Prelude                       hiding (init)
 import           Safe
 import           Snap.Core
-import           Snap.Http.Server              hiding (Config)
+import qualified Snap.Http.Server              as Snap
 import           Snap.Util.FileServe
 import           System.FilePath
+import qualified Text.JSON as JSON
 import           Text.JSON.Generic
 
 
 {-----------------------------------------------------------------------------
-    Server running
+    Server and and session management
 ------------------------------------------------------------------------------}
 newServerState :: IO ServerState
 newServerState = ServerState 
@@ -118,12 +115,18 @@ newServerState = ServerState
 
 -- | Run a TP server with Snap on the specified port and the given
 --   worker action.
-serve :: Config -> (Session -> IO ()) -> IO () -- ^ A TP server.
+serve :: Config -> (Session -> IO ()) -> IO ()
 serve Config{..} worker = do
-  server <- newServerState
-  _ <- forkIO $ custodian 30 (sSessions server)
-  httpServe config (router tpCustomHTML tpStatic worker server)
- where config = setPort tpPort defaultConfig
+    server <- newServerState
+    _      <- forkIO $ custodian 30 (sSessions server)
+    let config = Snap.setPort tpPort
+               $ Snap.setErrorLog (Snap.ConfigIoLog tpLog)
+               $ Snap.setAccessLog (Snap.ConfigIoLog tpLog)
+               $ Snap.defaultConfig
+    Snap.httpServe config . route $
+        routeResources tpCustomHTML tpStatic server
+        -- ++ routeCommunication worker server
+        ++ routeWebsockets worker server
 
 -- | Kill sessions after at least n seconds of disconnectedness.
 custodian :: Integer -> MVar Sessions -> IO ()
@@ -137,44 +140,282 @@ custodian seconds sessions = forever $ do
         Disconnected time -> do
           now <- getCurrentTime
           let dcSeconds = diffUTCTime now time
+          -- session is disconnected for more than  seconds
           if (dcSeconds > fromIntegral seconds)
              then do killThread sThreadId
                      return (Just key)
              else return Nothing
-            
+    
+    -- remove killed sessions from the map
     return (M.filterWithKey (\k _ -> not (k `elem` killed)) sessions)
 
--- Route requests.  If the initFile is Nothing, then a default
--- file will be served at /.
-router
-    :: Maybe FilePath
-    -> FilePath
-    -> (Session -> IO a)
-    -> ServerState
-    -> Snap ()
-router customHTML wwwroot worker server =
-        route [("/static"                    , serveDirectory wwwroot)
-              ,("/"                          , root)
-              ,("/driver/threepenny-gui.js"  , writeText jsDriverCode )
-              ,("/driver/threepenny-gui.css" , writeText cssDriverCode)
-              ,("/init"                      , init worker server)
-              ,("/poll"                      , withSession  server poll  )
-              ,("/signal"                    , withSession  server signal)
-              ,("/file/:name"                ,
-                    withFilepath (sFiles server) (flip serveFileAs))
-              ,("/dir/:name"                 ,
-                    withFilepath (sDirs  server) (\path _ -> serveDirectory path))
-              ]
+-- Run a snap action with the given session.
+withSession :: ServerState -> (Session -> Snap a) -> Snap a
+withSession server cont = do
+    token <- readInput "token"
+    case token of
+        Nothing    -> error $ "Invalid session token format."
+        Just token -> withGivenSession token server cont
+
+-- Do something with the session given by its token id.
+withGivenSession :: Integer -> ServerState -> (Session -> Snap a) -> Snap a
+withGivenSession token ServerState{..} cont = do
+    sessions <- liftIO $ withMVar sSessions return
+    case M.lookup token sessions of
+        Nothing      -> error $ "Nonexistant token: " ++ show token
+        Just session -> cont session
+
+{-----------------------------------------------------------------------------
+    Implementation of two-way communication
+    - POST and GET requests
+------------------------------------------------------------------------------}
+-- | Route the communication between JavaScript and the server
+routeCommunication :: (Session -> IO a) -> ServerState -> Routes
+routeCommunication worker server =
+    [("/init"   , init worker server)
+    ,("/poll"   , withSession server poll  )
+    ,("/signal" , withSession server signal)
+    ]
+
+-- | Make a new session.
+newSession :: ServerState -> (URI,[(String, String)]) -> Integer -> IO Session
+newSession sServerState sStartInfo sToken = do
+    sSignals          <- newChan
+    sInstructions     <- newChan
+    sMutex            <- newMVar ()
+    sEventHandlers    <- newMVar M.empty
+    sElementEvents    <- newMVar M.empty
+    sEventQuit        <- newEvent
+    sElementIds       <- newMVar [0..]
+    now               <- getCurrentTime
+    sConnectedState   <- newMVar (Disconnected now)
+    sThreadId         <- myThreadId
+    sClosures         <- newMVar [0..]
+    let session = Session {..}
+    initializeElementEvents session    
+    return session
+
+-- | Make a new session and add it to the server
+createSession :: (Session -> IO void) -> ServerState -> Snap Session
+createSession worker server = do
+    -- uri    <- snapRequestURI
+    let uri = undefined -- FIXME: No URI for WebSocket requests.
+    params <- snapRequestCookies
+    liftIO $ modifyMVar (sSessions server) $ \sessions -> do
+        let newKey = maybe 0 (+1) (lastMay (M.keys sessions))
+        session <- newSession server (uri,params) newKey
+        _       <- forkIO $ void $ worker session >> handleEvents session
+        return (M.insert newKey session sessions, session)
+
+-- | Respond to initialization request.
+init :: (Session -> IO void) -> ServerState -> Snap ()
+init worker server = do
+    session <- createSession worker server
+    modifyResponse . setHeader "Set-Token" . fromString . show . sToken $ session
+    poll session
+
+snapRequestURI :: Snap URI
+snapRequestURI = do
+    uri     <- getInput "info"
+    maybe (error ("Unable to parse request URI: " ++ show uri)) return (uri >>= parseURI)
+
+snapRequestCookies :: Snap [(String, String)]
+snapRequestCookies = do
+    cookies <- getsRequest rqCookies
+    return $ flip map cookies $ \Cookie{..} -> (toString cookieName,toString cookieValue)
+
+
+-- | Respond to poll requests.
+poll :: Session -> Snap ()
+poll Session{..} = do
+    let setDisconnected = do
+        now <- getCurrentTime
+        modifyMVar_ sConnectedState (const (return (Disconnected now)))
+    
+    instructions <- liftIO $ do
+        modifyMVar_ sConnectedState (const (return Connected))
+        threadId <- myThreadId
+        forkIO $ do
+            delaySeconds $ 60 * 5 -- Force kill after 5 minutes.
+            killThread threadId
+        E.catch (readAvailableChan sInstructions) $ \e -> do
+            -- no instructions available after some time
+            when (e == Control.Exception.ThreadKilled) $ setDisconnected
+            E.throw e
+    
+    writeJson instructions
+
+-- | Handle signals sent from the client.
+signal :: Session -> Snap ()
+signal Session{..} = do
+    input <- getInput "signal"
+    case input of
+      Just signalJson -> do
+        let signal = JSON.decode signalJson
+        case signal of
+          Ok signal -> liftIO $ writeChan sSignals signal
+          Error err -> error err
+      Nothing -> error $ "Unable to parse " ++ show input
+
+{-----------------------------------------------------------------------------
+    Implementation of two-way communication
+    - WebSockets
+------------------------------------------------------------------------------}
+-- | Route the communication between JavaScript and the server
+routeWebsockets :: (Session -> IO a) -> ServerState -> Routes
+routeWebsockets worker server =
+    [("websocket", response)]
     where
+    response = do
+        session <- createSession worker server
+        WS.runWebSocketsSnap (webSocket session)
+        error "Threepenny.Internal.Core: runWebSocketsSnap should never return."
+
+
+webSocket :: Session -> WS.Request -> WS.WebSockets WS.Hybi00 ()
+webSocket Session{..} req = void $ do
+    WS.acceptRequest req
+    -- websockets are always connected, don't let the custodian kill you.
+    liftIO $ modifyMVar_ sConnectedState (const (return Connected))
+
+    -- write data (in another thread)
+    send     <- WS.getSink
+    sendData <- liftIO . forkIO . forever $ do
+        x <- readChan sInstructions
+        WS.sendSink send . WS.textData . Text.pack . JSON.encode $ x
+
+    -- read data
+    let readData = do
+            input <- WS.receiveData
+            case input of
+                "ping" -> liftIO . WS.sendSink send . WS.textData . Text.pack $ "pong"
+                "quit" -> WS.throwWsError WS.ConnectionClosed
+                input  -> case JSON.decode . Text.unpack $ input of
+                    Ok signal -> liftIO $ writeChan sSignals signal
+                    Error err -> WS.throwWsError . WS.ParseError $ Atto.ParseError [] err
+    
+    forever readData `WS.catchWsError`
+        \_ -> liftIO $ do
+            killThread sendData             -- kill sending thread when done
+            writeChan sSignals $ Quit ()    -- signal  Quit  event
+
+{-----------------------------------------------------------------------------
+    FFI implementation on top of the communication channel
+------------------------------------------------------------------------------}
+-- | Atomically execute the given computation in the context of a browser window
+atomic :: Window -> IO a -> IO a
+atomic window@(Session{..}) m = do
+  takeMVar sMutex
+  ret <- m
+  putMVar sMutex ()
+  return ret
+
+-- | Send an instruction and read the signal response.
+call :: Session -> Instruction -> (Signal -> IO (Maybe a)) -> IO a
+call session@(Session{..}) instruction withSignal = do
+  takeMVar sMutex
+  run session $ instruction
+  newChan <- dupChan sSignals
+  go sMutex newChan
+
+  where
+    go mutex newChan = do
+      signal <- readChan newChan
+      result <- withSignal signal
+      case result of
+        Just signal -> do putMVar mutex ()
+                          return signal
+        Nothing     -> go mutex newChan
+            -- keep reading signals from the duplicated channel
+            -- until the function above succeeds
+
+-- Run the given instruction wihtout waiting for a response.
+run :: Session -> Instruction -> IO ()
+run (Session{..}) i = writeChan sInstructions i
+
+-- | Call the given function with the given continuation. Doesn't block.
+callDeferredFunction
+  :: Window                    -- ^ Browser window
+  -> String                    -- ^ The function name.
+  -> [String]                  -- ^ Parameters.
+  -> ([Maybe String] -> IO ()) -- ^ The continuation to call if/when the function completes.
+  -> IO ()
+callDeferredFunction session@(Session{..}) func params closure = do
+  cid      <- modifyMVar sClosures (\(x:xs) -> return (xs,x))
+  closure' <- newClosure session func (show cid) closure
+  run session $ CallDeferredFunction (closure',func,params)
+
+-- | Run the given JavaScript function and carry on. Doesn't block.
+--
+-- The client window uses JavaScript's @eval()@ function to run the code.
+runFunction :: Window -> JSFunction () -> IO ()
+runFunction session = run session . RunJSFunction . unJSCode . code
+
+-- | Run the given JavaScript function and wait for results. Blocks.
+--
+-- The client window uses JavaScript's @eval()@ function to run the code.
+callFunction :: Window -> JSFunction a -> IO a
+callFunction window (JSFunction code marshal) = 
+    call window (CallJSFunction . unJSCode $ code) $ \signal ->
+        case signal of
+            FunctionResult v -> case marshal window v of
+                Ok    a -> return $ Just a
+                Error _ -> return Nothing
+            _ -> return Nothing
+
+
+{-----------------------------------------------------------------------------
+    Snap utilities
+------------------------------------------------------------------------------}
+-- Write JSON to output.
+writeJson :: (MonadSnap m, JSON a) => a -> m ()
+writeJson json = do
+    modifyResponse $ setContentType "application/json"
+    (writeText . pack . (\x -> showJSValue x "") . showJSON) json
+
+-- Get a text input from snap.
+getInput :: (MonadSnap f) => ByteString -> f (Maybe String)
+getInput = fmap (fmap (unpack . decodeUtf8)) . getParam
+
+-- Read an input from snap.
+readInput :: (MonadSnap f,Read a) => ByteString -> f (Maybe a)
+readInput = fmap (>>= readMay) . getInput
+
+{-----------------------------------------------------------------------------
+    Resourcse
+------------------------------------------------------------------------------}
+type Routes = [(ByteString, Snap ())]
+
+routeResources :: Maybe FilePath -> Maybe FilePath -> ServerState -> Routes
+routeResources customHTML staticDir server =
+    fixHandlers noCache $
+        static ++
+        [("/"                          , root)
+        ,("/driver/threepenny-gui.js"  , writeText jsDriverCode )
+        ,("/driver/threepenny-gui.css" , writeText cssDriverCode)
+        ,("/file/:name"                ,
+            withFilepath (sFiles server) (flip serveFileAs))
+        ,("/dir/:name"                 ,
+            withFilepath (sDirs  server) (\path _ -> serveDirectory path))
+        ]
+    where
+    fixHandlers f routes = [(a,f b) | (a,b) <- routes]
+    noCache h = modifyResponse (setHeader "Cache-Control" "no-cache") >> h
+    
+    static = maybe [] (\dir -> [("/static", serveDirectory dir)]) staticDir
+    
     root = case customHTML of
-        Just file -> serveFile (wwwroot </> file)
+        Just file -> case staticDir of
+            Just dir -> serveFile (dir </> file)
+            Nothing  -> logError "Graphics.UI.Threepenny: Cannot use tpCustomHTML file without tpStatic"
         Nothing   -> writeText defaultHtmlFile
+
 
 -- Get a filename from a URI
 withFilepath :: MVar Filepaths -> (FilePath -> MimeType -> Snap a) -> Snap a
 withFilepath rDict cont = do
     mName    <- getParam "name"
-    (_,dict) <- io $ withMVar rDict return
+    (_,dict) <- liftIO $ withMVar rDict return
     case (\key -> M.lookup key dict) =<< mName of
         Just (path,mimetype) -> cont path mimetype
         Nothing              -> error $ "File not loaded: " ++ show mName
@@ -202,116 +443,6 @@ loadDirectory Session{..} path = do
     key <- newAssociation (sDirs sServerState) (path,"")
     return $ "/dir/" ++ key
 
--- Initialize the session.
-init :: (Session -> IO void) -> ServerState -> Snap ()
-init sessionThread server = do
-  uri <- getRequestURI
-  params <- getRequestCookies
-  key <- io $ modifyMVar (sSessions server) $ \sessions -> do
-    let newKey = maybe 0 (+1) (lastMay (M.keys sessions))
-    session <- newSession server (uri,params) newKey
-    _ <- forkIO $ do _ <- sessionThread session; return ()
-    return (M.insert newKey session sessions,newKey)
-  modifyResponse $ setHeader "Set-Token" (fromString (show key))
-  withGivenSession key server poll
-    
-  where getRequestURI = do
-          uri <- getInput "info"
-          maybe (error ("Unable to parse request URI: " ++ show uri)) return (uri >>= parseURI)
-        getRequestCookies = do
-          cookies <- getsRequest rqCookies
-          return $ flip map cookies $ \Cookie{..} -> (toString cookieName,toString cookieValue)
-
--- Make a new session.
-newSession :: ServerState -> (URI,[(String, String)]) -> Integer -> IO Session
-newSession server info token = do
-  signals <- newChan
-  instructions <- newChan
-  (event, handler) <- newEventsTagged
-  ids <- newMVar [0..]
-  mutex <- newMVar ()
-  now <- getCurrentTime
-  conState <- newMVar (Disconnected now)
-  threadId <- myThreadId
-  closures <- newMVar [0..]
-  return $ Session
-    { sSignals = signals
-    , sInstructions = instructions
-    , sEvent        = event
-    , sEventHandler = handler
-    , sElementIds = ids
-    , sToken = token
-    , sMutex = mutex
-    , sConnectedState = conState
-    , sThreadId    = threadId
-    , sClosures    = closures
-    , sStartInfo   = info
-    , sServerState = server
-    }
-  
--- Respond to poll requests.
-poll :: Session -> Snap ()
-poll Session{..} = do
-  let setDisconnected = do
-        now <- getCurrentTime
-        modifyMVar_ sConnectedState (const (return (Disconnected now)))
-  io $ modifyMVar_ sConnectedState (const (return Connected))
-  threadId <- io $ myThreadId
-  _ <- io $ forkIO $ do
-    delaySeconds $ 60 * 5 -- Force kill after 5 minutes.
-    killThread threadId
-  instructions <- io $ E.catch (readAvailableChan sInstructions) $ \e -> do
-    when (e == E.ThreadKilled) $ do
-      setDisconnected
-    E.throw e
-  writeJson instructions
-
--- Write JSON to output.
-writeJson :: (MonadSnap m, JSON a) => a -> m ()
-writeJson json = do
-    modifyResponse $ setContentType "application/json"
-    (writeString . (\x -> showJSValue x "") . showJSON) json
-
--- Write a string to output.
-writeString :: (MonadSnap m) => String -> m ()
-writeString = writeText . pack
-
--- Handle signals sent from the client.
-signal :: Session -> Snap ()
-signal Session{..} = do
-    input <- getInput "signal"
-    case input of
-      Just signalJson -> do
-        let signal = decode signalJson
-        case signal of
-          Ok signal -> io $ writeChan sSignals signal
-          Error err -> error err
-      Nothing -> error $ "Unable to parse " ++ show input
-
--- Get a text input from snap.
-getInput :: (MonadSnap f) => ByteString -> f (Maybe String)
-getInput = fmap (fmap (unpack . decodeUtf8)) . getParam
-
--- Run a snap action with the given session.
-withSession :: ServerState -> (Session -> Snap a) -> Snap a
-withSession server cont = do
-  token <- readInput "token"
-  case token of
-    Nothing    -> error $ "Invalid session token format."
-    Just token -> withGivenSession token server cont
-    
--- Do something with the session given by its token id.
-withGivenSession :: Integer -> ServerState -> (Session -> Snap a) -> Snap a
-withGivenSession token ServerState{..} cont = do
-  sessions <- io $ withMVar sSessions return
-  case M.lookup token sessions of
-    Nothing -> error $ "Nonexistant token: " ++ show token
-    Just session -> cont session
-
--- Read an input from snap.
-readInput :: (MonadSnap f,Read a) => ByteString -> f (Maybe a)
-readInput = fmap (>>= readMay) . getInput
-
 
 {-----------------------------------------------------------------------------
     Event handling
@@ -329,42 +460,71 @@ readInput = fmap (>>= readMay) . getInput
 
 -- | Handle events signalled from the client.
 handleEvents :: Window -> IO ()
-handleEvents window = forever $ handleEvent window
-
--- | Handle one event.
-handleEvent :: Window -> IO ()
-handleEvent window@(Session{..}) = do
+handleEvents window@(Session{..}) = do
     signal <- getSignal window
     case signal of
         Threepenny.Event (elid,eventType,params) -> do
-            sEventHandler ((elid,eventType), EventData params)
-        _ -> return ()
+            handleEvent1 window ((elid,eventType),EventData params)
+            handleEvents window
+        Quit () -> do
+            snd sEventQuit ()
+            -- do not continue handling events
+        _       -> do
+            handleEvents window
+
+-- | Add a new event handler for a given key
+addEventHandler :: Window -> (EventKey, Handler EventData) -> IO () 
+addEventHandler Session{..} (key,handler) =
+    modifyMVar_ sEventHandlers $ return .
+        M.insertWith (\h1 h a -> h1 a >> h a) key handler        
+
+
+-- | Handle a single event
+handleEvent1 :: Window -> (EventKey,EventData) -> IO ()
+handleEvent1 Session{..} (key,params) = do
+    handlers <- readMVar sEventHandlers
+    case M.lookup key handlers of
+        Just handler -> handler params
+        Nothing      -> return ()
 
 -- Get the latest signal sent from the client.
 getSignal :: Window -> IO Signal
 getSignal (Session{..}) = readChan sSignals
 
--- | Return an 'Event' associated to an 'Element'.
+-- | Bind an event handler for a dom event to an 'Element'.
 bind
     :: String               -- ^ The eventType, see any DOM documentation for a list of these.
     -> Element              -- ^ The element to bind to.
-    -> Event EventData      -- ^ The event handler.
-bind eventType (Element el@(ElementId elid) session) =
-    Control.Event.Event register
-    where
-    key        = (elid, eventType)
-    register h = do
-        -- register with server
-        unregister <- Control.Event.register (sEvent session key) h
-        -- register with client
+    -> Handler EventData    -- ^ The event handler to bind.
+    -> IO ()
+bind eventType (Element el@(ElementId elid) session) handler = do
+    let key = (elid, eventType)
+    -- register with client if it has never been registered on the server
+    handlers <- readMVar $ sEventHandlers session
+    when (not $ key `M.member` handlers) $
         run session $ Bind eventType el (Closure key)
-        return unregister
+    -- register with server
+    addEventHandler session (key, handler)
+
+-- | Register event handler that occurs when the client has disconnected.
+disconnect :: Window -> Event ()
+disconnect = fst . sEventQuit
+
+
+initializeElementEvents :: Window -> IO ()
+initializeElementEvents session@(Session{..}) = do
+        initEvents =<< getHead session
+        initEvents =<< getBody session
+    where
+    initEvents el@(Element elid _) = do
+        x <- newEventsNamed $ \(name,_,handler) -> bind name el handler
+        modifyMVar_ sElementEvents $ return . M.insert elid x
 
 -- Make a uniquely numbered event handler.
 newClosure :: Window -> String -> String -> ([Maybe String] -> IO ()) -> IO Closure
-newClosure window@(Session{..}) eventType elid thunk = do
+newClosure window eventType elid thunk = do
     let key = (elid, eventType)
-    _ <- register (sEvent key) $ \(EventData xs) -> thunk xs
+    addEventHandler window (key, \(EventData xs) -> thunk xs)
     return (Closure key)
 
 {-----------------------------------------------------------------------------
@@ -437,7 +597,6 @@ newElement :: Window      -- ^ Browser window in which context to create the ele
            -> String      -- ^ The tag name.
            -> IO Element  -- ^ A tag reference. Non-blocking.
 newElement session@(Session{..}) tagName = do
-    -- TODO: Remove the need to specify in which browser window is to be created
     elid <- modifyMVar sElementIds $ \elids ->
         return (tail elids,"*" ++ show (head elids) ++ ":" ++ tagName)
     return (Element (ElementId elid) session)
@@ -451,14 +610,6 @@ appendElementTo (Element parent session) e@(Element child _) =
     -- TODO: Right now, parent and child need to be from the same session/browser window
     --       Implement transfer of elements across browser windows
     run session $ Append parent child
-
-
-{-----------------------------------------------------------------------------
-    Oddball
-------------------------------------------------------------------------------}
--- | Invoke the JavaScript expression @audioElement.play();@.
-audioPlay :: Element -> IO ()
-audioPlay (Element el session) = runFunction session $ ffi "%1.play();" el
 
 {-----------------------------------------------------------------------------
     Querying the DOM
@@ -486,6 +637,17 @@ getElementsById
     -> IO [Element]  -- ^ Elements with given ID.
 getElementsById window ids =
   call window (GetElementsById ids) $ \signal ->
+    case signal of
+      Elements els -> return $ Just [Element el window | el <- els]
+      _            -> return Nothing
+
+-- | Get a list of elements by particular class.  Blocks.
+getElementsByClassName
+    :: Window        -- ^ Browser window
+    -> String        -- ^ The class string.
+    -> IO [Element]  -- ^ Elements with given class.
+getElementsByClassName window cls =
+  call window (GetElementsByClassName cls) $ \signal ->
     case signal of
       Elements els -> return $ Just [Element el window | el <- els]
       _            -> return Nothing
@@ -538,36 +700,6 @@ readValuesList
     -> IO (Maybe [a]) -- ^ Maybe the read values. All or none.
 readValuesList = liftM (sequence . map readMay) . getValuesList
 
--- | Atomically execute the given computation in the context of a browser window
-atomic :: Window -> IO a -> IO a
-atomic window@(Session{..}) m = do
-  takeMVar sMutex
-  ret <- m
-  putMVar sMutex ()
-  return ret
-
-
--- Send an instruction and read the signal response.
-call :: Session -> Instruction -> (Signal -> IO (Maybe a)) -> IO a
-call session@(Session{..}) instruction withSignal = do
-  takeMVar sMutex
-  run session $ instruction
-  newChan <- dupChan sSignals
-  go sMutex newChan
-
-  where
-    go mutex newChan = do
-      signal <- readChan newChan
-      result <- withSignal signal
-      case result of
-        Just signal -> do putMVar mutex ()
-                          return signal
-        Nothing     -> go mutex newChan
-
--- Run the given instruction.
-run :: Session -> Instruction -> IO ()
-run (Session{..}) i = writeChan sInstructions i
-
 -- | Get the head of the page.
 getHead :: Window -> IO Element
 getHead session = return $ Element (ElementId "head") session
@@ -597,34 +729,4 @@ debug window = run window . Debug
 
 -- | Clear the client's DOM.
 clear :: Window -> IO ()
-clear window = run window $ Clear ()
-
--- | Run the given JavaScript function and carry on. Doesn't block.
---
--- The client window uses JavaScript's @eval()@ function to run the code.
-runFunction :: Window -> JSFunction () -> IO ()
-runFunction session = run session . RunJSFunction . unJSCode . code
-
--- | Run the given JavaScript function and wait for results. Blocks.
---
--- The client window uses JavaScript's @eval()@ function to run the code.
-callFunction :: Window -> JSFunction a -> IO a
-callFunction window (JSFunction code marshal) = 
-    call window (CallJSFunction . unJSCode $ code) $ \signal ->
-        case signal of
-            FunctionResult v -> case marshal window v of
-                Ok    a -> return $ Just a
-                Error _ -> return Nothing
-            _ -> return Nothing
-
--- | Call the given function with the given continuation. Doesn't block.
-callDeferredFunction
-  :: Window                    -- ^ Browser window
-  -> String                    -- ^ The function name.
-  -> [String]                  -- ^ Parameters.
-  -> ([Maybe String] -> IO ()) -- ^ The continuation to call if/when the function completes.
-  -> IO ()
-callDeferredFunction session@(Session{..}) func params closure = do
-  cid      <- modifyMVar sClosures (\(x:xs) -> return (xs,x))
-  closure' <- newClosure session func (show cid) closure
-  run session $ CallDeferredFunction (closure',func,params)
+clear window = runFunction window $ ffi "$('body').contents().detach()"

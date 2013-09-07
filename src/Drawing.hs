@@ -17,12 +17,7 @@ import System.FilePath
     Main
 ------------------------------------------------------------------------------}
 main :: IO ()
-main = do
-    startGUI Config
-        { tpPort       = 10000
-        , tpCustomHTML = Nothing
-        , tpStatic     = ""
-        } setup
+main = startGUI defaultConfig { tpPort = 10000 } setup
 
 setup :: Window -> IO ()
 setup window = do

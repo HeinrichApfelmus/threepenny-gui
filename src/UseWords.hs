@@ -11,10 +11,10 @@ import Text.Parsec
 
 #ifdef CABAL
 import qualified  "threepenny-gui" Graphics.UI.Threepenny as UI
-import "threepenny-gui" Graphics.UI.Threepenny.Core hiding (string)
+import "threepenny-gui" Graphics.UI.Threepenny.Core hiding (string, (<|>), many)
 #else
 import qualified Graphics.UI.Threepenny as UI
-import Graphics.UI.Threepenny.Core hiding (string)
+import Graphics.UI.Threepenny.Core hiding (string, (<|>), many)
 #endif
 import Paths
 import System.FilePath ((</>))
@@ -25,10 +25,9 @@ import System.FilePath ((</>))
 main :: IO ()
 main = do
     static <- getStaticDir
-    startGUI Config
+    startGUI defaultConfig
         { tpPort       = 10000
-        , tpCustomHTML = Nothing
-        , tpStatic     = static
+        , tpStatic     = Just static
         } setup
 
 

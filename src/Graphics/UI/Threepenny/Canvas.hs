@@ -4,10 +4,9 @@ module Graphics.UI.Threepenny.Canvas (
     
     -- * Documentation
     Canvas,
-    drawImage, clearCanvas,
+    Vector, drawImage, clearCanvas,
     ) where
 
-import Control.Event
 import Graphics.UI.Threepenny.Core
 import qualified Graphics.UI.Threepenny.Internal.Core as Core
 import qualified Graphics.UI.Threepenny.Internal.Types as Core

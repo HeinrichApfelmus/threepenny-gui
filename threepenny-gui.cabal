@@ -1,8 +1,8 @@
 Name:                threepenny-gui
-Version:             0.2.0.1
-Synopsis:            Small GUI framework that uses the web browser as a display.
+Version:             0.3.0.0
+Synopsis:            GUI framework that uses the web browser as a display.
 Description:
-    Threepenny-GUI is a small GUI framework that uses the web browser as a display.
+    Threepenny-GUI is a GUI framework that uses the web browser as a display.
     .
     It's cheap and easy to install because everyone has a web browser installed.
     .
@@ -12,7 +12,6 @@ Description:
     from your Haskell code.
     .
     Stability forecast: This is an experimental release! Send us your feedback!
-    Basic functionality should work.
     Significant API changes are likely in future versions.
     .
     NOTE: This library contains examples, but they are not built by default.
@@ -21,6 +20,8 @@ Description:
     @cabal install threepenny-gui -fbuildExamples@
     .
     Changelog:
+    .
+    * 0.3.0.0 - Snapshot release. Browser communication with WebSockets. First stab at FRP integration.
     .
     * 0.2.0.0 - Snapshot release. First stab at easy JavaScript FFI.
     .
@@ -37,12 +38,10 @@ Cabal-version:       >=1.8
 
 Extra-Source-Files:  src/Graphics/UI/*.html
                     ,src/Graphics/UI/*.js
+                    ,src/Graphics/UI/*.css
 
 Data-dir:            .
-Data-files:          src/Graphics/UI/*.js
-                    ,src/Graphics/UI/*.html
-                    ,src/Graphics/UI/*.css
-                    ,wwwroot/css/*.css
+Data-files:          wwwroot/css/*.css
                     ,wwwroot/css/*.png
                     ,wwwroot/*.html
                     ,wwwroot/*.txt
@@ -51,7 +50,7 @@ Data-files:          src/Graphics/UI/*.js
 
 flag buildExamples
     description: Build example executables.
-    default:     True
+    default:     False
 
 Source-repository head
     type:               git
@@ -61,7 +60,7 @@ Source-repository head
 Library
   Hs-source-dirs:    src
   Exposed-modules:
-                     Control.Event
+                     Reactive.Threepenny
                     ,Graphics.UI.Threepenny
                     ,Graphics.UI.Threepenny.Attributes
                     ,Graphics.UI.Threepenny.Core
@@ -73,21 +72,26 @@ Library
                     ,Graphics.UI.Threepenny.Timer
   Other-modules:
                      Control.Concurrent.Chan.Extra
-                    ,Control.Monad.Extra
-                    ,Control.Monad.IO
                     ,Control.Concurrent.Delay
                     ,Graphics.UI.Threepenny.Internal.Core
                     ,Graphics.UI.Threepenny.Internal.Resources
+                    ,Graphics.UI.Threepenny.Internal.Include
                     ,Graphics.UI.Threepenny.Internal.Types
+                    ,Reactive.Threepenny.PulseLatch
+                    ,Reactive.Threepenny.Memo
                     ,Paths_threepenny_gui
   CPP-Options:      -DCABAL
   Build-depends:     base                      >= 4     && < 5
                     ,snap-server
                     ,snap-core
-                    ,mtl
+                    ,websockets
+                    ,websockets-snap
                     ,text
                     ,safe
                     ,containers
+                    ,unordered-containers
+                    ,hashable
+                    ,vault == 0.3.*
                     ,bytestring
                     ,json >= 0.4.4 && < 0.6
                     ,time
@@ -95,8 +99,11 @@ Library
                     ,network
                     ,filepath
                     ,data-default
+                    ,template-haskell
                     ,transformers
                     ,stm
+                    ,attoparsec-enumerator
+                    ,MonadCatchIO-transformers
                     
 Executable threepenny-examples-bartab
     if flag(buildExamples)
@@ -120,6 +127,16 @@ Executable threepenny-examples-buttons
         buildable: False
     main-is:           Buttons.hs
     other-modules:     Paths_threepenny_gui, Paths
+    hs-source-dirs:    src
+
+Executable threepenny-examples-currencyconverter
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,threepenny-gui
+    else
+        buildable: False
+    main-is:           CurrencyConverter.hs
     hs-source-dirs:    src
 
 Executable threepenny-examples-dragndropexample

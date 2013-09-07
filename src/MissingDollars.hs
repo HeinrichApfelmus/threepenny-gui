@@ -1,7 +1,6 @@
 {-# LANGUAGE CPP, PackageImports #-}
 
 import Control.Monad
-import Control.Monad.Extra
 import Safe
 
 #ifdef CABAL
@@ -19,10 +18,9 @@ import Paths
 main :: IO ()
 main = do
     static <- getStaticDir
-    startGUI Config
+    startGUI defaultConfig
         { tpPort       = 10000
-        , tpCustomHTML = Nothing
-        , tpStatic     = static
+        , tpStatic     = Just static
         } setup
 
 

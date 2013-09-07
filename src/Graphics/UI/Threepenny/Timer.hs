@@ -1,55 +1,63 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, DeriveDataTypeable #-}
 
 module Graphics.UI.Threepenny.Timer (
     -- * Synopsis
     -- | Implementation of a simple timer which runs on the server-side.
+    --
+    -- NOTE: The timer may be rather wobbly unless you compile
+    -- with the @-threaded@ option.
     
     -- * Documentation
     Timer, timer,
     interval, running, tick, start, stop,
     ) where
 
-
+import Data.Typeable
 import Control.Monad (when, forever, void)
-import Control.Event
 import Control.Concurrent
 import Control.Concurrent.STM
+import Reactive.Threepenny
 
 import Graphics.UI.Threepenny.Core
 
 
 data Timer = Timer
-    { tRunning  :: TVar Bool
-    , tInterval :: TVar Int      -- in ms
+    { tRunning  :: GetSet Bool Bool
+    , tInterval :: GetSet Int Int   -- in ms
     , tTick     :: Event ()
-    }
+    } deriving (Typeable)
 
 -- | Create a new timer
 timer :: IO Timer
 timer = do
-    tRunning      <- newTVarIO False
-    tInterval     <- newTVarIO 1000
+    tvRunning     <- newTVarIO False
+    tvInterval    <- newTVarIO 1000
     (tTick, fire) <- newEvent
     
     forkIO $ forever $ do
-        wait <- atomically $ do
-            b <- readTVar tRunning
+        atomically $ do
+            b <- readTVar tvRunning
             when (not b) retry
-            readTVar tInterval
-        threadDelay (wait * 1000)
+        wait <- atomically $ readTVar tvInterval
         fire ()
-        
+        threadDelay (wait * 1000)
+    
+    let tRunning  = fromTVar tvRunning
+        tInterval = fromTVar tvInterval 
+    
     return $ Timer {..}
 
+-- | Timer event.
+tick :: Timer -> Event ()
 tick = tTick
 
 -- | Timer interval in milliseconds.
 interval :: Attr Timer Int
-interval = fromTVar tInterval
+interval = fromGetSet tInterval
 
 -- | Whether the timer is running or not.
 running :: Attr Timer Bool
-running = fromTVar tRunning
+running = fromGetSet tRunning
 
 -- | Start the timer.
 start :: Timer -> IO ()
@@ -59,10 +67,13 @@ start = set' running True
 stop :: Timer -> IO ()
 stop = set' running False
 
-fromTVar :: (x -> TVar a) -> Attr x a
-fromTVar f = mkReadWriteAttr
-    (atomically . readTVar . f)
-    (\i x -> atomically $ writeTVar (f x) i)
+fromTVar :: TVar a -> GetSet a a
+fromTVar var = (atomically $ readTVar var, atomically . writeTVar var)
+
+type GetSet i o = (IO o, i -> IO ())
+
+fromGetSet :: (x -> GetSet i o) -> ReadWriteAttr x i o
+fromGetSet f = mkReadWriteAttr (fst . f) (\i x -> snd (f x) i)
 
 
 {-----------------------------------------------------------------------------

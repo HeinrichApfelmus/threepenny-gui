@@ -7,14 +7,15 @@ import Prelude              hiding (init)
 
 import Control.Applicative
 import Control.Concurrent
-import qualified Control.Event as E
-import Control.Monad.Reader
-import Data.ByteString               (ByteString)
-import Data.Map             (Map)
+import qualified Reactive.Threepenny as E
+import Data.ByteString               (ByteString, hPut)
+import Data.Map                      (Map)
+import Data.String                   (fromString)
 import Data.Time
 
 import Network.URI
 import Text.JSON.Generic
+import System.IO (stderr)
 
 {-----------------------------------------------------------------------------
     Public types
@@ -31,7 +32,7 @@ instance Show Element where
 
 -- | An opaque reference to an element in the DOM.
 data ElementId = ElementId String
-  deriving (Data,Typeable,Show)
+  deriving (Data,Typeable,Show,Eq,Ord)
 
 instance JSON ElementId where
   showJSON (ElementId o) = showJSON o
@@ -39,26 +40,30 @@ instance JSON ElementId where
     obj <- readJSON obj
     ElementId <$> valFromObj "Element" obj
 
-  
+
 -- | A client session. This type is opaque, you don't need to inspect it.
 data Session = Session
   { sSignals        :: Chan Signal
   , sInstructions   :: Chan Instruction
-  , sEvent          :: EventKey -> E.Event EventData
-  , sEventHandler   :: E.Handler (EventKey, EventData)
+  , sMutex          :: MVar ()
+  , sEventHandlers  :: MVar (Map EventKey (E.Handler EventData))
+  , sElementEvents  :: MVar (Map ElementId ElementEvents)
+  , sEventQuit      :: (E.Event (), E.Handler ())
   , sClosures       :: MVar [Integer]
   , sElementIds     :: MVar [Integer]
   , sToken          :: Integer
-  , sMutex          :: MVar ()
   , sConnectedState :: MVar ConnectedState
   , sThreadId       :: ThreadId
   , sStartInfo      :: (URI,[(String,String)])
   , sServerState    :: ServerState
   }
 
-type Sessions  = Map Integer Session
-type MimeType  = ByteString
-type Filepaths = (Integer, Map ByteString (FilePath, MimeType))
+type Sessions      = Map Integer Session
+type MimeType      = ByteString
+type Filepaths     = (Integer, Map ByteString (FilePath, MimeType))
+
+type EventKey      = (String, String)
+type ElementEvents = String -> E.Event EventData
 
 data ServerState = ServerState
     { sSessions :: MVar Sessions
@@ -66,7 +71,6 @@ data ServerState = ServerState
     , sDirs     :: MVar Filepaths
     }
 
-type EventKey = (String, String)
 
 -- | The client browser window.
 type Window = Session
@@ -83,10 +87,22 @@ data EventData = EventData [Maybe String]
 
 -- | Record for configuring the Threepenny GUI server.
 data Config = Config
-  { tpPort       :: Int               -- ^ Port number.
-  , tpCustomHTML :: Maybe FilePath    -- ^ Custom HTML file to replace the default one.
-  , tpStatic     :: FilePath          -- ^ Directory that is served under @/static@.
+  { tpPort       :: Int                 -- ^ Port number.
+  , tpCustomHTML :: Maybe FilePath      -- ^ Custom HTML file to replace the default one.
+  , tpStatic     :: Maybe FilePath      -- ^ Directory that is served under @/static@.
+  , tpLog        :: ByteString -> IO () -- ^ Print a single log message.
   }
+
+-- | Default configuration.
+--
+-- Port 10000, no custom HTML, no static directory, logging to stderr.
+defaultConfig :: Config
+defaultConfig = Config
+    { tpPort       = 10000
+    , tpCustomHTML = Nothing
+    , tpStatic     = Nothing
+    , tpLog        = \s -> hPut stderr s >> hPut stderr (fromString "\n")
+    }
 
 
 {-----------------------------------------------------------------------------
@@ -96,10 +112,8 @@ data Config = Config
 -- | An instruction that is sent to the client as JSON.
 data Instruction
   = Debug String
-  | Begin ()
-  | End ()
   | SetToken Integer
-  | Clear ()
+  | GetElementsByClassName String
   | GetElementsById [String]
   | GetElementsByTagName String
   | SetStyle ElementId [(String,String)]
@@ -111,7 +125,6 @@ data Instruction
   | GetValue ElementId
   | GetValues [ElementId]
   | SetTitle String
-  | GetLocation ()
   | RunJSFunction String
   | CallJSFunction String
   | CallDeferredFunction (Closure,String,[String])
@@ -125,34 +138,31 @@ instance JSON Instruction where
 
 -- | A signal (mostly events) that are sent from the client to the server.
 data Signal
-  = Init ()
+  = Quit ()
   | Elements [ElementId]
   | Event (String,String,[Maybe String])
   | Value String
   | Values [String]
-  | Location String
   | FunctionCallValues [Maybe String]
   | FunctionResult JSValue
-  deriving (Show)
+  deriving (Typeable,Show)
 
 instance JSON Signal where
   showJSON _ = error "JSON.Signal.showJSON: No method implemented."
   readJSON obj = do
     obj <- readJSON obj
-    let init = Init <$> valFromObj "Init" obj
+    let quit     = Quit <$> valFromObj "Quit" obj
         elements = Elements <$> valFromObj "Elements" obj
         event = do
           (cid,typ,arguments) <- valFromObj "Event" obj
           args <- mapM nullable arguments
           return $ Event (cid,typ,args)
         value = Value <$> valFromObj "Value" obj
-        location = Location <$> valFromObj "Location" obj
         values = Values <$> valFromObj "Values" obj
         fcallvalues = do
           FunctionCallValues <$> (valFromObj "FunctionCallValues" obj >>= mapM nullable)
         fresult = FunctionResult <$> valFromObj "FunctionResult" obj
-    init <|> elements <|> event <|> value <|> values <|> location
-         <|> fcallvalues <|> fresult
+    quit <|> elements <|> event <|> value <|> values <|> fcallvalues <|> fresult
 
 -- | Read a JSValue that may be null.
 nullable :: JSON a => JSValue -> Result (Maybe a)
@@ -161,7 +171,7 @@ nullable v      = Just <$> readJSON v
 
 -- | An opaque reference to a closure that the event manager uses to
 --   trigger events signalled by the client.
-data Closure = Closure (String,String)
+data Closure = Closure EventKey
     deriving (Typeable,Data,Show)
 
 {-----------------------------------------------------------------------------

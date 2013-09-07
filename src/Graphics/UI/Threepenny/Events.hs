@@ -1,16 +1,39 @@
 module Graphics.UI.Threepenny.Events (
     -- * Synopsis
-    -- | Common DOM events, for convenience.
+    -- | Events on DOM elements.
     
-    -- * Documentation
+    -- * Convenience events
+    valueChange, selectionChange, checkedChange,
+    
+    -- * Standard DOM events
     click, mousemove, hover, blur, leave,
-    keyup, keydown,
+    KeyCode, keyup, keydown,
     ) where
 
+import Graphics.UI.Threepenny.Attributes
 import Graphics.UI.Threepenny.Core
 
 silence = fmap (const ())
 
+{-----------------------------------------------------------------------------
+    Events
+------------------------------------------------------------------------------}
+-- | Event that occurs when the /user/ changes the value of the input element.
+valueChange :: Element -> Event String
+valueChange el = unsafeMapIO (const $ get value el) (domEvent "keydown" el)
+
+-- | Event that occurs when the /user/ changes the selection of a @<select>@ element.
+selectionChange :: Element -> Event (Maybe Int)
+selectionChange el = unsafeMapIO (const $ get selection el) (click el)
+
+-- | Event that occurs when the /user/ changes the checked status of an input
+-- element of type checkbox.
+checkedChange :: Element -> Event Bool
+checkedChange el = unsafeMapIO (const $ get checked el) (click el)
+
+{-----------------------------------------------------------------------------
+    DOM Events
+------------------------------------------------------------------------------}
 -- | Mouse click.
 click :: Element -> Event ()
 click = silence . domEvent "click"

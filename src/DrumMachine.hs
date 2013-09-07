@@ -38,10 +38,9 @@ loadInstrumentSample w name = do
 main :: IO ()
 main = do
     static <- getStaticDir
-    startGUI Config
+    startGUI defaultConfig
         { tpPort       = 10000
-        , tpCustomHTML = Nothing
-        , tpStatic     = static
+        , tpStatic     = Just static
         } setup
 
 setup :: Window -> IO ()
@@ -55,21 +54,17 @@ setup w = void $ do
                       ,[UI.string "Beat:", element elTick]]
     getBody w #+ [UI.div #. "wrap" #+ (status : map element elInstruments)]
     
-    timer   <- UI.timer # set UI.interval (bpm2ms defaultBpm)
-    refBeat <- newIORef 0
-    
-    -- play sounds on timer events
-    on UI.tick timer $ const $ void $ do
-        -- get and increase beat count
-        beat <- readIORef refBeat
-        writeIORef refBeat $ (beat + 1) `mod` (beats * bars)
+    timer <- UI.timer # set UI.interval (bpm2ms defaultBpm)
+    eBeat <- accumE (0::Int) $
+        (\beat -> (beat + 1) `mod` (beats * bars)) <$ UI.tick timer
+    _ <- register eBeat $ \beat -> do
+        -- display beat count
         element elTick # set text (show $ beat + 1)
-        
         -- play corresponding sounds
         sequence_ $ map (!! beat) kit
     
     -- allow user to set BPM
-    on (domEvent "livechange") elBpm $ const $ void $ do
+    on UI.keydown elBpm $ \keycode -> when (keycode == 13) $ void $ do
         bpm <- read <$> get value elBpm
         return timer # set UI.interval (bpm2ms bpm)
     
@@ -97,7 +92,9 @@ mkInstrument window name = do
     let
         play box = do
             checked <- get UI.checked box
-            when checked $ audioPlay elAudio
+            when checked $ do
+                audioStop elAudio -- just in case the sound is already playing
+                audioPlay elAudio
         beats    = map play . concat $ elCheckboxes
         elGroups = [UI.span #. "bar" #+ map element bar | bar <- elCheckboxes]
     
