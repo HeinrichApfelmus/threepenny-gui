@@ -39,12 +39,10 @@ Cabal-version:       >=1.8
 
 Extra-Source-Files:  src/Graphics/UI/*.html
                     ,src/Graphics/UI/*.js
+                    ,src/Graphics/UI/*.css
 
 Data-dir:            .
-Data-files:          src/Graphics/UI/*.js
-                    ,src/Graphics/UI/*.html
-                    ,src/Graphics/UI/*.css
-                    ,wwwroot/css/*.css
+Data-files:          wwwroot/css/*.css
                     ,wwwroot/css/*.png
                     ,wwwroot/*.html
                     ,wwwroot/*.txt
@@ -78,6 +76,7 @@ Library
                     ,Control.Concurrent.Delay
                     ,Graphics.UI.Threepenny.Internal.Core
                     ,Graphics.UI.Threepenny.Internal.Resources
+                    ,Graphics.UI.Threepenny.Internal.Include
                     ,Graphics.UI.Threepenny.Internal.Types
                     ,Reactive.Threepenny.PulseLatch
                     ,Reactive.Threepenny.Memo
@@ -101,6 +100,7 @@ Library
                     ,network
                     ,filepath
                     ,data-default
+                    ,template-haskell
                     ,transformers
                     ,stm
                     ,attoparsec-enumerator
