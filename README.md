@@ -1,4 +1,6 @@
-Use the web browser as a GUI, controllable from Haskell.
+Threepenny-gui is a GUI framework that uses the web browser as a display.
+
+* [Project homepage](http://www.haskell.org/haskellwiki/Threepenny-gui)
 
 ## Introduction
 
@@ -12,8 +14,8 @@ What is more, Threepenny is controlled entirely from within Haskell code,
 relieving the user of writing client-side Javascript by hand.
 
 Threepenny comes with a simple web server that is preconfigured to host a 
-client-side JS file called threepenny-gui.js.  The Threepenny API communicates
-with this JS to create new elements, respond to events, and more.  This frequent
+client-side JS file called `threepenny-gui.js`. The Threepenny API communicates
+with this JS to create new elements, respond to events, and more. This frequent
 communication precludes Threepenny from use in high-latency environments.
 
 Users can, however, write their own Javascript if they wish, and invoke that
@@ -87,3 +89,17 @@ can read the pages.
 
 There are plenty more like this, but this is the first that springs to
 mind that is good.
+
+## Contributors
+
+Many thanks to everyone who contributed, provided feedback or simply wrote an application using Threepenny!
+
+* *Heinrich Apfelmus*
+* *Daniel Austin*
+* Daniel Díaz
+* *Daniel Mlot*
+* Luke Palmer
+* Jens Petersen
+* rnons
+
+Special thanks to *Chris Done* for starting the precursor project Ji.

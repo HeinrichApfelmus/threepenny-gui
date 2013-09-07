@@ -9,7 +9,7 @@ module Reactive.Threepenny (
     
     -- * IO
     -- | Functions to connect events to the outside world.
-    Handler, newEvent, newEventsNamed, register,
+    Handler, newEvent, register,
     currentValue,
     
     -- * Core Combinators
@@ -36,7 +36,9 @@ module Reactive.Threepenny (
     -- $recursion
     
     -- * Internal
-    onChange, unsafeMapIO,
+    -- | Functions reserved for special circumstances.
+    -- Do not use unless you know what you're doing.
+    onChange, unsafeMapIO, newEventsNamed,
     ) where
 
 import Control.Applicative
