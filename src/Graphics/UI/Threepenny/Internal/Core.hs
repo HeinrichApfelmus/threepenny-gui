@@ -11,13 +11,18 @@ module Graphics.UI.Threepenny.Internal.Core
    serve
   ,loadFile
   ,loadDirectory
+
+  -- * Manipulating tree structure
+  -- $treestructure
+  ,newElement
+  ,appendElementTo
   
   -- * Event handling
   -- $eventhandling
   ,bind
   ,disconnect
   ,module Reactive.Threepenny
-  
+ 
   -- * Setting attributes
   -- $settingattributes
   ,setStyle
@@ -28,11 +33,6 @@ module Graphics.UI.Threepenny.Internal.Core
   ,setTitle
   ,emptyEl
   ,delete
-  
-  -- * Manipulating tree structure
-  -- $treestructure
-  ,newElement
-  ,appendElementTo
   
   -- * Querying
   -- $querying
@@ -103,6 +103,8 @@ import           System.FilePath
 import qualified Text.JSON as JSON
 import           Text.JSON.Generic
 
+
+import qualified System.Mem.Coupon as Foreign
 
 {-----------------------------------------------------------------------------
     Server and and session management
@@ -186,14 +188,15 @@ newSession sServerState sStartInfo sToken = do
     sEventHandlers    <- newMVar M.empty
     sElementEvents    <- newMVar M.empty
     sEventQuit        <- newEvent
-    sElementIds       <- newMVar [0..]
+    sPrizeBooth       <- Foreign.newPrizeBooth
+    let sHeadElement  =  undefined -- filled in later
+    let sBodyElement  =  undefined
     now               <- getCurrentTime
     sConnectedState   <- newMVar (Disconnected now)
     sThreadId         <- myThreadId
     sClosures         <- newMVar [0..]
     let session = Session {..}
     initializeElementEvents session    
-    return session
 
 -- | Make a new session and add it to the server
 createSession :: (Session -> IO void) -> ServerState -> Snap Session
@@ -445,6 +448,68 @@ loadDirectory Session{..} path = do
 
 
 {-----------------------------------------------------------------------------
+    Elements
+        Creation, Management, Finalization
+------------------------------------------------------------------------------}
+-- $treestructure
+--
+-- Functions for creating, deleting, moving, appending, prepending, DOM nodes.
+
+-- | Create a new element of the given tag name.
+newElement :: Window      -- ^ Browser window in which context to create the element
+           -> String      -- ^ The tag name.
+           -> IO Element  -- ^ A tag reference. Non-blocking.
+newElement elSession@(Session{..}) elTagName =
+    Foreign.newItem sPrizeBooth ElementData{..}
+
+-- | Perform an action on the element.
+-- The element is not garbage collected while the action is run.
+withElement :: Element -> (ElementId -> Session -> IO b) -> IO b
+withElement e f = Foreign.withItem e $
+    \coupon -> f (ElementId coupon) . elSession
+
+-- | Look up an element in the browser window.
+lookupElement :: ElementId -> Session -> IO Element
+lookupElement (ElementId coupon) Session{..} =
+    maybe (error msg) id <$> Foreign.lookup coupon sPrizeBooth
+    where
+    msg = "Graphics.UI.Threepenny: Fatal error: ElementId " ++ show coupon
+        ++ "was garbage collected on the server, but is still present in the browser."
+
+lookupElements els window = mapM (flip lookupElement window) els
+
+-- | Append a child element to a parent element. Non-blocking.
+appendElementTo
+    :: Element     -- ^ Parent.
+    -> Element     -- ^ Child.
+    -> IO () 
+appendElementTo eParent eChild =
+    -- TODO: Right now, parent and child need to be from the same session/browser window
+    --       Implement transfer of elements across browser windows
+    withElement eParent $ \parent session ->
+    withElement eChild  $ \child  _       ->
+        run session $ Append parent child
+
+-- | Get the head of the page.
+getHead :: Window -> IO Element
+getHead session = return $ sHeadElement session
+
+-- | Get the body of the page.
+getBody :: Window -> IO Element
+getBody session = return $ sBodyElement session
+
+-- | Empty the given element.
+emptyEl :: Element -> IO ()
+emptyEl e = withElement e $ \el session ->
+    run session $ EmptyEl el
+
+-- | Delete the given element.
+delete :: Element -> IO ()
+delete e = withElement e $ \el session ->
+    run session $ Delete el
+
+
+{-----------------------------------------------------------------------------
     Event handling
 ------------------------------------------------------------------------------}
 {- $eventhandling
@@ -497,12 +562,12 @@ bind
     -> Element              -- ^ The element to bind to.
     -> Handler EventData    -- ^ The event handler to bind.
     -> IO ()
-bind eventType (Element el@(ElementId elid) session) handler = do
-    let key = (elid, eventType)
+bind eventType el handler = withElement el $ \elid session -> do
+    let key = (show elid, eventType)
     -- register with client if it has never been registered on the server
     handlers <- readMVar $ sEventHandlers session
     when (not $ key `M.member` handlers) $
-        run session $ Bind eventType el (Closure key)
+        run session $ Bind eventType elid (Closure key)
     -- register with server
     addEventHandler session (key, handler)
 
@@ -511,13 +576,16 @@ disconnect :: Window -> Event ()
 disconnect = fst . sEventQuit
 
 
-initializeElementEvents :: Window -> IO ()
+initializeElementEvents :: Session -> IO Session
 initializeElementEvents session@(Session{..}) = do
-        initEvents =<< getHead session
-        initEvents =<< getBody session
+        sHeadElement <- newElement session "head"
+        sBodyElement <- newElement session "body"
+        initEvents sHeadElement
+        initEvents sBodyElement
+        return $ Session{..}
     where
-    initEvents el@(Element elid _) = do
-        x <- newEventsNamed $ \(name,_,handler) -> bind name el handler
+    initEvents e = withElement e $ \elid _ -> do
+        x <- newEventsNamed $ \(name,_,handler) -> bind name e handler
         modifyMVar_ sElementEvents $ return . M.insert elid x
 
 -- Make a uniquely numbered event handler.
@@ -540,34 +608,38 @@ newClosure window eventType elid thunk = do
 setStyle :: [(String, String)] -- ^ Pairs of CSS (property,value).
          -> Element            -- ^ The element to update.
          -> IO ()
-setStyle props e@(Element el session) = run session $ SetStyle el props
+setStyle props e = withElement e $ \el session ->
+    run session $ SetStyle el props
 
 -- | Set the attribute of the given element.
 setAttr :: String  -- ^ The attribute name.
         -> String  -- ^ The attribute value.
         -> Element -- ^ The element to update.
         -> IO ()
-setAttr key value e@(Element el session) = run session $ SetAttr el key value
+setAttr key value e = withElement e $ \el session ->
+    run session $ SetAttr el key value
 
 -- | Set the property of the given element.
 setProp :: String  -- ^ The property name.
         -> JSValue -- ^ The property value.
         -> Element -- ^ The element to update.
         -> IO ()
-setProp key value e@(Element el session) =
+setProp key value e = withElement e $ \el session ->
     runFunction session $ ffi "$(%1).prop(%2,%3);" el key value
 
 -- | Set the text of the given element.
 setText :: String  -- ^ The plain text.
         -> Element -- ^ The element to update.
         -> IO ()
-setText props e@(Element el session) = run session $ SetText el props
+setText props e = withElement e $ \el session ->
+    run session $ SetText el props
 
 -- | Set the HTML of the given element.
 setHtml :: String  -- ^ The HTML.
         -> Element -- ^ The element to update.
         -> IO ()
-setHtml props e@(Element el session) = run session $ SetHtml el props
+setHtml props e = withElement e $ \el session ->
+    run session $ SetHtml el props
 
 -- | Set the title of the document.
 setTitle
@@ -575,41 +647,6 @@ setTitle
     -> Window  -- ^ The document window
     -> IO ()
 setTitle title session = run session $ SetTitle title
-
--- | Empty the given element.
-emptyEl :: Element -> IO ()
-emptyEl e@(Element el session) = run session $ EmptyEl el
-
--- | Delete the given element.
-delete :: Element -> IO ()
-delete e@(Element el session)  = run session $ Delete el
-
-
-{-----------------------------------------------------------------------------
-    Manipulating tree structure
-------------------------------------------------------------------------------}
--- $treestructure
---
---  Functions for creating, deleting, moving, appending, prepending, DOM nodes.
-
--- | Create a new element of the given tag name.
-newElement :: Window      -- ^ Browser window in which context to create the element
-           -> String      -- ^ The tag name.
-           -> IO Element  -- ^ A tag reference. Non-blocking.
-newElement session@(Session{..}) tagName = do
-    elid <- modifyMVar sElementIds $ \elids ->
-        return (tail elids,"*" ++ show (head elids) ++ ":" ++ tagName)
-    return (Element (ElementId elid) session)
-
--- | Append a child element to a parent element. Non-blocking.
-appendElementTo
-    :: Element     -- ^ Parent.
-    -> Element     -- ^ Child.
-    -> IO () 
-appendElementTo (Element parent session) e@(Element child _) =
-    -- TODO: Right now, parent and child need to be from the same session/browser window
-    --       Implement transfer of elements across browser windows
-    run session $ Append parent child
 
 {-----------------------------------------------------------------------------
     Querying the DOM
@@ -627,7 +664,7 @@ getElementsByTagName
 getElementsByTagName window tagName =
   call window (GetElementsByTagName tagName) $ \signal ->
     case signal of
-      Elements els -> return $ Just $ [Element el window | el <- els]
+      Elements els -> Just <$> lookupElements els window
       _            -> return Nothing
 
 -- | Get a list of elements by particular IDs.  Blocks.
@@ -638,7 +675,7 @@ getElementsById
 getElementsById window ids =
   call window (GetElementsById ids) $ \signal ->
     case signal of
-      Elements els -> return $ Just [Element el window | el <- els]
+      Elements els -> Just <$> lookupElements els window
       _            -> return Nothing
 
 -- | Get a list of elements by particular class.  Blocks.
@@ -649,14 +686,14 @@ getElementsByClassName
 getElementsByClassName window cls =
   call window (GetElementsByClassName cls) $ \signal ->
     case signal of
-      Elements els -> return $ Just [Element el window | el <- els]
+      Elements els -> Just <$> lookupElements els window
       _            -> return Nothing
 
 -- | Get the value of an input. Blocks.
 getValue
     :: Element   -- ^ The element to get the value of.
     -> IO String -- ^ The plain text value.
-getValue e@(Element el window) =
+getValue e = withElement e $ \el window ->
   call window (GetValue el) $ \signal ->
     case signal of
       Value str -> return (Just str)
@@ -667,20 +704,21 @@ getProp
     :: String     -- ^ The property name.
     -> Element    -- ^ The element to get the value of.
     -> IO JSValue -- ^ The plain text value.
-getProp prop e@(Element el window) =
+getProp prop e = withElement e $ \el window ->
     callFunction window (ffi "$(%1).prop(%2)" el prop)
 
 -- | Get 'Window' associated to an 'Element'.
 getWindow :: Element -> Window
-getWindow (Element _ window) = window
+getWindow = elSession . Foreign.getValue
 
 -- | Get values from inputs. Blocks. This is faster than many 'getValue' invocations.
 getValuesList
     :: [Element]   -- ^ A list of elements to get the values of.
     -> IO [String] -- ^ The list of plain text values.
-getValuesList [] = return []
-getValuesList es@(Element _ window : _) =
-    let elids = [elid | Element elid _ <- es] in
+getValuesList []        = return []
+getValuesList es@(e0:_) = do
+    let window = elSession $ Foreign.getValue e0
+    let elids  = [ElementId (Foreign.getCoupon e) | e <- es ]
     call window (GetValues elids) $ \signal ->
         case signal of
             Values strs -> return $ Just strs
@@ -699,14 +737,6 @@ readValuesList
     => [Element]      -- ^ The element to read a value from.
     -> IO (Maybe [a]) -- ^ Maybe the read values. All or none.
 readValuesList = liftM (sequence . map readMay) . getValuesList
-
--- | Get the head of the page.
-getHead :: Window -> IO Element
-getHead session = return $ Element (ElementId "head") session
-
--- | Get the body of the page.
-getBody :: Window -> IO Element
-getBody session = return $ Element (ElementId "body") session
 
 -- | Get the request location.
 getRequestLocation :: Window -> IO URI
@@ -729,4 +759,6 @@ debug window = run window . Debug
 
 -- | Clear the client's DOM.
 clear :: Window -> IO ()
-clear window = runFunction window $ ffi "$('body').contents().detach()"
+clear window = do
+    runFunction window $ ffi "$('body').contents().detach()"
+    emptyEl =<< getBody window

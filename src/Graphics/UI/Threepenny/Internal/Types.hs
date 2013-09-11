@@ -17,22 +17,21 @@ import Network.URI
 import Text.JSON.Generic
 import System.IO (stderr)
 
+import System.Mem.Coupon (Coupon, PrizeBooth)
+import qualified System.Mem.Coupon as Foreign
+
 {-----------------------------------------------------------------------------
     Public types
 ------------------------------------------------------------------------------}
-
 -- | Reference to an element in the DOM of the client window.
-data Element = Element
-    { elId      :: ElementId
+type Element     = Foreign.Item ElementData
+data ElementData = ElementData
+    { elTagName :: String
     , elSession :: Session
     }
 
-instance Show Element where
-    show = show . elId
-
--- | An opaque reference to an element in the DOM.
-data ElementId = ElementId String
-  deriving (Data,Typeable,Show,Eq,Ord)
+data ElementId   = ElementId Foreign.Coupon
+                   deriving (Data,Typeable,Show,Eq,Ord)
 
 instance JSON ElementId where
   showJSON (ElementId o) = showJSON o
@@ -50,7 +49,9 @@ data Session = Session
   , sElementEvents  :: MVar (Map ElementId ElementEvents)
   , sEventQuit      :: (E.Event (), E.Handler ())
   , sClosures       :: MVar [Integer]
-  , sElementIds     :: MVar [Integer]
+  , sPrizeBooth     :: PrizeBooth ElementData
+  , sHeadElement    :: Element
+  , sBodyElement    :: Element
   , sToken          :: Integer
   , sConnectedState :: MVar ConnectedState
   , sThreadId       :: ThreadId
@@ -189,9 +190,10 @@ instance ToJS String    where render   = JSCode . show
 instance ToJS Int       where render   = JSCode . show
 instance ToJS Bool      where render b = JSCode $ if b then "false" else "true"
 instance ToJS JSValue   where render x = JSCode $ showJSValue x ""
+instance ToJS Foreign.Coupon where render = JSCode . show
 instance ToJS ElementId where
     render (ElementId x) = apply "elidToElement(%1)" [render x]
-instance ToJS Element   where render (Element e _) = render e
+instance ToJS Element   where render e = render (ElementId $ Foreign.getCoupon e)
 
 
 -- | Representation of a JavaScript expression
@@ -222,8 +224,12 @@ instance FFI (JSFunction String)    where fancy   = mkResult "%1.toString()"
 instance FFI (JSFunction JSValue)   where fancy   = mkResult "%1"
 instance FFI (JSFunction ElementId) where
     fancy   = mkResult "{ Element: elementToElid(%1) }"
+
+-- FIXME: We need access to IO in order to turn a Coupon into an Element.
+{- 
 instance FFI (JSFunction Element)   where
     fancy   = fmapWindow (\w elid -> Element elid w) . fancy
+-}
 
 mkResult :: JSON a => String -> ([JSCode] -> JSCode) -> JSFunction a
 mkResult client f = JSFunction
