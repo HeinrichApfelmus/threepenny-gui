@@ -72,6 +72,7 @@ Library
                     ,Graphics.UI.Threepenny.Events
                     ,Graphics.UI.Threepenny.JQuery
                     ,Graphics.UI.Threepenny.Timer
+                    ,System.Mem.RemotePtr
   Other-modules:
                      Control.Concurrent.Chan.Extra
                     ,Control.Concurrent.Delay
