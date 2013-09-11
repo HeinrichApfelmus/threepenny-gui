@@ -1,5 +1,5 @@
 Name:                threepenny-gui
-Version:             0.3.0.0
+Version:             0.4.0.0
 Synopsis:            GUI framework that uses the web browser as a display.
 Description:
     Threepenny-GUI is a GUI framework that uses the web browser as a display.
@@ -20,6 +20,8 @@ Description:
     @cabal install threepenny-gui -fbuildExamples@
     .
     Changelog:
+    .
+    * 0.4.0.0 - Snapshot release. Garbage collection for DOM elements.
     .
     * 0.3.0.0 - Snapshot release. Browser communication with WebSockets. First stab at FRP integration.
     .
