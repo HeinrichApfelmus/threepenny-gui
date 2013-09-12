@@ -1,5 +1,7 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Graphics.UI.Threepenny.Internal.Types where
 
@@ -7,21 +9,21 @@ import Prelude              hiding (init)
 
 import Control.Applicative
 import Control.Concurrent
-import qualified Reactive.Threepenny as E
-import Data.ByteString               (ByteString, hPut)
-import Data.Map                      (Map)
-import Data.String                   (fromString)
+import qualified Reactive.Threepenny    as E
+import           Data.ByteString.Char8  (ByteString)
+import qualified Data.ByteString.Char8  as BS
+import Data.Map                         (Map)
+import Data.String                      (fromString)
 import Data.Time
 
 import Network.URI
 import Text.JSON.Generic
 import System.IO (stderr)
 
-import System.Mem.Coupon (Coupon, PrizeBooth)
 import qualified System.Mem.Coupon as Foreign
 
 {-----------------------------------------------------------------------------
-    Public types
+    Elements and ElementIds
 ------------------------------------------------------------------------------}
 -- | Reference to an element in the DOM of the client window.
 type Element     = Foreign.Item ElementData
@@ -29,9 +31,13 @@ data ElementData = ElementData
     { elTagName :: String
     , elSession :: Session
     }
-
-data ElementId   = ElementId Foreign.Coupon
+data ElementId   = ElementId BS.ByteString
                    deriving (Data,Typeable,Show,Eq,Ord)
+
+getSession :: Element -> Session
+getSession = elSession . Foreign.getValue
+
+-- Marshalling ElementId
 
 instance JSON ElementId where
   showJSON (ElementId o) = showJSON o
@@ -40,7 +46,35 @@ instance JSON ElementId where
     ElementId <$> valFromObj "Element" obj
 
 
--- | A client session. This type is opaque, you don't need to inspect it.
+getElementId :: Element -> ElementId
+getElementId e = ElementId $ case tag of
+        ""     -> coupon
+        "head" -> "head"
+        "body" -> "body" 
+        tag    -> BS.concat ["*",coupon,":",tag]
+    where
+    coupon = Foreign.getCoupon e
+    tag    = fromString . elTagName . Foreign.getValue $ e
+
+-- | Look up an element in the browser window.
+lookupElement :: ElementId -> Session -> IO Element
+lookupElement (ElementId xs) Session{..} = case xs of
+        "head"      -> return sHeadElement
+        "body"      -> return sBodyElement
+        xs          -> maybe (error msg) id <$> Foreign.lookup (coupon xs) sRemoteBooth
+    where
+    coupon xs = if BS.head xs == '*'
+        then BS.takeWhile (/= ':') . BS.tail $ xs
+        else xs
+
+    msg = "Graphics.UI.Threepenny: Fatal error: ElementId " ++ show xs
+        ++ "was garbage collected on the server, but is still present in the browser."
+
+
+{-----------------------------------------------------------------------------
+    Server
+------------------------------------------------------------------------------}
+-- | A client session.
 data Session = Session
   { sSignals        :: Chan Signal
   , sInstructions   :: Chan Instruction
@@ -49,7 +83,7 @@ data Session = Session
   , sElementEvents  :: MVar (Map ElementId ElementEvents)
   , sEventQuit      :: (E.Event (), E.Handler ())
   , sClosures       :: MVar [Integer]
-  , sPrizeBooth     :: PrizeBooth ElementData
+  , sRemoteBooth    :: Foreign.RemoteBooth ElementData
   , sHeadElement    :: Element
   , sBodyElement    :: Element
   , sToken          :: Integer
@@ -72,16 +106,19 @@ data ServerState = ServerState
     , sDirs     :: MVar Filepaths
     }
 
-
--- | The client browser window.
-type Window = Session
-
 data ConnectedState
   = Disconnected UTCTime -- ^ The time that the poll disconnected, or
                          -- the first initial connection time.
   | Connected            -- ^ The client is connected, we don't care
                          -- since when.
   deriving (Show)
+
+
+{-----------------------------------------------------------------------------
+    Public types
+------------------------------------------------------------------------------}
+-- | The client browser window.
+type Window = Session
 
 -- | Data from an event. At the moment it is empty.
 data EventData = EventData [Maybe String]
@@ -102,14 +139,13 @@ defaultConfig = Config
     { tpPort       = 10000
     , tpCustomHTML = Nothing
     , tpStatic     = Nothing
-    , tpLog        = \s -> hPut stderr s >> hPut stderr (fromString "\n")
+    , tpLog        = \s -> BS.hPut stderr s >> BS.hPut stderr "\n"
     }
 
 
 {-----------------------------------------------------------------------------
     Communication between client and server
 ------------------------------------------------------------------------------}
-
 -- | An instruction that is sent to the client as JSON.
 data Instruction
   = Debug String
@@ -193,7 +229,7 @@ instance ToJS JSValue   where render x = JSCode $ showJSValue x ""
 instance ToJS Foreign.Coupon where render = JSCode . show
 instance ToJS ElementId where
     render (ElementId x) = apply "elidToElement(%1)" [render x]
-instance ToJS Element   where render e = render (ElementId $ Foreign.getCoupon e)
+instance ToJS Element   where render = render . getElementId
 
 
 -- | Representation of a JavaScript expression

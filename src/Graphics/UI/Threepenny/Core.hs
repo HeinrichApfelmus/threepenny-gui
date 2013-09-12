@@ -139,7 +139,9 @@ data    Elem
 -- Note that multiple MVars may now point to the same live reference,
 -- but this is ok since live references never change.
 fromAlive :: Core.Element -> IO Element
-fromAlive e@(Core.Element elid Session{..}) = do
+fromAlive e = do
+    let Session{..} = Core.getSession   e
+    let elid        = Core.getElementId e
     Just events <- Map.lookup elid <$> readMVar sElementEvents
     Element events <$> newMVar (Alive e)
 
@@ -171,8 +173,9 @@ manifestElement w (Element events me) = do
         return e2
     
     where
-    rememberEvents events (Core.Element elid Session{..}) =
-        modifyMVar_ sElementEvents $ return . Map.insert elid events
+    rememberEvents events e =
+        let Session{..} = Core.getSession e; elid = Core.getElementId e
+        in modifyMVar_ sElementEvents $ return . Map.insert elid events
 
 
 -- Append a child element to a parent element. Non-blocking.

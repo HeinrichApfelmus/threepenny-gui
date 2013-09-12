@@ -7,7 +7,7 @@ module System.Mem.Coupon (
     
     -- * Documentation
     Coupon,
-    PrizeBooth, newPrizeBooth, lookup,
+    RemoteBooth, newRemoteBooth, lookup,
     
     Item, newItem, addFinalizer, destroy, withItem,
     getCoupon, getValue,
@@ -29,7 +29,7 @@ import System.Mem.Weak hiding (addFinalizer)
 type Map = Map.Map
 
 {-----------------------------------------------------------------------------
-    Coupon
+    Types
 ------------------------------------------------------------------------------}
 -- | Coupons can be used as a proxy for items.
 -- The important point is that they can be serialized and sent
@@ -44,26 +44,26 @@ data Item a = Item
 
 -- | Prize boothes keep track of items and coupons.
 -- However, they do not keep items alive.
-data PrizeBooth a = PrizeBooth
-    { pbCoupons :: MVar (Map Coupon (Weak (Item a)))
-    , pbCounter :: MVar [Integer]
+data RemoteBooth a = RemoteBooth
+    { bCoupons :: MVar (Map Coupon (Weak (Item a)))
+    , bCounter :: MVar [Integer]
     }
 
+{-----------------------------------------------------------------------------
+    Booth and Coupons
+------------------------------------------------------------------------------}
 -- | Create a new prize booth for creating items and trading coupons.
-newPrizeBooth :: IO (PrizeBooth a)
-newPrizeBooth = do
-    pbCounter <- newMVar [0..]
-    pbCoupons <- newMVar Map.empty
-    return $ PrizeBooth {..}
+newRemoteBooth :: IO (RemoteBooth a)
+newRemoteBooth = do
+    bCounter <- newMVar [0..]
+    bCoupons <- newMVar Map.empty
+    return $ RemoteBooth {..}
 
 -- | Take a coupon to the prize booth and maybe you'll get an item for it.
-lookup :: Coupon -> PrizeBooth a -> IO (Maybe (Item a))
-lookup = undefined
-
--- | Destroy an item and run all finalizers for it.
--- Coupons for this item can no longer be redeemed.
-destroy :: Item a -> IO ()
-destroy = undefined
+lookup :: Coupon -> RemoteBooth a -> IO (Maybe (Item a))
+lookup coupon RemoteBooth{..} = do
+    w <- Map.lookup coupon <$> readMVar bCoupons
+    maybe (return Nothing) deRefWeak w
 
 -- | Create a new item, which can be exchanged for coupons
 -- at an associated prize booth.
@@ -75,16 +75,24 @@ destroy = undefined
 -- 
 -- The prize booth keeps track of coupons and items,
 -- but does not keep the item alive.
-newItem :: PrizeBooth a -> a -> IO (Item a)
-newItem PrizeBooth{..} a = do
-    iCoupon <- BS.fromString . show <$> modifyMVar pbCounter (\(n:ns) -> return (ns,n))
+newItem :: RemoteBooth a -> a -> IO (Item a)
+newItem RemoteBooth{..} a = do
+    iCoupon <- BS.fromString . show <$> modifyMVar bCounter (\(n:ns) -> return (ns,n))
     iKey    <- newUnique
     let iValue = a
     let item   = Item {..}
-    modifyMVar pbCoupons $ \m -> do
+    modifyMVar bCoupons $ \m -> do
         w <- mkWeak iKey item Nothing
         return (Map.insert iCoupon w m, ())
     return item
+
+{-----------------------------------------------------------------------------
+    Items
+------------------------------------------------------------------------------}
+-- | Destroy an item and run all finalizers for it.
+-- Coupons for this item can no longer be redeemed.
+destroy :: Item a -> IO ()
+destroy = undefined
 
 -- | Add a finalizer that is run when the item is garbage collected.
 --
@@ -97,7 +105,15 @@ addFinalizer = undefined
 -- While the action is being performed, the item will not be garbage collected
 -- and the coupon can be succesfully redeemed at the prize booth.
 withItem :: Item a -> (Coupon -> a -> IO b) -> IO b
-withItem = undefined
+withItem item f = do
+    b <- f (getCoupon item) (getValue item)
+    touchItem item
+    return b
+
+-- | Make Sure that the item in question is alive
+-- at the given place in the sequence of IO actions.
+touchItem :: Item a -> IO ()
+touchItem = void . evaluate
 
 -- | Get the coupon for an item.
 --

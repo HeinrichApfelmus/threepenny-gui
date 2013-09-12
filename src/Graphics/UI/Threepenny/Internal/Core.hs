@@ -188,7 +188,7 @@ newSession sServerState sStartInfo sToken = do
     sEventHandlers    <- newMVar M.empty
     sElementEvents    <- newMVar M.empty
     sEventQuit        <- newEvent
-    sPrizeBooth       <- Foreign.newPrizeBooth
+    sRemoteBooth       <- Foreign.newRemoteBooth
     let sHeadElement  =  undefined -- filled in later
     let sBodyElement  =  undefined
     now               <- getCurrentTime
@@ -460,22 +460,15 @@ newElement :: Window      -- ^ Browser window in which context to create the ele
            -> String      -- ^ The tag name.
            -> IO Element  -- ^ A tag reference. Non-blocking.
 newElement elSession@(Session{..}) elTagName =
-    Foreign.newItem sPrizeBooth ElementData{..}
+    Foreign.newItem sRemoteBooth ElementData{..}
 
 -- | Perform an action on the element.
 -- The element is not garbage collected while the action is run.
 withElement :: Element -> (ElementId -> Session -> IO b) -> IO b
-withElement e f = Foreign.withItem e $
-    \coupon -> f (ElementId coupon) . elSession
+withElement e f = Foreign.withItem e $ \_ _ -> f (getElementId e) (getSession e)
 
--- | Look up an element in the browser window.
-lookupElement :: ElementId -> Session -> IO Element
-lookupElement (ElementId coupon) Session{..} =
-    maybe (error msg) id <$> Foreign.lookup coupon sPrizeBooth
-    where
-    msg = "Graphics.UI.Threepenny: Fatal error: ElementId " ++ show coupon
-        ++ "was garbage collected on the server, but is still present in the browser."
-
+-- | Look up several elements in the browser window.
+lookupElements :: [ElementId] -> Session -> IO [Element]
 lookupElements els window = mapM (flip lookupElement window) els
 
 -- | Append a child element to a parent element. Non-blocking.
@@ -500,8 +493,8 @@ getBody session = return $ sBodyElement session
 
 -- | Empty the given element.
 emptyEl :: Element -> IO ()
-emptyEl e = withElement e $ \el session ->
-    run session $ EmptyEl el
+emptyEl e = withElement e $ \elid window ->
+    runFunction window $ ffi "$(%1).contents().detach()" elid
 
 -- | Delete the given element.
 delete :: Element -> IO ()
@@ -717,8 +710,8 @@ getValuesList
     -> IO [String] -- ^ The list of plain text values.
 getValuesList []        = return []
 getValuesList es@(e0:_) = do
-    let window = elSession $ Foreign.getValue e0
-    let elids  = [ElementId (Foreign.getCoupon e) | e <- es ]
+    let window = getSession e0
+    let elids  = map getElementId es
     call window (GetValues elids) $ \signal ->
         case signal of
             Values strs -> return $ Just strs
@@ -759,6 +752,4 @@ debug window = run window . Debug
 
 -- | Clear the client's DOM.
 clear :: Window -> IO ()
-clear window = do
-    runFunction window $ ffi "$('body').contents().detach()"
-    emptyEl =<< getBody window
+clear window = emptyEl =<< getBody window
