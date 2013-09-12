@@ -160,8 +160,13 @@ $.fn.livechange = function(ms,trigger){
       ws.close();
     });
     
-    var sendEvent = function (e) {
-      ws.send(JSON.stringify({ Event : e}));
+    var sendEvent = function (elid, key, params) {
+      ws.send(JSON.stringify({ Event : 
+          { Element : { Element : elid }
+          , EventId : key
+          , Params  : params
+          }
+        }));
     }
     var reply     = function (response) {
       if (response != undefined)
@@ -204,14 +209,15 @@ $.fn.livechange = function(ms,trigger){
       switch(key){
 
       case "CallDeferredFunction": {
-        var call = event.CallDeferredFunction;
-        var closure = call[0];
+        // FIXME: CallDeferredFunction probably doesn't work right now.
+        var call        = event.CallDeferredFunction;
+        var closure     = call[0];
         var theFunction = eval(call[1]);
-        var params = call[2];
+        var params      = call[2];
         theFunction.apply(window, params.concat(function(){
           console_log(this);
           var args = Array.prototype.slice.call(arguments,0);
-          sendEvent(closure.concat([args]));
+          sendEvent(closure[0],closure[1],args);
         }));
         reply();
         break;
@@ -341,40 +347,40 @@ $.fn.livechange = function(ms,trigger){
       case "Bind": {
         var bind        = event.Bind;
         var eventType   = bind[0];
-        var handlerGuid = bind[2];
-        var el = elidToElement(bind[1]);
+        var elid        = bind[1];
+        var el          = elidToElement(elid);
         console_log('event type: ' + eventType);
         if(eventType == 'livechange') {
           $(el).livechange(300,function(e){
-            sendEvent( handlerGuid.concat([[$(el).val()]]) );
+            sendEvent(elid,eventType, [$(el).val()]);
             return true;
           });
         } else if(eventType == 'sendvalue') {
           $(el).sendvalue(function(x){
-            sendEvent( handlerGuid.concat([[x]]) );
+            sendEvent(elid,eventType, [x]);
           });
         } else if(eventType.match('dragstart|dragenter|dragover|dragleave|drag|drop|dragend')) {
           $(el).bind(eventType,function(e){
-            sendEvent( handlerGuid.concat([
+            sendEvent(elid,eventType,
                 e.originalEvent.dataTransfer
-                    ?[e.originalEvent.dataTransfer.getData("dragData")]
-                    :[]])
+                    ? [e.originalEvent.dataTransfer.getData("dragData")]
+                    : []
               );
             return true;
           });
         } else if(eventType.match('mousemove')) {
           $(el).bind(eventType,function(e){
-            sendEvent( handlerGuid.concat([[e.pageX.toString(), e.pageY.toString()]]) );
+            sendEvent(elid,eventType, [e.pageX.toString(), e.pageY.toString()]);
             return true;
           });
         } else if(eventType.match('keydown|keyup')) {
           $(el).bind(eventType,function(e){
-            sendEvent( handlerGuid.concat([[e.keyCode.toString()]]) );
+            sendEvent(elid,eventType, [e.keyCode.toString()]);
             return true;
           });
         } else {
           $(el).bind(eventType,function(e){
-            sendEvent( handlerGuid.concat([e.which?[e.which.toString()]:[]]) );
+            sendEvent(elid,eventType, e.which ? [e.which.toString()] : []);
             return true;
           });
         }

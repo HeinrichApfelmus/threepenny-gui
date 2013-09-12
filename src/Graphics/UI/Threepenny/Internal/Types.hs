@@ -27,14 +27,22 @@ import qualified System.Mem.Coupon as Foreign
 -- | Reference to an element in the DOM of the client window.
 type Element     = Foreign.Item ElementData
 data ElementData = ElementData
-    { elTagName :: String
-    , elSession :: Session
+    { elTagName  :: String
+    , elSession  :: Session
+    , elHandlers :: MVar Handlers
     }
 data ElementId   = ElementId BS.ByteString
                    deriving (Data,Typeable,Show,Eq,Ord)
 
 getSession :: Element -> Session
 getSession = elSession . Foreign.getValue
+
+-- | Collection of handlers associated with a particular element.
+type Handlers = Map EventId (E.Handler EventData)
+
+getHandlers :: Element -> MVar Handlers
+getHandlers = elHandlers . Foreign.getValue
+
 
 -- Marshalling ElementId
 
@@ -78,7 +86,6 @@ data Session = Session
   { sSignals        :: Chan Signal
   , sInstructions   :: Chan Instruction
   , sMutex          :: MVar ()
-  , sEventHandlers  :: MVar (Map EventKey (E.Handler EventData))
   , sElementEvents  :: MVar (Map ElementId ElementEvents)
   , sEventQuit      :: (E.Event (), E.Handler ())
   , sClosures       :: MVar [Integer]
@@ -96,7 +103,7 @@ type Sessions      = Map Integer Session
 type MimeType      = ByteString
 type Filepaths     = (Integer, Map ByteString (FilePath, MimeType))
 
-type EventKey      = (String, String)
+type EventId       = String
 type ElementEvents = String -> E.Event EventData
 
 data ServerState = ServerState
@@ -111,6 +118,12 @@ data ConnectedState
   | Connected            -- ^ The client is connected, we don't care
                          -- since when.
   deriving (Show)
+
+
+-- | An opaque reference to a closure that the event manager uses to
+--   trigger events signalled by the client.
+data Closure = Closure (ElementId,EventId)
+    deriving (Typeable,Data,Show)
 
 
 {-----------------------------------------------------------------------------
@@ -157,7 +170,7 @@ data Instruction
   | Append ElementId ElementId
   | SetText ElementId String
   | SetHtml ElementId String
-  | Bind String ElementId Closure
+  | Bind EventId ElementId
   | GetValue ElementId
   | GetValues [ElementId]
   | SetTitle String
@@ -175,7 +188,7 @@ instance JSON Instruction where
 data Signal
   = Quit ()
   | Elements [ElementId]
-  | Event (String,String,[Maybe String])
+  | Event ElementId EventId [Maybe String]
   | Value String
   | Values [String]
   | FunctionCallValues [Maybe String]
@@ -189,9 +202,12 @@ instance JSON Signal where
     let quit     = Quit <$> valFromObj "Quit" obj
         elements = Elements <$> valFromObj "Elements" obj
         event = do
-          (cid,typ,arguments) <- valFromObj "Event" obj
-          args <- mapM nullable arguments
-          return $ Event (cid,typ,args)
+          e         <- valFromObj "Event" obj
+          elid      <- valFromObj "Element" e
+          eventId   <- valFromObj "EventId" e
+          arguments <- valFromObj "Params"  e
+          args      <- mapM nullable arguments
+          return $ Event elid eventId args
         value = Value <$> valFromObj "Value" obj
         values = Values <$> valFromObj "Values" obj
         fcallvalues = do
@@ -203,9 +219,4 @@ instance JSON Signal where
 nullable :: JSON a => JSValue -> Result (Maybe a)
 nullable JSNull = return Nothing
 nullable v      = Just <$> readJSON v
-
--- | An opaque reference to a closure that the event manager uses to
---   trigger events signalled by the client.
-data Closure = Closure EventKey
-    deriving (Typeable,Data,Show)
 

@@ -185,10 +185,9 @@ newSession sServerState sStartInfo sToken = do
     sSignals          <- newChan
     sInstructions     <- newChan
     sMutex            <- newMVar ()
-    sEventHandlers    <- newMVar M.empty
     sElementEvents    <- newMVar M.empty
     sEventQuit        <- newEvent
-    sRemoteBooth       <- Foreign.newRemoteBooth
+    sRemoteBooth      <- Foreign.newRemoteBooth
     let sHeadElement  =  undefined -- filled in later
     let sBodyElement  =  undefined
     now               <- getCurrentTime
@@ -343,10 +342,9 @@ callDeferredFunction
   -> [String]                  -- ^ Parameters.
   -> ([Maybe String] -> IO ()) -- ^ The continuation to call if/when the function completes.
   -> IO ()
-callDeferredFunction session@(Session{..}) func params closure = do
-  cid      <- modifyMVar sClosures (\(x:xs) -> return (xs,x))
-  closure' <- newClosure session func (show cid) closure
-  run session $ CallDeferredFunction (closure',func,params)
+callDeferredFunction window fun params thunk = do
+    closure <- newClosure window fun $ \(EventData xs) -> thunk xs
+    run window $ CallDeferredFunction (closure,fun,params)
 
 -- | Run the given JavaScript function and carry on. Doesn't block.
 --
@@ -365,6 +363,22 @@ callFunction window jsfunction =
                 Ok    a -> return $ Just a
                 Error _ -> return Nothing
             _ -> return Nothing
+
+
+-- | Package a Haskell function such that it can be called from JavaScript.
+-- 
+-- At the moment, we implement this as an event handler that is
+-- attached to the @head@ element.
+newClosure
+    :: Window               -- ^ Browser window context
+    -> String               -- ^ Function name (for debugging).
+    -> (EventData -> IO ()) -- ^ Function to call
+    -> IO Closure
+newClosure window@(Session{..}) fun thunk = do
+    cid <- modifyMVar sClosures $ \(x:xs) -> return (xs,x)
+    let eventId = fun ++ "-" ++ show cid
+    attachClosure sHeadElement eventId thunk
+    return $ Closure (getElementId sHeadElement, eventId)
 
 
 {-----------------------------------------------------------------------------
@@ -459,7 +473,8 @@ loadDirectory Session{..} path = do
 newElement :: Window      -- ^ Browser window in which context to create the element
            -> String      -- ^ The tag name.
            -> IO Element  -- ^ A tag reference. Non-blocking.
-newElement elSession@(Session{..}) elTagName =
+newElement elSession@(Session{..}) elTagName = do
+    elHandlers <- newMVar M.empty
     Foreign.newItem sRemoteBooth ElementData{..}
 
 -- | Get 'Window' associated to an 'Element'.
@@ -525,8 +540,8 @@ handleEvents :: Window -> IO ()
 handleEvents window@(Session{..}) = do
     signal <- getSignal window
     case signal of
-        Threepenny.Event (elid,eventType,params) -> do
-            handleEvent1 window ((elid,eventType),EventData params)
+        Threepenny.Event elid eventId params -> do
+            handleEvent1 window (elid,eventId,EventData params)
             handleEvents window
         Quit () -> do
             snd sEventQuit ()
@@ -534,18 +549,12 @@ handleEvents window@(Session{..}) = do
         _       -> do
             handleEvents window
 
--- | Add a new event handler for a given key
-addEventHandler :: Window -> (EventKey, Handler EventData) -> IO () 
-addEventHandler Session{..} (key,handler) =
-    modifyMVar_ sEventHandlers $ return .
-        M.insertWith (\h1 h a -> h1 a >> h a) key handler        
-
-
--- | Handle a single event
-handleEvent1 :: Window -> (EventKey,EventData) -> IO ()
-handleEvent1 Session{..} (key,params) = do
-    handlers <- readMVar sEventHandlers
-    case M.lookup key handlers of
+-- | Handle a single event.
+handleEvent1 :: Window -> (ElementId, EventId, EventData) -> IO ()
+handleEvent1 window (elid,eventId,params) = do
+    el       <- lookupElement elid window
+    handlers <- readMVar $ getHandlers el
+    case M.lookup eventId handlers of
         Just handler -> handler params
         Nothing      -> return ()
 
@@ -553,26 +562,31 @@ handleEvent1 Session{..} (key,params) = do
 getSignal :: Window -> IO Signal
 getSignal (Session{..}) = readChan sSignals
 
+-- | Associate a new closure with an element.
+attachClosure :: Element -> EventId -> Handler EventData -> IO () 
+attachClosure el eventId handler = do
+    modifyMVar_ (getHandlers el) $ return .
+        M.insertWith (\h1 h a -> h1 a >> h a) eventId handler
+
 -- | Bind an event handler for a dom event to an 'Element'.
 bind
-    :: String               -- ^ The eventType, see any DOM documentation for a list of these.
+    :: EventId              -- ^ The eventType, see any DOM documentation for a list of these.
     -> Element              -- ^ The element to bind to.
     -> Handler EventData    -- ^ The event handler to bind.
     -> IO ()
-bind eventType el handler = withElement el $ \elid session -> do
-    let key = (show elid, eventType)
+bind eventId el handler = withElement el $ \elid session -> do
+    handlers <- readMVar $ getHandlers el
     -- register with client if it has never been registered on the server
-    handlers <- readMVar $ sEventHandlers session
-    when (not $ key `M.member` handlers) $
-        run session $ Bind eventType elid (Closure key)
+    when (not $ eventId `M.member` handlers) $
+        run session $ Bind eventId elid
     -- register with server
-    addEventHandler session (key, handler)
+    attachClosure el eventId handler
 
 -- | Register event handler that occurs when the client has disconnected.
 disconnect :: Window -> Event ()
 disconnect = fst . sEventQuit
 
-
+-- | Initialize the 'head' and 'body' elements when the session starts.
 initializeElementEvents :: Session -> IO Session
 initializeElementEvents session@(Session{..}) = do
         sHeadElement <- newElement session "head"
@@ -585,12 +599,6 @@ initializeElementEvents session@(Session{..}) = do
         x <- newEventsNamed $ \(name,_,handler) -> bind name e handler
         modifyMVar_ sElementEvents $ return . M.insert elid x
 
--- Make a uniquely numbered event handler.
-newClosure :: Window -> String -> String -> ([Maybe String] -> IO ()) -> IO Closure
-newClosure window eventType elid thunk = do
-    let key = (elid, eventType)
-    addEventHandler window (key, \(EventData xs) -> thunk xs)
-    return (Closure key)
 
 {-----------------------------------------------------------------------------
     Setting attributes
