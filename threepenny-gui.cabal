@@ -73,12 +73,14 @@ Library
                     ,Graphics.UI.Threepenny.JQuery
                     ,Graphics.UI.Threepenny.Timer
                     ,System.Mem.RemotePtr
+                    ,System.Mem.Coupon
   Other-modules:
                      Control.Concurrent.Chan.Extra
                     ,Control.Concurrent.Delay
                     ,Graphics.UI.Threepenny.Internal.Core
-                    ,Graphics.UI.Threepenny.Internal.Resources
+                    ,Graphics.UI.Threepenny.Internal.FFI
                     ,Graphics.UI.Threepenny.Internal.Include
+                    ,Graphics.UI.Threepenny.Internal.Resources
                     ,Graphics.UI.Threepenny.Internal.Types
                     ,Reactive.Threepenny.PulseLatch
                     ,Reactive.Threepenny.Memo
