@@ -69,15 +69,11 @@ module Graphics.UI.Threepenny.Internal.Core
 
 
 
-import           Graphics.UI.Threepenny.Internal.Types     as Threepenny
-import           Graphics.UI.Threepenny.Internal.Resources
-
 import           Control.Applicative
 import           Control.Concurrent
 import           Control.Concurrent.Chan.Extra
 import           Control.Concurrent.Delay
 import qualified Control.Exception
-import           Reactive.Threepenny
 import           Control.Monad
 import           Control.Monad.IO.Class
 import qualified "MonadCatchIO-transformers" Control.Monad.CatchIO as E
@@ -103,6 +99,11 @@ import           System.FilePath
 import qualified Text.JSON as JSON
 import           Text.JSON.Generic
 
+
+import           Graphics.UI.Threepenny.Internal.Types     as Threepenny
+import           Graphics.UI.Threepenny.Internal.Resources
+import           Graphics.UI.Threepenny.Internal.FFI
+import           Reactive.Threepenny
 
 import qualified System.Mem.Coupon as Foreign
 
@@ -352,16 +353,16 @@ callDeferredFunction session@(Session{..}) func params closure = do
 --
 -- The client window uses JavaScript's @eval()@ function to run the code.
 runFunction :: Window -> JSFunction () -> IO ()
-runFunction session = run session . RunJSFunction . unJSCode . code
+runFunction session = run session . RunJSFunction . toCode
 
 -- | Run the given JavaScript function and wait for results. Blocks.
 --
 -- The client window uses JavaScript's @eval()@ function to run the code.
 callFunction :: Window -> JSFunction a -> IO a
-callFunction window (JSFunction code marshal) = 
-    call window (CallJSFunction . unJSCode $ code) $ \signal ->
+callFunction window jsfunction = 
+    call window (CallJSFunction . toCode $ jsfunction) $ \signal ->
         case signal of
-            FunctionResult v -> case marshal window v of
+            FunctionResult v -> case marshalResult jsfunction window v of
                 Ok    a -> return $ Just a
                 Error _ -> return Nothing
             _ -> return Nothing
@@ -461,6 +462,10 @@ newElement :: Window      -- ^ Browser window in which context to create the ele
            -> IO Element  -- ^ A tag reference. Non-blocking.
 newElement elSession@(Session{..}) elTagName =
     Foreign.newItem sRemoteBooth ElementData{..}
+
+-- | Get 'Window' associated to an 'Element'.
+getWindow :: Element -> Window
+getWindow = getSession
 
 -- | Perform an action on the element.
 -- The element is not garbage collected while the action is run.
@@ -699,10 +704,6 @@ getProp
     -> IO JSValue -- ^ The plain text value.
 getProp prop e = withElement e $ \el window ->
     callFunction window (ffi "$(%1).prop(%2)" el prop)
-
--- | Get 'Window' associated to an 'Element'.
-getWindow :: Element -> Window
-getWindow = elSession . Foreign.getValue
 
 -- | Get values from inputs. Blocks. This is faster than many 'getValue' invocations.
 getValuesList

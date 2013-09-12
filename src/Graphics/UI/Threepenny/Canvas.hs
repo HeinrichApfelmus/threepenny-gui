@@ -9,7 +9,6 @@ module Graphics.UI.Threepenny.Canvas (
 
 import Graphics.UI.Threepenny.Core
 import qualified Graphics.UI.Threepenny.Internal.Core as Core
-import qualified Graphics.UI.Threepenny.Internal.Types as Core
 
 {-----------------------------------------------------------------------------
     Canvas
@@ -20,18 +19,16 @@ type Vector = (Int,Int)
 
 -- | Draw the image of an image element onto the canvas at a specified position.
 drawImage :: Element -> Vector -> Canvas -> IO ()
-drawImage eimage (x,y) = updateElement $ \e -> do
-    let window = Core.getSession e
-    let canvas = Core.getElementId e
+drawImage eimage (x,y) = updateElement $ \canvas -> do
+    let window = Core.getWindow canvas
     image <- manifestElement window eimage
     runFunction window $
         ffi "%1.getContext('2d').drawImage(%2,%3,%4)" canvas image x y
 
 -- | Clear the canvas
 clearCanvas :: Canvas -> IO ()
-clearCanvas = updateElement $ \e -> do
-    let window = Core.getSession e
-    let canvas = Core.getElementId e
+clearCanvas = updateElement $ \canvas -> do
+    let window = Core.getWindow canvas
     runFunction window $
         ffi "%1.getContext('2d').clear()" canvas
 
