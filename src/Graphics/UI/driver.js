@@ -202,17 +202,7 @@ $.fn.livechange = function(ms,trigger){
     console_log("Event: %s",JSON.stringify(event));
     for(var key in event){
       switch(key){
-                
-      case "EmptyEl": {
-        var id = event.EmptyEl;
-        var el = elidToElement(id);
-        // Detach child elements without deleting associated event handlers and data.
-        // It is not correct to remove the child elements from the el_table
-        // because they may still be present on the server side.
-        $(el).contents().detach();
-        reply();
-        break;
-      }
+
       case "CallDeferredFunction": {
         var call = event.CallDeferredFunction;
         var closure = call[0];

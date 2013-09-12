@@ -39,7 +39,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * JavaScript FFI
     -- | Direct interface to JavaScript in the browser window.
-    debug, clear,
+    debug,
     ToJS, FFI, ffi, JSFunction, runFunction, callFunction,
     callDeferredFunction, atomic,
     
@@ -66,7 +66,7 @@ import qualified Graphics.UI.Threepenny.Internal.Core  as Core
 import Graphics.UI.Threepenny.Internal.Core
     (getRequestLocation,
      ToJS, FFI, ffi, JSFunction,
-     debug, clear, callFunction, runFunction, callDeferredFunction, atomic, )
+     debug, callFunction, runFunction, callDeferredFunction, atomic, )
 import qualified Graphics.UI.Threepenny.Internal.Types as Core
 import Graphics.UI.Threepenny.Internal.Types
     (Window, Config, defaultConfig, EventData, Session(..))

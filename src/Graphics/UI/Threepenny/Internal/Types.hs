@@ -164,7 +164,6 @@ data Instruction
   | RunJSFunction String
   | CallJSFunction String
   | CallDeferredFunction (Closure,String,[String])
-  | EmptyEl ElementId
   | Delete ElementId
   deriving (Typeable,Data,Show)
 

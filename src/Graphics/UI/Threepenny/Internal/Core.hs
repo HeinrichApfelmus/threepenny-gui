@@ -52,7 +52,6 @@ module Graphics.UI.Threepenny.Internal.Core
   
   -- * Utilities
   ,debug
-  ,clear
   ,callDeferredFunction
   ,atomic
 
@@ -750,7 +749,3 @@ debug
     -> String -- ^ Some plain text to send to the client.
     -> IO ()
 debug window = run window . Debug
-
--- | Clear the client's DOM.
-clear :: Window -> IO ()
-clear window = emptyEl =<< getBody window
