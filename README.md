@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/HeinrichApfelmus/threepenny-gui.png)](https://travis-ci.org/HeinrichApfelmus/threepenny-gui)
+
 Threepenny-gui is a GUI framework that uses the web browser as a display.
 
 * [Project homepage](http://www.haskell.org/haskellwiki/Threepenny-gui)

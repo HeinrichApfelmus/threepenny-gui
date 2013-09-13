@@ -1,0 +1,11 @@
+language: haskell
+notifications:
+  email: false
+before_script:
+  - cabal configure -fbuildExamples
+  - cabal sdist
+  - cd ..
+  - tar -xf threepenny-gui/dist/threepenny-gui*.tar.gz
+  - cd threepenny-gui*
+script:
+  - cabal configure -fbuildExamples --enable-tests && cabal build && cabal test

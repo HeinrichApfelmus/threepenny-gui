@@ -31,7 +31,7 @@ License:             BSD3
 License-file:        LICENSE
 Author:              Chris Done, Heinrich Apfelmus
 Maintainer:          Heinrich Apfelmus <apfelmus at quantentunnel dot de>
-Homepage:            http://github.com/HeinrichApfelmus/threepenny-gui
+Homepage:            http://www.haskell.org/haskellwiki/Threepenny-gui
 Category:            Web, GUI
 Build-type:          Simple
 Cabal-version:       >=1.8
