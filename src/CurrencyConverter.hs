@@ -8,7 +8,7 @@
 import Control.Monad (void)
 import Data.Maybe
 import Text.Printf
-import Text.Read     (readMaybe)
+import Safe          (readMay)
 
 #ifdef CABAL
 import qualified "threepenny-gui" Graphics.UI.Threepenny as UI
@@ -42,7 +42,7 @@ setup window = void $ do
     dollarIn <- stepper "0" $ UI.valueChange dollar
     let
         rate = 0.7 :: Double
-        withString f = maybe "-" (printf "%.2f") . fmap f . readMaybe
+        withString f = maybe "-" (printf "%.2f") . fmap f . readMay
     
         dollarOut = withString (/ rate) <$> euroIn
         euroOut   = withString (* rate) <$> dollarIn

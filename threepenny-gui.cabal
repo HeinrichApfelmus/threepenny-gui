@@ -134,6 +134,7 @@ Executable threepenny-examples-currencyconverter
         cpp-options:       -DCABAL
         build-depends:     base                      >= 4     && < 5
                           ,threepenny-gui
+                          ,safe
     else
         buildable: False
     main-is:           CurrencyConverter.hs
