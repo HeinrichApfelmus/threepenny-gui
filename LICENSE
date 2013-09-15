@@ -1,3 +1,16 @@
+The following license ("BSD3") applies to almost all files in this project,
+in particular the source code indicated in the `threepenny-gui.cabal` file.
+Exceptions are audio sample (*.wav) files,
+and files whose content explicitely indicates a different license.
+
+--
+
+Copyright (c) 2013, Heinrich Apfelmus <https://github.com/HeinrichApfelmus/>
+Copyright (c) 2013, Daniel Austin     <https://github.com/daniel-r-austin>
+Copyright (c) 2013, Daniel Mlot       <https://github.com/duplode>
+Copyright (c) 2013, Rnons             <https://github.com/rnons>
+Copyright (c) 2012, Jeremy Bowers     <https://github.com/thejerf>
+Copyright (c) 2011-2012, Chris Done   <https://github.com/chrisdone>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
