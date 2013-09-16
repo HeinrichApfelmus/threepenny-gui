@@ -66,10 +66,14 @@ Library
                     ,Graphics.UI.Threepenny.Core
                     ,Graphics.UI.Threepenny.Canvas
                     ,Graphics.UI.Threepenny.DragNDrop
-                    ,Graphics.UI.Threepenny.Elements
                     ,Graphics.UI.Threepenny.Events
                     ,Graphics.UI.Threepenny.JQuery
                     ,Graphics.UI.Threepenny.Timer
+                     -- Elements
+                    ,Graphics.UI.Threepenny.Elements
+                    ,Graphics.UI.Threepenny.Elements.Class
+                    ,Graphics.UI.Threepenny.Elements.Checkbox
+                    
   Other-modules:
                      Control.Concurrent.Chan.Extra
                     ,Control.Concurrent.Delay
