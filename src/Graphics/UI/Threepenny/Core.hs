@@ -37,6 +37,9 @@ module Graphics.UI.Threepenny.Core (
     Attr, WriteAttr, ReadAttr, ReadWriteAttr(..),
     set, sink, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
     
+    -- * Widgets
+    Widget(..), element, widget,
+    
     -- * JavaScript FFI
     -- | Direct interface to JavaScript in the browser window.
     debug, clear,
@@ -463,17 +466,6 @@ infixl 8 #.
 (#.) :: IO Element -> String -> IO Element
 (#.) mx s = mx # set (attr "class") s
 
-
--- | Convience synonym for 'return' to make elements work well with 'set'.
---
--- Example usage.
---
--- > e <- mkElement "button"
--- > element e # set text "Ok"
-element :: Element -> IO Element
-element = return
-
-
 -- | Attributes can be 'set' and 'get'.
 type Attr x a = ReadWriteAttr x a a
 
@@ -525,4 +517,30 @@ mkReadAttr get = mkReadWriteAttr get (\_ _ -> return ())
 -- | Build attribute from a setter.
 mkWriteAttr :: (i -> x -> IO ()) -> WriteAttr x i
 mkWriteAttr set = mkReadWriteAttr (\_ -> return ()) set
+
+
+{-----------------------------------------------------------------------------
+    Widget class
+------------------------------------------------------------------------------}
+-- | Widgets are data types that have a visual representation.
+class Widget w where
+    getElement :: w -> Element
+
+instance Widget Element where
+    getElement = id
+
+
+-- | Convience synonym for 'return' to make elements work well with 'set'.
+-- Also works on 'Widget's.
+--
+-- Example usage.
+--
+-- > e <- mkElement "button"
+-- > element e # set text "Ok"
+element :: Widget w => w -> IO Element
+element = return . getElement
+
+-- | Convience synonym for 'return' to make widgets work well with 'set'.
+widget  :: Widget w => w -> IO w
+widget  = return
 
