@@ -46,8 +46,6 @@ module Graphics.UI.Threepenny.Internal.Core
   ,getProp
   ,getValue
   ,getValuesList
-  ,readValue
-  ,readValuesList
   ,getRequestCookies
   ,getRequestLocation
   
@@ -724,20 +722,6 @@ getValuesList es@(e0:_) = do
         case signal of
             Values strs -> return $ Just strs
             _           -> return Nothing
-
--- | Read a value from an input. Blocks.
-readValue
-    :: Read a
-    => Element      -- ^ The element to read a value from.
-    -> IO (Maybe a) -- ^ Maybe the read value.
-readValue = liftM readMay . getValue
-
--- | Read values from inputs. Blocks. This is faster than many 'readValue' invocations.
-readValuesList
-    :: Read a
-    => [Element]      -- ^ The element to read a value from.
-    -> IO (Maybe [a]) -- ^ Maybe the read values. All or none.
-readValuesList = liftM (sequence . map readMay) . getValuesList
 
 -- | Get the request location.
 getRequestLocation :: Window -> IO URI
