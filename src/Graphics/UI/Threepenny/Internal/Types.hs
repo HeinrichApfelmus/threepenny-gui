@@ -27,22 +27,28 @@ import qualified System.Mem.Coupon as Foreign
 -- | Reference to an element in the DOM of the client window.
 type Element     = Foreign.Item ElementData
 data ElementData = ElementData
-    { elTagName  :: String
-    , elSession  :: Session
-    , elHandlers :: MVar Handlers
+    { elTagName  :: String          -- element is a <tag>..</tag> element
+    , elSession  :: Session         -- associated browser window
+    , elHandlers :: MVar Handlers   -- event handlers associated with that element
+    , elEvents   :: Events          -- events         associated with that element
     }
 data ElementId   = ElementId BS.ByteString
                    deriving (Data,Typeable,Show,Eq,Ord)
 
+type EventId  = String
+type Handlers = Map EventId (E.Handler EventData)
+type Events   = EventId -> E.Event EventData
+
+-- getters
+
 getSession :: Element -> Session
 getSession = elSession . Foreign.getValue
-
--- | Collection of handlers associated with a particular element.
-type Handlers = Map EventId (E.Handler EventData)
 
 getHandlers :: Element -> MVar Handlers
 getHandlers = elHandlers . Foreign.getValue
 
+getEvents :: Element -> Events
+getEvents = elEvents . Foreign.getValue
 
 -- Marshalling ElementId
 
@@ -86,7 +92,6 @@ data Session = Session
   { sSignals        :: Chan Signal
   , sInstructions   :: Chan Instruction
   , sMutex          :: MVar ()
-  , sElementEvents  :: MVar (Map ElementId ElementEvents)
   , sEventQuit      :: (E.Event (), E.Handler ())
   , sClosures       :: MVar [Integer]
   , sRemoteBooth    :: Foreign.RemoteBooth ElementData
@@ -102,9 +107,6 @@ data Session = Session
 type Sessions      = Map Integer Session
 type MimeType      = ByteString
 type Filepaths     = (Integer, Map ByteString (FilePath, MimeType))
-
-type EventId       = String
-type ElementEvents = String -> E.Event EventData
 
 data ServerState = ServerState
     { sSessions :: MVar Sessions

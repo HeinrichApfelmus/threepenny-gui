@@ -1,5 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings, PackageImports #-}
+{-# LANGUAGE RecursiveDo #-}
 {-# OPTIONS -fno-warn-name-shadowing #-}
 
 module Graphics.UI.Threepenny.Internal.Core
@@ -185,7 +186,6 @@ newSession sServerState sStartInfo sToken = do
     sSignals          <- newChan
     sInstructions     <- newChan
     sMutex            <- newMVar ()
-    sElementEvents    <- newMVar M.empty
     sEventQuit        <- newEvent
     sRemoteBooth      <- Foreign.newRemoteBooth
     let sHeadElement  =  undefined -- filled in later
@@ -195,7 +195,7 @@ newSession sServerState sStartInfo sToken = do
     sThreadId         <- myThreadId
     sClosures         <- newMVar [0..]
     let session = Session {..}
-    initializeElementEvents session    
+    initializeElements session    
 
 -- | Make a new session and add it to the server
 createSession :: (Session -> IO void) -> ServerState -> Snap Session
@@ -470,10 +470,11 @@ loadDirectory Session{..} path = do
 -- Functions for creating, deleting, moving, appending, prepending, DOM nodes.
 
 -- | Create a new element of the given tag name.
-newElement :: Window      -- ^ Browser window in which context to create the element
-           -> String      -- ^ The tag name.
-           -> IO Element  -- ^ A tag reference. Non-blocking.
-newElement elSession@(Session{..}) elTagName = do
+newElement :: Window        -- ^ Browser window in which context to create the element
+           -> String        -- ^ The tag name.
+           -> Events        -- ^ Events associated to that element.
+           -> IO Element    -- ^ A tag reference. Non-blocking.
+newElement elSession@(Session{..}) elTagName elEvents = do
     elHandlers <- newMVar M.empty
     Foreign.newItem sRemoteBooth ElementData{..}
 
@@ -587,17 +588,16 @@ disconnect :: Window -> Event ()
 disconnect = fst . sEventQuit
 
 -- | Initialize the 'head' and 'body' elements when the session starts.
-initializeElementEvents :: Session -> IO Session
-initializeElementEvents session@(Session{..}) = do
-        sHeadElement <- newElement session "head"
-        sBodyElement <- newElement session "body"
-        initEvents sHeadElement
-        initEvents sBodyElement
+initializeElements :: Session -> IO Session
+initializeElements session@(Session{..}) = do
+        sHeadElement <- createElement "head"
+        sBodyElement <- createElement "body"
         return $ Session{..}
     where
-    initEvents e = withElement e $ \elid _ -> do
-        x <- newEventsNamed $ \(name,_,handler) -> bind name e handler
-        modifyMVar_ sElementEvents $ return . M.insert elid x
+    newEvents     e   = newEventsNamed $ \(name,_,handler) -> bind name e handler
+    createElement tag = mdo
+        x <- newElement session tag =<< newEvents x
+        return x
 
 
 {-----------------------------------------------------------------------------

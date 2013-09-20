@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
+{-# LANGUAGE RecursiveDo #-}
 module Graphics.UI.Threepenny.Core (
     -- * Synopsis
     -- | Core functionality of the Threepenny GUI library.
@@ -67,9 +68,8 @@ import Graphics.UI.Threepenny.Internal.Core
     (getRequestLocation,
      ToJS, FFI, ffi, JSFunction,
      debug, callFunction, runFunction, callDeferredFunction, atomic, )
-import qualified Graphics.UI.Threepenny.Internal.Types as Core
-import Graphics.UI.Threepenny.Internal.Types
-    (Window, Config, defaultConfig, EventData, Session(..))
+import Graphics.UI.Threepenny.Internal.Types as Core
+    (Window, Config, defaultConfig, Events, getEvents, EventData)
 
 {-----------------------------------------------------------------------------
     Server
@@ -127,7 +127,7 @@ cookies = mkReadAttr Core.getRequestCookies
 type Value = String
 
 -- | Reference to an element in the DOM of the client window.
-data Element = Element Core.ElementEvents (MVar Elem) deriving (Typeable)
+data Element = Element Core.Events (MVar Elem) deriving (Typeable)
 -- Element events mvar
 --      events = Events associated to this element
 --      mvar   = Current state of the MVar
@@ -139,11 +139,7 @@ data    Elem
 -- Note that multiple MVars may now point to the same live reference,
 -- but this is ok since live references never change.
 fromAlive :: Core.Element -> IO Element
-fromAlive e = do
-    let Session{..} = Core.getSession   e
-    let elid        = Core.getElementId e
-    Just events <- Map.lookup elid <$> readMVar sElementEvents
-    Element events <$> newMVar (Alive e)
+fromAlive e = Element (Core.getEvents e) <$> newMVar (Alive e)
 
 -- Update an element that may be in Limbo.
 updateElement :: (Core.Element -> IO ()) -> Element -> IO ()
@@ -160,23 +156,16 @@ updateElement f (Element _ me) = do
 -- TODO: 1. Throw exception if the element exists in another window.
 --       2. Don't throw exception, but move the element across windows.
 manifestElement :: Window -> Element -> IO Core.Element
-manifestElement w (Element events me) = do
+manifestElement w (Element _ me) = do
         e1 <- takeMVar me
         e2 <- case e1 of
             Alive e        -> return e
             Limbo v create -> do
                 e2 <- create w
                 Core.setAttr "value" v e2
-                rememberEvents events e2    -- save events in session data
                 return e2
         putMVar me $ Alive e2
         return e2
-    
-    where
-    rememberEvents events e =
-        let Session{..} = Core.getSession e; elid = Core.getElementId e
-        in modifyMVar_ sElementEvents $ return . Map.insert elid events
-
 
 -- Append a child element to a parent element. Non-blocking.
 appendTo
@@ -192,9 +181,9 @@ appendTo parent child = do
 mkElement
     :: String           -- ^ Tag name
     -> IO Element
-mkElement tag = do
+mkElement tag = mdo
     -- create element in Limbo
-    ref <- newMVar (Limbo "" $ \w -> Core.newElement w tag)
+    ref <- newMVar (Limbo "" $ \w -> Core.newElement w tag events)
     -- create events and initialize them when element becomes Alive
     let
         initializeEvent (name,_,handler) = 
