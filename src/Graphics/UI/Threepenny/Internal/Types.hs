@@ -19,7 +19,7 @@ import Network.URI
 import Text.JSON.Generic
 import System.IO (stderr)
 
-import qualified System.Mem.Coupon as Foreign
+import qualified Foreign.Coupon as Foreign
 
 {-----------------------------------------------------------------------------
     Elements and ElementIds
@@ -74,7 +74,7 @@ lookupElement :: ElementId -> Session -> IO Element
 lookupElement (ElementId xs) Session{..} = case xs of
         "head"      -> return sHeadElement
         "body"      -> return sBodyElement
-        xs          -> maybe (error msg) id <$> Foreign.lookup (coupon xs) sRemoteBooth
+        xs          -> maybe (error msg) id <$> Foreign.lookup (coupon xs) sPrizeBooth
     where
     coupon xs = if BS.head xs == '*'
         then BS.takeWhile (/= ':') . BS.tail $ xs
@@ -94,7 +94,7 @@ data Session = Session
   , sMutex          :: MVar ()
   , sEventQuit      :: (E.Event (), E.Handler ())
   , sClosures       :: MVar [Integer]
-  , sRemoteBooth    :: Foreign.RemoteBooth ElementData
+  , sPrizeBooth     :: Foreign.PrizeBooth ElementData
   , sHeadElement    :: Element
   , sBodyElement    :: Element
   , sToken          :: Integer

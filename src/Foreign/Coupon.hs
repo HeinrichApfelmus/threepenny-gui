@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-module System.Mem.Coupon (
+module Foreign.Coupon (
     -- * Synopsis
     -- | References to remote objects.
     -- Offers unique tokens ('Coupon') for communication.
@@ -7,7 +7,7 @@ module System.Mem.Coupon (
     
     -- * Documentation
     Coupon,
-    RemoteBooth, newRemoteBooth, lookup,
+    PrizeBooth, newPrizeBooth, lookup,
     
     Item, newItem, addFinalizer, destroy, withItem,
     getCoupon, getValue,
@@ -31,20 +31,27 @@ type Map = Map.Map
 {-----------------------------------------------------------------------------
     Types
 ------------------------------------------------------------------------------}
--- | Coupons can be used as a proxy for items.
--- The important point is that they can be serialized and sent
+-- | Coupons can be used as a proxy for 'Item'.
+--
+-- The important point is that coupons can be serialized and sent
 -- over a remote connection.
 type Coupon = BS.ByteString
 
+-- | Items represent foreign objects.
+-- 
+-- The foreign object can be accessed by means of the item data of type @a@.
 data Item a = Item
     { iKey    :: Unique -- Key suitable for weak pointers
     , iCoupon :: Coupon
     , iValue  :: a
     }
 
--- | Prize boothes keep track of items and coupons.
--- However, they do not keep items alive.
-data RemoteBooth a = RemoteBooth
+-- | Remote boothes are a mapping from 'Coupon' to 'Item'.
+--
+-- Prize boothes are neutral concerning garbage collection,
+-- they do not keep items alive.
+-- Moreover, items will be deleted from the booth when they are garbage collected.
+data PrizeBooth a = PrizeBooth
     { bCoupons :: MVar (Map Coupon (Weak (Item a)))
     , bCounter :: MVar [Integer]
     }
@@ -53,30 +60,27 @@ data RemoteBooth a = RemoteBooth
     Booth and Coupons
 ------------------------------------------------------------------------------}
 -- | Create a new prize booth for creating items and trading coupons.
-newRemoteBooth :: IO (RemoteBooth a)
-newRemoteBooth = do
+newPrizeBooth :: IO (PrizeBooth a)
+newPrizeBooth = do
     bCounter <- newMVar [0..]
     bCoupons <- newMVar Map.empty
-    return $ RemoteBooth {..}
+    return $ PrizeBooth {..}
 
 -- | Take a coupon to the prize booth and maybe you'll get an item for it.
-lookup :: Coupon -> RemoteBooth a -> IO (Maybe (Item a))
-lookup coupon RemoteBooth{..} = do
+lookup :: Coupon -> PrizeBooth a -> IO (Maybe (Item a))
+lookup coupon PrizeBooth{..} = do
     w <- Map.lookup coupon <$> readMVar bCoupons
     maybe (return Nothing) deRefWeak w
 
--- | Create a new item, which can be exchanged for coupons
+-- | Create a new item, which can be exchanged for a coupon
 -- at an associated prize booth.
 --
 -- The item can become unreachable,
 -- at which point it will be garbage collected,
--- the finalizers will be run and any
+-- the finalizers will be run and its
 -- coupon ceases to be valid.
--- 
--- The prize booth keeps track of coupons and items,
--- but does not keep the item alive.
-newItem :: RemoteBooth a -> a -> IO (Item a)
-newItem RemoteBooth{..} a = do
+newItem :: PrizeBooth a -> a -> IO (Item a)
+newItem PrizeBooth{..} a = do
     iCoupon <- BS.fromString . show <$> modifyMVar bCounter (\(n:ns) -> return (ns,n))
     iKey    <- newUnique
     let iValue = a
@@ -96,14 +100,15 @@ destroy = undefined
 
 -- | Add a finalizer that is run when the item is garbage collected.
 --
--- The coupon cannot be redeemed anymore when the finalizer runs.
+-- The coupon cannot be redeemed anymore while the finalizer runs.
 addFinalizer :: Item a -> (Coupon -> a -> IO ()) -> IO ()
 addFinalizer = undefined
 
 -- | Perform an action with the item.
 -- 
--- While the action is being performed, the item will not be garbage collected
--- and the coupon can be succesfully redeemed at the prize booth.
+-- While the action is being performed, it is ensured that the item
+-- will not be garbage collected
+-- and its coupon can be succesfully redeemed at the prize booth.
 withItem :: Item a -> (Coupon -> a -> IO b) -> IO b
 withItem item f = do
     b <- f (getCoupon item) (getValue item)

@@ -73,7 +73,7 @@ Library
                     ,Graphics.UI.Threepenny.JQuery
                     ,Graphics.UI.Threepenny.Timer
                     ,System.Mem.RemotePtr
-                    ,System.Mem.Coupon
+                    ,Foreign.Coupon
   Other-modules:
                      Control.Concurrent.Chan.Extra
                     ,Control.Concurrent.Delay

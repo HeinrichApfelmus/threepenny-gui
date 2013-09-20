@@ -103,7 +103,7 @@ import           Graphics.UI.Threepenny.Internal.Resources
 import           Graphics.UI.Threepenny.Internal.FFI
 import           Reactive.Threepenny
 
-import qualified System.Mem.Coupon as Foreign
+import qualified Foreign.Coupon as Foreign
 
 {-----------------------------------------------------------------------------
     Server and and session management
@@ -185,7 +185,7 @@ newSession sServerState sStartInfo sToken = do
     sInstructions     <- newChan
     sMutex            <- newMVar ()
     sEventQuit        <- newEvent
-    sRemoteBooth      <- Foreign.newRemoteBooth
+    sPrizeBooth      <- Foreign.newPrizeBooth
     let sHeadElement  =  undefined -- filled in later
     let sBodyElement  =  undefined
     now               <- getCurrentTime
@@ -474,7 +474,7 @@ newElement :: Window        -- ^ Browser window in which context to create the e
            -> IO Element    -- ^ A tag reference. Non-blocking.
 newElement elSession@(Session{..}) elTagName elEvents = do
     elHandlers <- newMVar M.empty
-    Foreign.newItem sRemoteBooth ElementData{..}
+    Foreign.newItem sPrizeBooth ElementData{..}
 
 -- | Get 'Window' associated to an 'Element'.
 getWindow :: Element -> Window
