@@ -20,8 +20,8 @@ instance Default Easing where
 -- | Animate property changes of a function.
 animate :: Element -> [(String,String)] -> Int -> Easing -> IO () -> IO ()
 animate element props duration easing complete =
-    flip updateElement element $ \e -> let elid = Core.getElementId e in
-        callDeferredFunction (Core.getSession e)
+    flip updateElement element $ \e -> Core.withElement e $ \elid window ->
+        callDeferredFunction window
             "jquery_animate"
             [encode elid,encode (makeObj (map (second showJSON) props)),show duration,map toLower (show easing)]
             (const complete)
@@ -44,10 +44,10 @@ sendValue el = fmap f (domEvent "sendvalue" el)
 
 -- | Focus an element.
 setFocus :: Element -> IO ()
-setFocus = updateElement $ \e ->
-    runFunction (Core.getWindow e) (ffi "$(%1).focus()" e)
+setFocus = updateElementWindow $ \e window ->
+    runFunction window (ffi "$(%1).focus()" e)
 
 -- | Scroll to the bottom of an element.
 scrollToBottom :: Element -> IO ()
-scrollToBottom = updateElement $ \e ->
-    runFunction (Core.getWindow e) (ffi "jquery_scrollToBottom(%1)" e)
+scrollToBottom = updateElementWindow $ \e window ->
+    runFunction window (ffi "jquery_scrollToBottom(%1)" e)

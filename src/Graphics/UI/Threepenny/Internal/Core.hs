@@ -376,7 +376,7 @@ newClosure window@(Session{..}) fun thunk = do
     cid <- modifyMVar sClosures $ \(x:xs) -> return (xs,x)
     let eventId = fun ++ "-" ++ show cid
     attachClosure sHeadElement eventId thunk
-    return $ Closure (getElementId sHeadElement, eventId)
+    return $ Closure (unprotectedGetElementId sHeadElement, eventId)
 
 
 {-----------------------------------------------------------------------------
@@ -477,13 +477,8 @@ newElement elSession@(Session{..}) elTagName elEvents = do
     Foreign.newItem sPrizeBooth ElementData{..}
 
 -- | Get 'Window' associated to an 'Element'.
-getWindow :: Element -> Window
-getWindow = getSession
-
--- | Perform an action on the element.
--- The element is not garbage collected while the action is run.
-withElement :: Element -> (ElementId -> Session -> IO b) -> IO b
-withElement e f = Foreign.withItem e $ \_ _ -> f (getElementId e) (getSession e)
+getWindow :: Element -> IO Window
+getWindow e = withElement e $ \_ window -> return window
 
 -- | Look up several elements in the browser window.
 lookupElements :: [ElementId] -> Session -> IO [Element]
@@ -498,7 +493,7 @@ appendElementTo eParent eChild =
     -- TODO: Right now, parent and child need to be from the same session/browser window
     --       Implement transfer of elements across browser windows
     withElement eParent $ \parent session ->
-    withElement eChild  $ \child  _       ->
+    withElement eChild  $ \child  _       -> do
         run session $ Append parent child
 
 -- | Get the head of the page.
@@ -511,7 +506,7 @@ getBody session = return $ sBodyElement session
 
 -- | Empty the given element.
 emptyEl :: Element -> IO ()
-emptyEl e = withElement e $ \elid window ->
+emptyEl el = withElement el $ \elid window -> do
     runFunction window $ ffi "$(%1).contents().detach()" elid
 
 -- | Delete the given element.
@@ -551,11 +546,12 @@ handleEvents window@(Session{..}) = do
 -- | Handle a single event.
 handleEvent1 :: Window -> (ElementId, EventId, EventData) -> IO ()
 handleEvent1 window (elid,eventId,params) = do
-    el       <- lookupElement elid window
-    handlers <- readMVar $ getHandlers el
-    case M.lookup eventId handlers of
-        Just handler -> handler params
-        Nothing      -> return ()
+    el <- lookupElement elid window
+    withElementData el $ \_ eldata -> do
+        handlers <- readMVar $ elHandlers eldata
+        case M.lookup eventId handlers of
+            Just handler -> handler params
+            Nothing      -> return ()
 
 -- Get the latest signal sent from the client.
 getSignal :: Window -> IO Signal
@@ -563,8 +559,8 @@ getSignal (Session{..}) = readChan sSignals
 
 -- | Associate a new closure with an element.
 attachClosure :: Element -> EventId -> Handler EventData -> IO () 
-attachClosure el eventId handler = do
-    modifyMVar_ (getHandlers el) $ return .
+attachClosure el eventId handler = withElementData el $ \_ eldata ->
+    modifyMVar_ (elHandlers eldata) $ return .
         M.insertWith (\h1 h a -> h1 a >> h a) eventId handler
 
 -- | Bind an event handler for a dom event to an 'Element'.
@@ -573,13 +569,13 @@ bind
     -> Element              -- ^ The element to bind to.
     -> Handler EventData    -- ^ The event handler to bind.
     -> IO ()
-bind eventId el handler = withElement el $ \elid session -> do
-    handlers <- readMVar $ getHandlers el
+bind eventId e handler = withElementData e $ \elid el -> do
+    handlers <- readMVar $ elHandlers el
     -- register with client if it has never been registered on the server
     when (not $ eventId `M.member` handlers) $
-        run session $ Bind eventId elid
+        run (elSession el) $ Bind eventId elid
     -- register with server
-    attachClosure el eventId handler
+    attachClosure e eventId handler
 
 -- | Register event handler that occurs when the client has disconnected.
 disconnect :: Window -> Event ()
@@ -715,9 +711,8 @@ getValuesList
     :: [Element]   -- ^ A list of elements to get the values of.
     -> IO [String] -- ^ The list of plain text values.
 getValuesList []        = return []
-getValuesList es@(e0:_) = do
-    let window = getSession e0
-    let elids  = map getElementId es
+getValuesList es@(e0:_) = withElement e0 $ \_ window -> do
+    let elids  = map unprotectedGetElementId es
     call window (GetValues elids) $ \signal ->
         case signal of
             Values strs -> return $ Just strs

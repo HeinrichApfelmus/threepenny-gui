@@ -37,7 +37,7 @@ instance ToJS JSValue    where render x = JSCode $ showJSValue x ""
 instance ToJS ByteString where render   = JSCode . show
 instance ToJS ElementId  where
     render (ElementId x) = apply "elidToElement(%1)" [render x]
-instance ToJS Element    where render = render . getElementId
+instance ToJS Element    where render = render . unprotectedGetElementId
 
 
 -- | A JavaScript function with a given output type @a@.

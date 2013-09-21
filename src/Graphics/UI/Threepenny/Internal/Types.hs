@@ -18,6 +18,7 @@ import Data.Time
 import Network.URI
 import Text.JSON.Generic
 import System.IO (stderr)
+import System.IO.Unsafe
 
 import qualified Foreign.Coupon as Foreign
 
@@ -39,19 +40,8 @@ type EventId  = String
 type Handlers = Map EventId (E.Handler EventData)
 type Events   = EventId -> E.Event EventData
 
--- getters
-
-getSession :: Element -> Session
-getSession = elSession . Foreign.getValue
-
-getHandlers :: Element -> MVar Handlers
-getHandlers = elHandlers . Foreign.getValue
-
-getEvents :: Element -> Events
-getEvents = elEvents . Foreign.getValue
 
 -- Marshalling ElementId
-
 instance JSON ElementId where
   showJSON (ElementId o) = showJSON o
   readJSON obj = do
@@ -59,15 +49,25 @@ instance JSON ElementId where
     ElementId <$> valFromObj "Element" obj
 
 
-getElementId :: Element -> ElementId
-getElementId e = ElementId $ case tag of
-        ""     -> coupon
-        "head" -> "head"
-        "body" -> "body" 
-        tag    -> BS.concat ["*",coupon,":",tag]
-    where
-    coupon = Foreign.getCoupon e
-    tag    = fromString . elTagName . Foreign.getValue $ e
+-- | Perform an action on the element.
+-- The element is not garbage collected while the action is run.
+withElementData :: Element -> (ElementId -> ElementData -> IO a) -> IO a
+withElementData e f = Foreign.withItem e $ \coupon el ->
+    let elid = ElementId $ case fromString (elTagName el) of
+            ""     -> coupon
+            "head" -> "head"
+            "body" -> "body" 
+            tag    -> BS.concat ["*",coupon,":",tag]
+    in f elid el
+
+-- | Special case of 'withElementData'.
+withElement :: Element -> (ElementId -> Session -> IO b) -> IO b
+withElement e f = withElementData e $ \elid el -> f elid (elSession el)
+
+-- | Get 'ElementId' without any guarantee that the element is still alive.
+unprotectedGetElementId :: Element -> ElementId
+unprotectedGetElementId e = unsafePerformIO . withElement e $ \elid _ -> return elid
+
 
 -- | Look up an element in the browser window.
 lookupElement :: ElementId -> Session -> IO Element

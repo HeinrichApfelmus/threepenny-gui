@@ -45,7 +45,7 @@ module Graphics.UI.Threepenny.Core (
     callDeferredFunction, atomic,
     
     -- * Internal and oddball functions
-    updateElement, manifestElement, fromProp,
+    updateElement, updateElementWindow, manifestElement, fromProp,
     audioPlay, audioStop,
     
     ) where
@@ -65,11 +65,16 @@ import Reactive.Threepenny
 
 import qualified Graphics.UI.Threepenny.Internal.Core  as Core
 import Graphics.UI.Threepenny.Internal.Core
-    (getRequestLocation,
-     ToJS, FFI, ffi, JSFunction,
-     debug, callFunction, runFunction, callDeferredFunction, atomic, )
+    ( getRequestLocation
+    , ToJS, FFI, ffi, JSFunction
+    , debug, callFunction, runFunction, callDeferredFunction, atomic, )
 import Graphics.UI.Threepenny.Internal.Types as Core
-    (Window, Config, defaultConfig, Events, getEvents, EventData)
+    ( Window, Config, defaultConfig, Events, EventData
+    , ElementData(..), withElementData,)
+
+
+import Graphics.UI.Threepenny.Internal.Types as Core (unprotectedGetElementId)
+
 
 {-----------------------------------------------------------------------------
     Server
@@ -139,7 +144,8 @@ data    Elem
 -- Note that multiple MVars may now point to the same live reference,
 -- but this is ok since live references never change.
 fromAlive :: Core.Element -> IO Element
-fromAlive e = Element (Core.getEvents e) <$> newMVar (Alive e)
+fromAlive e = Core.withElementData e $ \_ el ->
+    Element (elEvents el) <$> newMVar (Alive e)
 
 -- Update an element that may be in Limbo.
 updateElement :: (Core.Element -> IO ()) -> Element -> IO ()
@@ -152,6 +158,13 @@ updateElement f (Element _ me) = do
         Limbo value create ->      -- update on creation
             putMVar me $ Limbo value $ \w -> create w >>= \e -> f e >> return e
 
+-- Update an element that may be in Limbo
+-- Also supply  Window  associated to the element
+updateElementWindow :: (Core.Element -> Window -> IO ()) -> Element -> IO ()
+updateElementWindow f e = flip updateElement e $ \el -> do
+    window <- Core.getWindow el
+    f el window
+
 -- Given a browser window, make sure that the element exists there.
 -- TODO: 1. Throw exception if the element exists in another window.
 --       2. Don't throw exception, but move the element across windows.
@@ -163,6 +176,8 @@ manifestElement w (Element _ me) = do
             Limbo v create -> do
                 e2 <- create w
                 Core.setAttr "value" v e2
+                Core.withElementData e2 $ \elid _ ->
+                    Core.setAttr "debug" (show elid) e2
                 return e2
         putMVar me $ Alive e2
         return e2
@@ -174,7 +189,8 @@ appendTo
     -> IO ()
 appendTo parent child = do
     flip updateElement parent $ \x -> do
-        y <- manifestElement (Core.getWindow x) child
+        window <- Core.getWindow x
+        y      <- manifestElement window child
         Core.appendElementTo x y
 
 -- | Make a new DOM element.
@@ -203,9 +219,9 @@ mkElement tag = mdo
 getWindow :: Element -> IO (Maybe Window)
 getWindow (Element _ ref) = do
     e1 <- readMVar ref
-    return $ case e1 of
-        Alive e   -> Just $ Core.getWindow e
-        Limbo _ _ -> Nothing
+    case e1 of
+        Alive e   -> Just <$> Core.getWindow e
+        Limbo _ _ -> return Nothing
 
 -- | Delete the given element.
 delete :: Element -> IO ()
@@ -324,12 +340,16 @@ getElementsByClassName window cls =
     Oddball
 ------------------------------------------------------------------------------}
 -- | Invoke the JavaScript expression @audioElement.play();@.
-audioPlay = updateElement $ \el -> Core.runFunction (Core.getWindow el) $
-    ffi "%1.play()" el
+audioPlay = updateElement $ \el -> do
+    window <- Core.getWindow el
+    Core.runFunction window $
+        ffi "%1.play()" el
 
 -- | Invoke the JavaScript expression @audioElement.stop();@.
-audioStop = updateElement $ \el -> Core.runFunction (Core.getWindow el) $
-    ffi "prim_audio_stop(%1)" el
+audioStop = updateElement $ \el -> do
+    window <- Core.getWindow el
+    Core.runFunction window $
+        ffi "prim_audio_stop(%1)" el
 
 -- Turn a jQuery property @.prop()@ into an attribute.
 fromProp :: String -> (JSValue -> a) -> (a -> JSValue) -> Attr Element a
