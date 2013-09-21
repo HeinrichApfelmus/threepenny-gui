@@ -39,7 +39,7 @@ $.fn.livechange = function(ms,trigger){
   ////////////////////////////////////////////////////////////////////////////////
   // State
   var sessionToken = null;
-  var element_count = 0, el_table = {};
+  var el_table = {};
   var tp_enable_log = $.cookie('tp_log') == "true";
   var signal_count = 0;
 
@@ -404,9 +404,9 @@ $.fn.livechange = function(ms,trigger){
       return document.body;
     else if(elid == 'head')
       return document.head;
-    else if(el_table[elid]){
+    else if(el_table[elid])
       return el_table[elid];
-    } else {
+    else {
       if(elid[0] == '*'){
         var create = elid.split(':');
         var element = document.createElement(create[1]);
@@ -425,21 +425,14 @@ $.fn.livechange = function(ms,trigger){
   // elid lookup table using the new elid.
   // Note: The mapping between  elids  and  DOM elements  must be bijective.
   function elementToElid(element){
-    if(element.elid) {
-        return element.elid;
-	  }
-	  else if (element === document.body) {
-        return "body";
-    }
-	  else if (element === document.head) {
-        return "head";
-    }
+    if(element.elid)
+      return element.elid;
+	  else if (element === document.body)
+      return "body";
+	  else if (element === document.head)
+      return "head";
     else {
-        var elid = "!" + element_count.toString();
-        element_count++;
-        element.elid   = elid;
-        el_table[elid] = element;
-        return elid;
+      throw "Element requested, but does not have elid: " + element;
     }
   }
   
