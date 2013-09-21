@@ -233,7 +233,7 @@ $.fn.livechange = function(ms,trigger){
         break;
       }
       case "Delete": {
-        event_delete(event);
+        deleteElid(event.Delete);
         reply();
         break;
       }
@@ -418,10 +418,7 @@ $.fn.livechange = function(ms,trigger){
       }
     }
   }
-  function deleteElementTable(elid){
-    delete el_table[elid];
-  }
-  
+ 
   // Get/generate a elid for an element.  This function is used for cases in which the
   // element is accessed without knowing an elid from the server, such as when the 
   // element is retrieved by type or html ID attribute.  The element is then added to 
@@ -430,11 +427,11 @@ $.fn.livechange = function(ms,trigger){
   function elementToElid(element){
     if(element.elid) {
         return element.elid;
-	}
-	else if (element === document.body) {
+	  }
+	  else if (element === document.body) {
         return "body";
     }
-	else if (element === document.head) {
+	  else if (element === document.head) {
         return "head";
     }
     else {
@@ -445,17 +442,18 @@ $.fn.livechange = function(ms,trigger){
         return elid;
     }
   }
+  
+  // Delete element from the table
+  function deleteElid(elid){
+    var el = el_table[elid];
+    if (el) {
+      $(el).detach(); // Should be detached already, but make sure
+      delete el_table[elid];
+    }
+  }
 
   ////////////////////////////////////////////////////////////////////////////////
   // FFI - additional primitive functions
-  
-  function event_delete(event){
-    var id = event.Delete;
-    var el = elidToElement(id);
-    // TODO: Think whether it is correct to remove element ids
-    $(el).detach();
-    deleteElementTable(id);
-  }
   
   window.jquery_animate = function(el_id,props,duration,easing,complete){
     var el = elidToElement(JSON.parse(el_id));

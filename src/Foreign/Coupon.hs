@@ -9,8 +9,8 @@ module Foreign.Coupon (
     Coupon,
     PrizeBooth, newPrizeBooth, lookup,
     
-    Item, newItem, addFinalizer, destroy, withItem,
-    getCoupon, getValue,
+    Item, newItem, withItem,
+    addFinalizer, destroy, addReachable, clearReachable,
     ) where
 
 import Prelude hiding (lookup)
@@ -21,12 +21,16 @@ import Control.Exception (evaluate)
 import Data.String as BS
 import qualified Data.ByteString as BS
 import Data.Functor
+import Data.IORef
 import qualified Data.Map as Map
-import Data.Unique.Really
 
 import System.Mem.Weak hiding (addFinalizer)
+import qualified System.Mem.Weak as Weak
 
 type Map = Map.Map
+
+debug m = m
+-- debug m = return ()
 
 {-----------------------------------------------------------------------------
     Types
@@ -35,16 +39,26 @@ type Map = Map.Map
 --
 -- The important point is that coupons can be serialized and sent
 -- over a remote connection.
+--
+-- Coupons are in bijection with items:
+-- Different coupons will yield different items while
+-- the same item will always be associated to the same coupon.
 type Coupon = BS.ByteString
 
 -- | Items represent foreign objects.
+-- The intended use case is that these objects do not live in RAM,
+-- but are only accessible via a remote connection.
 -- 
 -- The foreign object can be accessed by means of the item data of type @a@.
-data Item a = Item
-    { iKey    :: Unique -- Key suitable for weak pointers
-    , iCoupon :: Coupon
-    , iValue  :: a
+type Item a = IORef (ItemData a)
+
+data ItemData a = ItemData
+    { self     :: Weak (Item a)
+    , coupon   :: Coupon
+    , value    :: a
+    , children :: IORef [Weak (Item a)]
     }
+
 
 -- | Remote boothes are a mapping from 'Coupon' to 'Item'.
 --
@@ -80,30 +94,21 @@ lookup coupon PrizeBooth{..} = do
 -- the finalizers will be run and its
 -- coupon ceases to be valid.
 newItem :: PrizeBooth a -> a -> IO (Item a)
-newItem PrizeBooth{..} a = do
-    iCoupon <- BS.fromString . show <$> modifyMVar bCounter (\(n:ns) -> return (ns,n))
-    iKey    <- newUnique
-    let iValue = a
-    let item   = Item {..}
-    modifyMVar bCoupons $ \m -> do
-        w <- mkWeak iKey item Nothing
-        return (Map.insert iCoupon w m, ())
+newItem PrizeBooth{..} value = do
+    coupon   <- BS.fromString . show <$> modifyMVar bCounter (\(n:ns) -> return (ns,n))
+    children <- newIORef []
+    let self = undefined
+    item     <- newIORef ItemData{..}
+    
+    let finalize = modifyMVar bCoupons $ \m -> return (Map.delete coupon m, ())
+    w <- mkWeakIORef item finalize
+    modifyMVar bCoupons $ \m -> return (Map.insert coupon w m, ())
+    atomicModifyIORef' item $ \item -> (item { self = w }, ())
     return item
 
 {-----------------------------------------------------------------------------
     Items
 ------------------------------------------------------------------------------}
--- | Destroy an item and run all finalizers for it.
--- Coupons for this item can no longer be redeemed.
-destroy :: Item a -> IO ()
-destroy = undefined
-
--- | Add a finalizer that is run when the item is garbage collected.
---
--- The coupon cannot be redeemed anymore while the finalizer runs.
-addFinalizer :: Item a -> (Coupon -> a -> IO ()) -> IO ()
-addFinalizer = undefined
-
 -- | Perform an action with the item.
 -- 
 -- While the action is being performed, it is ensured that the item
@@ -111,24 +116,57 @@ addFinalizer = undefined
 -- and its coupon can be succesfully redeemed at the prize booth.
 withItem :: Item a -> (Coupon -> a -> IO b) -> IO b
 withItem item f = do
-    b <- f (getCoupon item) (getValue item)
+    ItemData{..} <- readIORef item
+    b <- f coupon value
     touchItem item
     return b
 
 -- | Make Sure that the item in question is alive
 -- at the given place in the sequence of IO actions.
 touchItem :: Item a -> IO ()
-touchItem = void . evaluate
+touchItem item = readIORef item >>= evaluate >> return ()
 
--- | Get the coupon for an item.
+-- | Destroy an item and run all finalizers for it.
+-- Coupons for this item can no longer be redeemed.
+destroy :: Item a -> IO ()
+destroy item = finalize =<< self <$> readIORef item
+
+-- | Add a finalizer that is run when the item is garbage collected.
 --
--- Coupons are in bijection with items:
--- Different coupons will yield different items while
--- the same item will always be associated to the same coupon.
-getCoupon :: Item a -> Coupon
-getCoupon = iCoupon
+-- The coupon cannot be redeemed anymore while the finalizer runs.
+addFinalizer :: Item a -> IO () -> IO ()
+addFinalizer item = void . mkWeakIORef item
 
--- | Retrieve item data.
-getValue :: Item a -> a
-getValue = iValue
+-- | When dealing with several foreign objects,
+-- it is useful to model dependencies between them.
+--
+-- After this operation, the second 'Item' will be reachable
+-- whenever the first one is reachable.
+-- For instance, you should call this function when the second foreign object
+-- is actually a subobject of the first one.
+--
+-- Note: It is possible to model dependencies in the @parent@ data,
+-- but the 'addReachable' method is preferrable,
+-- as it allows all child object to be garbage collected at once.
+addReachable :: Item a -> Item a -> IO ()
+addReachable parent child = do
+    -- FIXME: the debug statements are keeping an element alive
+    c1 <- coupon <$> readIORef parent
+    c2 <- coupon <$> readIORef child
+    putStrLn $ "Parent " ++ show c1 ++ " gets child " ++ show c2
+    
+    -- FIXME: IORefs are not good keys for weak pointers
+    w   <- mkWeak parent child $
+        Just $ putStrLn $ "Parent " ++ show c1 ++ " releases child " ++ show c2
+    ref <- children <$> readIORef parent
+    atomicModifyIORef' ref $ \ws -> (w:ws, ())
 
+-- | Clear all dependencies.
+-- 
+-- Reachability of this 'Item' no longer implies reachability
+-- of other items, as formerly implied by calls to 'addReachable'.
+clearReachable :: Item a -> IO ()
+clearReachable item = do
+    ref <- children <$> readIORef item
+    xs  <- atomicModifyIORef' ref $ \xs -> ([], xs)
+    mapM_ finalize xs

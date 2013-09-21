@@ -104,6 +104,7 @@ import           Graphics.UI.Threepenny.Internal.FFI
 import           Reactive.Threepenny
 
 import qualified Foreign.Coupon as Foreign
+import qualified System.Mem
 
 {-----------------------------------------------------------------------------
     Server and and session management
@@ -474,7 +475,13 @@ newElement :: Window        -- ^ Browser window in which context to create the e
            -> IO Element    -- ^ A tag reference. Non-blocking.
 newElement elSession@(Session{..}) elTagName elEvents = do
     elHandlers <- newMVar M.empty
-    Foreign.newItem sPrizeBooth ElementData{..}
+    el         <- Foreign.newItem sPrizeBooth ElementData{..}
+    Foreign.addFinalizer el $ withElement el $ \elid session -> do
+        run session $ Delete elid
+        -- FIXME: do not try to delete elements from the session when
+        -- the session is broken.
+        -- putStrLn $ "Passed away: " ++ show elid
+    return el
 
 -- | Get 'Window' associated to an 'Element'.
 getWindow :: Element -> IO Window
@@ -488,12 +495,13 @@ lookupElements els window = mapM (flip lookupElement window) els
 appendElementTo
     :: Element     -- ^ Parent.
     -> Element     -- ^ Child.
-    -> IO () 
+    -> IO ()
 appendElementTo eParent eChild =
     -- TODO: Right now, parent and child need to be from the same session/browser window
     --       Implement transfer of elements across browser windows
     withElement eParent $ \parent session ->
     withElement eChild  $ \child  _       -> do
+        Foreign.addReachable eParent eChild 
         run session $ Append parent child
 
 -- | Get the head of the page.
@@ -507,6 +515,7 @@ getBody session = return $ sBodyElement session
 -- | Empty the given element.
 emptyEl :: Element -> IO ()
 emptyEl el = withElement el $ \elid window -> do
+    Foreign.clearReachable el
     runFunction window $ ffi "$(%1).contents().detach()" elid
 
 -- | Delete the given element.
@@ -536,6 +545,8 @@ handleEvents window@(Session{..}) = do
     case signal of
         Threepenny.Event elid eventId params -> do
             handleEvent1 window (elid,eventId,EventData params)
+            -- debug garbage collection of elements:
+            System.Mem.performGC
             handleEvents window
         Quit () -> do
             snd sEventQuit ()
