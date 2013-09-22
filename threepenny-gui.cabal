@@ -54,6 +54,13 @@ flag buildExamples
     description: Build example executables.
     default:     False
 
+flag rebug
+    description: The library uses some techniques that are highly
+                 non-deterministic, for example garbage collection and concurrency.
+                 Bugs in these subsystems are harder to find.
+                 Activating this flag will expose more of them.
+    default:     False
+
 Source-repository head
     type:               git
     location:           git://github.com/HeinrichApfelmus/threepenny-gui.git
@@ -72,7 +79,6 @@ Library
                     ,Graphics.UI.Threepenny.Events
                     ,Graphics.UI.Threepenny.JQuery
                     ,Graphics.UI.Threepenny.Timer
-                    ,System.Mem.RemotePtr
                     ,Foreign.Coupon
   Other-modules:
                      Control.Concurrent.Chan.Extra
@@ -86,6 +92,9 @@ Library
                     ,Reactive.Threepenny.Memo
                     ,Paths_threepenny_gui
   CPP-Options:      -DCABAL
+  if flag(rebug)
+      CPP-Options:  -DREBUG
+      GHC-Options:  -O2   
   Build-depends:     base                      >= 4     && < 5
                     ,snap-server
                     ,snap-core

@@ -1,5 +1,6 @@
+{-# LANGUAGE CPP, PackageImports #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings, PackageImports #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecursiveDo #-}
 {-# OPTIONS -fno-warn-name-shadowing #-}
 
@@ -477,8 +478,9 @@ newElement elSession@(Session{..}) elTagName elEvents = do
     elHandlers <- newMVar M.empty
     el         <- Foreign.newItem sPrizeBooth ElementData{..}
     Foreign.addFinalizer el $ withElement el $ \elid session -> do
-        -- FIXME: do not try to delete elements from the session when
-        -- the session is broken.
+        -- FIXME: Do not try to delete elements from the session when
+        -- the session is broken/disconnected already.
+        -- A fix should be part of the  run  function, though.
         run session $ Delete elid
     return el
 
@@ -544,8 +546,10 @@ handleEvents window@(Session{..}) = do
     case signal of
         Threepenny.Event elid eventId params -> do
             handleEvent1 window (elid,eventId,EventData params)
+#ifdef REBUG
             -- debug garbage collection of elements:
             System.Mem.performGC
+#endif
             handleEvents window
         Quit () -> do
             snd sEventQuit ()
