@@ -39,7 +39,7 @@ $.fn.livechange = function(ms,trigger){
   ////////////////////////////////////////////////////////////////////////////////
   // State
   var sessionToken = null;
-  var element_count = 0, el_table = {};
+  var el_table = {};
   var tp_enable_log = $.cookie('tp_log') == "true";
   var signal_count = 0;
 
@@ -160,8 +160,13 @@ $.fn.livechange = function(ms,trigger){
       ws.close();
     });
     
-    var sendEvent = function (e) {
-      ws.send(JSON.stringify({ Event : e}));
+    var sendEvent = function (elid, key, params) {
+      ws.send(JSON.stringify({ Event : 
+          { Element : { Element : elid }
+          , EventId : key
+          , Params  : params
+          }
+        }));
     }
     var reply     = function (response) {
       if (response != undefined)
@@ -202,26 +207,17 @@ $.fn.livechange = function(ms,trigger){
     console_log("Event: %s",JSON.stringify(event));
     for(var key in event){
       switch(key){
-                
-      case "EmptyEl": {
-        var id = event.EmptyEl;
-        var el = elidToElement(id);
-        // Detach child elements without deleting associated event handlers and data.
-        // It is not correct to remove the child elements from the el_table
-        // because they may still be present on the server side.
-        $(el).contents().detach();
-        reply();
-        break;
-      }
+
       case "CallDeferredFunction": {
-        var call = event.CallDeferredFunction;
-        var closure = call[0];
+        // FIXME: CallDeferredFunction probably doesn't work right now.
+        var call        = event.CallDeferredFunction;
+        var closure     = call[0];
         var theFunction = eval(call[1]);
-        var params = call[2];
+        var params      = call[2];
         theFunction.apply(window, params.concat(function(){
           console_log(this);
           var args = Array.prototype.slice.call(arguments,0);
-          sendEvent(closure.concat([args]));
+          sendEvent(closure[0],closure[1],args);
         }));
         reply();
         break;
@@ -237,7 +233,7 @@ $.fn.livechange = function(ms,trigger){
         break;
       }
       case "Delete": {
-        event_delete(event);
+        deleteElid(event.Delete);
         reply();
         break;
       }
@@ -351,40 +347,40 @@ $.fn.livechange = function(ms,trigger){
       case "Bind": {
         var bind        = event.Bind;
         var eventType   = bind[0];
-        var handlerGuid = bind[2];
-        var el = elidToElement(bind[1]);
+        var elid        = bind[1];
+        var el          = elidToElement(elid);
         console_log('event type: ' + eventType);
         if(eventType == 'livechange') {
           $(el).livechange(300,function(e){
-            sendEvent( handlerGuid.concat([[$(el).val()]]) );
+            sendEvent(elid,eventType, [$(el).val()]);
             return true;
           });
         } else if(eventType == 'sendvalue') {
           $(el).sendvalue(function(x){
-            sendEvent( handlerGuid.concat([[x]]) );
+            sendEvent(elid,eventType, [x]);
           });
         } else if(eventType.match('dragstart|dragenter|dragover|dragleave|drag|drop|dragend')) {
           $(el).bind(eventType,function(e){
-            sendEvent( handlerGuid.concat([
+            sendEvent(elid,eventType,
                 e.originalEvent.dataTransfer
-                    ?[e.originalEvent.dataTransfer.getData("dragData")]
-                    :[]])
+                    ? [e.originalEvent.dataTransfer.getData("dragData")]
+                    : []
               );
             return true;
           });
         } else if(eventType.match('mousemove')) {
           $(el).bind(eventType,function(e){
-            sendEvent( handlerGuid.concat([[e.pageX.toString(), e.pageY.toString()]]) );
+            sendEvent(elid,eventType, [e.pageX.toString(), e.pageY.toString()]);
             return true;
           });
         } else if(eventType.match('keydown|keyup')) {
           $(el).bind(eventType,function(e){
-            sendEvent( handlerGuid.concat([[e.keyCode.toString()]]) );
+            sendEvent(elid,eventType, [e.keyCode.toString()]);
             return true;
           });
         } else {
           $(el).bind(eventType,function(e){
-            sendEvent( handlerGuid.concat([e.which?[e.which.toString()]:[]]) );
+            sendEvent(elid,eventType, e.which ? [e.which.toString()] : []);
             return true;
           });
         }
@@ -408,9 +404,9 @@ $.fn.livechange = function(ms,trigger){
       return document.body;
     else if(elid == 'head')
       return document.head;
-    else if(el_table[elid]){
+    else if(el_table[elid])
       return el_table[elid];
-    } else {
+    else {
       if(elid[0] == '*'){
         var create = elid.split(':');
         var element = document.createElement(create[1]);
@@ -422,44 +418,35 @@ $.fn.livechange = function(ms,trigger){
       }
     }
   }
-  function deleteElementTable(elid){
-    delete el_table[elid];
-  }
-  
+ 
   // Get/generate a elid for an element.  This function is used for cases in which the
   // element is accessed without knowing an elid from the server, such as when the 
   // element is retrieved by type or html ID attribute.  The element is then added to 
   // elid lookup table using the new elid.
   // Note: The mapping between  elids  and  DOM elements  must be bijective.
   function elementToElid(element){
-    if(element.elid) {
-        return element.elid;
-	}
-	else if (element === document.body) {
-        return "body";
-    }
-	else if (element === document.head) {
-        return "head";
-    }
+    if(element.elid)
+      return element.elid;
+	  else if (element === document.body)
+      return "body";
+	  else if (element === document.head)
+      return "head";
     else {
-        var elid = "!" + element_count.toString();
-        element_count++;
-        element.elid   = elid;
-        el_table[elid] = element;
-        return elid;
+      throw "Element requested, but does not have elid: " + element;
+    }
+  }
+  
+  // Delete element from the table
+  function deleteElid(elid){
+    var el = el_table[elid];
+    if (el) {
+      $(el).detach(); // Should be detached already, but make sure
+      delete el_table[elid];
     }
   }
 
   ////////////////////////////////////////////////////////////////////////////////
   // FFI - additional primitive functions
-  
-  function event_delete(event){
-    var id = event.Delete;
-    var el = elidToElement(id);
-    // TODO: Think whether it is correct to remove element ids
-    $(el).detach();
-    deleteElementTable(id);
-  }
   
   window.jquery_animate = function(el_id,props,duration,easing,complete){
     var el = elidToElement(JSON.parse(el_id));

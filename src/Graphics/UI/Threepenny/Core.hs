@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
+{-# LANGUAGE RecursiveDo #-}
 module Graphics.UI.Threepenny.Core (
     -- * Synopsis
     -- | Core functionality of the Threepenny GUI library.
@@ -42,12 +43,12 @@ module Graphics.UI.Threepenny.Core (
     
     -- * JavaScript FFI
     -- | Direct interface to JavaScript in the browser window.
-    debug, clear,
+    debug,
     ToJS, FFI, ffi, JSFunction, runFunction, callFunction,
     callDeferredFunction, atomic,
     
     -- * Internal and oddball functions
-    updateElement, manifestElement, fromProp,
+    updateElement, updateElementWindow, manifestElement, fromProp,
     audioPlay, audioStop,
     
     ) where
@@ -67,12 +68,16 @@ import Reactive.Threepenny
 
 import qualified Graphics.UI.Threepenny.Internal.Core  as Core
 import Graphics.UI.Threepenny.Internal.Core
-    (getRequestLocation,
-     ToJS, FFI, ffi, JSFunction,
-     debug, clear, callFunction, runFunction, callDeferredFunction, atomic, )
-import qualified Graphics.UI.Threepenny.Internal.Types as Core
-import Graphics.UI.Threepenny.Internal.Types
-    (Window, Config, defaultConfig, EventData, Session(..))
+    ( getRequestLocation
+    , ToJS, FFI, ffi, JSFunction
+    , debug, callFunction, runFunction, callDeferredFunction, atomic, )
+import Graphics.UI.Threepenny.Internal.Types as Core
+    ( Window, Config, defaultConfig, Events, EventData
+    , ElementData(..), withElementData,)
+
+
+import Graphics.UI.Threepenny.Internal.Types as Core (unprotectedGetElementId)
+
 
 {-----------------------------------------------------------------------------
     Server
@@ -130,7 +135,7 @@ cookies = mkReadAttr Core.getRequestCookies
 type Value = String
 
 -- | Reference to an element in the DOM of the client window.
-data Element = Element Core.ElementEvents (MVar Elem) deriving (Typeable)
+data Element = Element Core.Events (MVar Elem) deriving (Typeable)
 -- Element events mvar
 --      events = Events associated to this element
 --      mvar   = Current state of the MVar
@@ -142,9 +147,8 @@ data    Elem
 -- Note that multiple MVars may now point to the same live reference,
 -- but this is ok since live references never change.
 fromAlive :: Core.Element -> IO Element
-fromAlive e@(Core.Element elid Session{..}) = do
-    Just events <- Map.lookup elid <$> readMVar sElementEvents
-    Element events <$> newMVar (Alive e)
+fromAlive e = Core.withElementData e $ \_ el ->
+    Element (elEvents el) <$> newMVar (Alive e)
 
 -- Update an element that may be in Limbo.
 updateElement :: (Core.Element -> IO ()) -> Element -> IO ()
@@ -157,26 +161,29 @@ updateElement f (Element _ me) = do
         Limbo value create ->      -- update on creation
             putMVar me $ Limbo value $ \w -> create w >>= \e -> f e >> return e
 
+-- Update an element that may be in Limbo
+-- Also supply  Window  associated to the element
+updateElementWindow :: (Core.Element -> Window -> IO ()) -> Element -> IO ()
+updateElementWindow f e = flip updateElement e $ \el -> do
+    window <- Core.getWindow el
+    f el window
+
 -- Given a browser window, make sure that the element exists there.
 -- TODO: 1. Throw exception if the element exists in another window.
 --       2. Don't throw exception, but move the element across windows.
 manifestElement :: Window -> Element -> IO Core.Element
-manifestElement w (Element events me) = do
+manifestElement w (Element _ me) = do
         e1 <- takeMVar me
         e2 <- case e1 of
             Alive e        -> return e
             Limbo v create -> do
                 e2 <- create w
                 Core.setAttr "value" v e2
-                rememberEvents events e2    -- save events in session data
+                Core.withElementData e2 $ \elid _ ->
+                    Core.setAttr "debug" (show elid) e2
                 return e2
         putMVar me $ Alive e2
         return e2
-    
-    where
-    rememberEvents events (Core.Element elid Session{..}) =
-        modifyMVar_ sElementEvents $ return . Map.insert elid events
-
 
 -- Append a child element to a parent element. Non-blocking.
 appendTo
@@ -185,16 +192,17 @@ appendTo
     -> IO ()
 appendTo parent child = do
     flip updateElement parent $ \x -> do
-        y <- manifestElement (Core.getWindow x) child
+        window <- Core.getWindow x
+        y      <- manifestElement window child
         Core.appendElementTo x y
 
 -- | Make a new DOM element.
 mkElement
     :: String           -- ^ Tag name
     -> IO Element
-mkElement tag = do
+mkElement tag = mdo
     -- create element in Limbo
-    ref <- newMVar (Limbo "" $ \w -> Core.newElement w tag)
+    ref <- newMVar (Limbo "" $ \w -> Core.newElement w tag events)
     -- create events and initialize them when element becomes Alive
     let
         initializeEvent (name,_,handler) = 
@@ -214,9 +222,9 @@ mkElement tag = do
 getWindow :: Element -> IO (Maybe Window)
 getWindow (Element _ ref) = do
     e1 <- readMVar ref
-    return $ case e1 of
-        Alive e   -> Just $ Core.getWindow e
-        Limbo _ _ -> Nothing
+    case e1 of
+        Alive e   -> Just <$> Core.getWindow e
+        Limbo _ _ -> return Nothing
 
 -- | Delete the given element.
 delete :: Element -> IO ()
@@ -335,12 +343,16 @@ getElementsByClassName window cls =
     Oddball
 ------------------------------------------------------------------------------}
 -- | Invoke the JavaScript expression @audioElement.play();@.
-audioPlay = updateElement $ \el -> Core.runFunction (Core.getWindow el) $
-    ffi "%1.play()" el
+audioPlay = updateElement $ \el -> do
+    window <- Core.getWindow el
+    Core.runFunction window $
+        ffi "%1.play()" el
 
 -- | Invoke the JavaScript expression @audioElement.stop();@.
-audioStop = updateElement $ \el -> Core.runFunction (Core.getWindow el) $
-    ffi "prim_audio_stop(%1)" el
+audioStop = updateElement $ \el -> do
+    window <- Core.getWindow el
+    Core.runFunction window $
+        ffi "prim_audio_stop(%1)" el
 
 -- Turn a jQuery property @.prop()@ into an attribute.
 fromProp :: String -> (JSValue -> a) -> (a -> JSValue) -> Attr Element a

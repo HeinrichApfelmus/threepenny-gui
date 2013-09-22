@@ -1,5 +1,5 @@
 Name:                threepenny-gui
-Version:             0.3.0.0
+Version:             0.4.0.0
 Synopsis:            GUI framework that uses the web browser as a display.
 Description:
     Threepenny-GUI is a GUI framework that uses the web browser as a display.
@@ -20,6 +20,8 @@ Description:
     @cabal install threepenny-gui -fbuildExamples@
     .
     Changelog:
+    .
+    * 0.4.0.0 - Snapshot release. Garbage collection for DOM elements.
     .
     * 0.3.0.0 - Snapshot release. Browser communication with WebSockets. First stab at FRP integration.
     .
@@ -52,6 +54,13 @@ flag buildExamples
     description: Build example executables.
     default:     False
 
+flag rebug
+    description: The library uses some techniques that are highly
+                 non-deterministic, for example garbage collection and concurrency.
+                 Bugs in these subsystems are harder to find.
+                 Activating this flag will expose more of them.
+    default:     False
+
 Source-repository head
     type:               git
     location:           git://github.com/HeinrichApfelmus/threepenny-gui.git
@@ -70,17 +79,22 @@ Library
                     ,Graphics.UI.Threepenny.Events
                     ,Graphics.UI.Threepenny.JQuery
                     ,Graphics.UI.Threepenny.Timer
+                    ,Foreign.Coupon
   Other-modules:
                      Control.Concurrent.Chan.Extra
                     ,Control.Concurrent.Delay
                     ,Graphics.UI.Threepenny.Internal.Core
-                    ,Graphics.UI.Threepenny.Internal.Resources
+                    ,Graphics.UI.Threepenny.Internal.FFI
                     ,Graphics.UI.Threepenny.Internal.Include
+                    ,Graphics.UI.Threepenny.Internal.Resources
                     ,Graphics.UI.Threepenny.Internal.Types
                     ,Reactive.Threepenny.PulseLatch
                     ,Reactive.Threepenny.Memo
                     ,Paths_threepenny_gui
   CPP-Options:      -DCABAL
+  if flag(rebug)
+      CPP-Options:  -DREBUG
+      GHC-Options:  -O2   
   Build-depends:     base                      >= 4     && < 5
                     ,snap-server
                     ,snap-core
