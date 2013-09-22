@@ -477,10 +477,9 @@ newElement elSession@(Session{..}) elTagName elEvents = do
     elHandlers <- newMVar M.empty
     el         <- Foreign.newItem sPrizeBooth ElementData{..}
     Foreign.addFinalizer el $ withElement el $ \elid session -> do
-        run session $ Delete elid
         -- FIXME: do not try to delete elements from the session when
         -- the session is broken.
-        -- putStrLn $ "Passed away: " ++ show elid
+        run session $ Delete elid
     return el
 
 -- | Get 'Window' associated to an 'Element'.

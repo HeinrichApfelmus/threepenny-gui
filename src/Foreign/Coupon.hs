@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE MagicHash, UnboxedTuples #-}
 module Foreign.Coupon (
     -- * Synopsis
     -- | References to remote objects.
@@ -26,6 +27,15 @@ import qualified Data.Map as Map
 
 import System.Mem.Weak hiding (addFinalizer)
 import qualified System.Mem.Weak as Weak
+
+import qualified GHC.Base  as GHC
+import qualified GHC.Weak  as GHC
+import qualified GHC.IORef as GHC
+import qualified GHC.STRef as GHC
+
+mkWeakIORefValue :: IORef a -> value -> IO () -> IO (Weak value)
+mkWeakIORefValue r@(GHC.IORef (GHC.STRef r#)) v f = GHC.IO $ \s ->
+  case GHC.mkWeak# r# v f s of (# s1, w #) -> (# s1, GHC.Weak w #)
 
 type Map = Map.Map
 
@@ -103,7 +113,7 @@ newItem PrizeBooth{..} value = do
     let finalize = modifyMVar bCoupons $ \m -> return (Map.delete coupon m, ())
     w <- mkWeakIORef item finalize
     modifyMVar bCoupons $ \m -> return (Map.insert coupon w m, ())
-    atomicModifyIORef' item $ \item -> (item { self = w }, ())
+    atomicModifyIORef' item $ \itemdata -> (itemdata { self = w }, ())
     return item
 
 {-----------------------------------------------------------------------------
@@ -124,7 +134,7 @@ withItem item f = do
 -- | Make Sure that the item in question is alive
 -- at the given place in the sequence of IO actions.
 touchItem :: Item a -> IO ()
-touchItem item = readIORef item >>= evaluate >> return ()
+touchItem item = item `seq` return ()
 
 -- | Destroy an item and run all finalizers for it.
 -- Coupons for this item can no longer be redeemed.
@@ -150,14 +160,7 @@ addFinalizer item = void . mkWeakIORef item
 -- as it allows all child object to be garbage collected at once.
 addReachable :: Item a -> Item a -> IO ()
 addReachable parent child = do
-    -- FIXME: the debug statements are keeping an element alive
-    c1 <- coupon <$> readIORef parent
-    c2 <- coupon <$> readIORef child
-    putStrLn $ "Parent " ++ show c1 ++ " gets child " ++ show c2
-    
-    -- FIXME: IORefs are not good keys for weak pointers
-    w   <- mkWeak parent child $
-        Just $ putStrLn $ "Parent " ++ show c1 ++ " releases child " ++ show c2
+    w   <- mkWeakIORefValue parent child $ return ()
     ref <- children <$> readIORef parent
     atomicModifyIORef' ref $ \ws -> (w:ws, ())
 
