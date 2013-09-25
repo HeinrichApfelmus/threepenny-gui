@@ -9,6 +9,11 @@ module Graphics.UI.Threepenny.Core (
     Config(..), defaultConfig, startGUI,
     loadFile, loadDirectory,
     
+    -- * UI monad
+    -- $ui
+    UI,
+    module Control.Monad.IO.Class,
+    
     -- * Browser Window
     Window, title, cookies, getRequestLocation,
     
@@ -34,7 +39,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * Attributes
     -- | For a list of predefined attributes, see "Graphics.UI.Threepenny.Attributes".
-    (#), (#.), element,
+    (#), (#.),
     Attr, WriteAttr, ReadAttr, ReadWriteAttr(..),
     set, sink, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
     
@@ -80,6 +85,39 @@ import Graphics.UI.Threepenny.Internal.Types as Core (unprotectedGetElementId)
 
 
 {-----------------------------------------------------------------------------
+    UI monad
+------------------------------------------------------------------------------}
+{- $ui
+
+User interface elements are created and manipulated in the 'UI' monad.
+
+This monad is essentially just a thin wrapper around the familiar 'IO' monad.
+Use the 'liftIO' function to access 'IO' operations like reading
+and writing from files.
+
+There are several subtle reasons why Threepenny
+uses a custom 'UI' monad instead of the standard 'IO' monad:
+
+* More convenience when calling JavaScript.
+
+* Recursion for functional reactive programming.
+
+-}
+
+newtype UI a = UI { unUI :: IO a }
+
+instance Functor UI where
+    fmap f = UI . fmap f . unUI
+
+instance Monad UI where
+    return  = UI . return
+    m >>= k = UI $ unUI m >>= unUI . k
+
+instance MonadIO UI where
+    liftIO = UI
+
+
+{-----------------------------------------------------------------------------
     Server
 ------------------------------------------------------------------------------}
 {- $server
@@ -101,9 +139,9 @@ if you don't access each window in a single-threaded fashion.
 -- | Start server for GUI sessions.
 startGUI
     :: Config               -- ^ Server configuration.
-    -> (Window -> IO ())    -- ^ Action to run whenever a client browser connects.
+    -> (Window -> UI ())    -- ^ Action to run whenever a client browser connects.
     -> IO ()
-startGUI config handler = Core.serve config handler
+startGUI config handler = Core.serve config (unUI . handler)
 
 
 -- | Make a local file available as a relative URI.
@@ -111,12 +149,12 @@ loadFile
     :: Window     -- ^ Browser window
     -> String     -- ^ MIME type
     -> FilePath   -- ^ Local path to the file
-    -> IO String  -- ^ Generated URI
-loadFile w mime path = Core.loadFile w (fromString mime) path
+    -> UI String  -- ^ Generated URI
+loadFile w mime path = liftIO $ Core.loadFile w (fromString mime) path
 
 -- | Make a local directory available as a relative URI.
-loadDirectory :: Window -> FilePath -> IO String
-loadDirectory = Core.loadDirectory
+loadDirectory :: Window -> FilePath -> UI String
+loadDirectory w = liftIO . Core.loadDirectory w
 
 {-----------------------------------------------------------------------------
     Browser window
@@ -199,8 +237,8 @@ appendTo parent child = do
 -- | Make a new DOM element.
 mkElement
     :: String           -- ^ Tag name
-    -> IO Element
-mkElement tag = mdo
+    -> UI Element
+mkElement tag = liftIO $ mdo
     -- create element in Limbo
     ref <- newMVar (Limbo "" $ \w -> Core.newElement w tag events)
     -- create events and initialize them when element becomes Alive
@@ -219,23 +257,23 @@ mkElement tag = mdo
 --
 -- WARNING: The ability to move elements from one browser window to another
 -- is currently not implemented yet.
-getWindow :: Element -> IO (Maybe Window)
-getWindow (Element _ ref) = do
+getWindow :: Element -> UI (Maybe Window)
+getWindow (Element _ ref) = liftIO $ do
     e1 <- readMVar ref
     case e1 of
         Alive e   -> Just <$> Core.getWindow e
         Limbo _ _ -> return Nothing
 
 -- | Delete the given element.
-delete :: Element -> IO ()
-delete = updateElement (Core.delete)
+delete :: Element -> UI ()
+delete = liftIO . updateElement (Core.delete)
 
 -- | Append DOM elements as children to a given element.
-(#+) :: IO Element -> [IO Element] -> IO Element
+(#+) :: UI Element -> [UI Element] -> UI Element
 (#+) mx mys = do
     x  <- mx
     ys <- sequence mys
-    mapM_ (appendTo x) ys
+    mapM_ (liftIO . appendTo x) ys
     return x
 
 -- | Child elements of a given element.
@@ -280,8 +318,8 @@ value = mkReadWriteAttr get set
 -- | Get values from inputs. Blocks. This is faster than many 'getValue' invocations.
 getValuesList
     :: [Element]   -- ^ A list of elements to get the values of.
-    -> IO [String] -- ^ The list of plain text values.
-getValuesList = mapM (get value)
+    -> UI [String] -- ^ The list of plain text values.
+getValuesList = liftIO . mapM (get value)
     -- TODO: improve this to use Core.getValuesList
 
 -- | Text content of an element.
@@ -289,67 +327,71 @@ text :: WriteAttr Element String
 text = mkWriteAttr (updateElement . Core.setText)
 
 -- | Make a @span@ element with a given text content.
-string :: String -> IO Element
+string :: String -> UI Element
 string s = mkElement "span" # set text s
 
 
 -- | Get the head of the page.
-getHead :: Window -> IO Element
-getHead = fromAlive <=< Core.getHead
+getHead :: Window -> UI Element
+getHead = liftIO . (fromAlive <=< Core.getHead)
 
 -- | Get the body of the page.
-getBody :: Window -> IO Element
-getBody = fromAlive <=< Core.getBody
+getBody :: Window -> UI Element
+getBody = liftIO . (fromAlive <=< Core.getBody)
 
 -- | Get an element by its tag name.  Blocks.
 getElementByTagName
     :: Window             -- ^ Browser window
     -> String             -- ^ The tag name.
-    -> IO (Maybe Element) -- ^ An element (if any) with that tag name.
-getElementByTagName window = liftM listToMaybe . getElementsByTagName window
+    -> UI (Maybe Element) -- ^ An element (if any) with that tag name.
+getElementByTagName window =
+    liftM listToMaybe . getElementsByTagName window
 
 -- | Get all elements of the given tag name.  Blocks.
 getElementsByTagName
     :: Window        -- ^ Browser window
     -> String        -- ^ The tag name.
-    -> IO [Element]  -- ^ All elements with that tag name.
-getElementsByTagName window name =
+    -> UI [Element]  -- ^ All elements with that tag name.
+getElementsByTagName window name = liftIO $
     mapM fromAlive =<< Core.getElementsByTagName window name
 
 -- | Get an element by a particular ID.  Blocks.
 getElementById
     :: Window              -- ^ Browser window
     -> String              -- ^ The ID string.
-    -> IO (Maybe Element)  -- ^ Element (if any) with given ID.
-getElementById window id = listToMaybe `fmap` getElementsById window [id]
+    -> UI (Maybe Element)  -- ^ Element (if any) with given ID.
+getElementById window id =
+    listToMaybe `fmap` getElementsById window [id]
 
 -- | Get a list of elements by particular IDs.  Blocks.
 getElementsById
     :: Window        -- ^ Browser window
     -> [String]      -- ^ The ID string.
-    -> IO [Element]  -- ^ Elements with given ID.
-getElementsById window name =
+    -> UI [Element]  -- ^ Elements with given ID.
+getElementsById window name = liftIO $
     mapM fromAlive =<< Core.getElementsById window name
 
 -- | Get a list of elements by particular class.  Blocks.
 getElementsByClassName
     :: Window        -- ^ Browser window
     -> String        -- ^ The class string.
-    -> IO [Element]  -- ^ Elements with given class.
-getElementsByClassName window cls =
+    -> UI [Element]  -- ^ Elements with given class.
+getElementsByClassName window cls = liftIO $
     mapM fromAlive =<< Core.getElementsByClassName window cls
 
 {-----------------------------------------------------------------------------
     Oddball
 ------------------------------------------------------------------------------}
 -- | Invoke the JavaScript expression @audioElement.play();@.
-audioPlay = updateElement $ \el -> do
+audioPlay :: Element -> UI ()
+audioPlay e = liftIO $ flip updateElement e $ \el -> do
     window <- Core.getWindow el
     Core.runFunction window $
         ffi "%1.play()" el
 
 -- | Invoke the JavaScript expression @audioElement.stop();@.
-audioStop = updateElement $ \el -> do
+audioStop :: Element -> UI ()
+audioStop e = liftIO $ flip updateElement e $ \el -> do
     window <- Core.getWindow el
     Core.runFunction window $
         ffi "prim_audio_stop(%1)" el
@@ -369,11 +411,11 @@ fromProp name from to = mkReadWriteAttr get set
     Layout
 ------------------------------------------------------------------------------}
 -- | Align given elements in a row. Special case of 'grid'.
-row :: [IO Element] -> IO Element
+row :: [UI Element] -> UI Element
 row xs = grid [xs]
 
 -- | Align given elements in a column. Special case of 'grid'.
-column :: [IO Element] -> IO Element
+column :: [UI Element] -> UI Element
 column = grid . map (:[])
 
 -- | Align given elements in a rectangular grid.
@@ -395,7 +437,7 @@ column = grid . map (:[])
 -- You can customatize the actual layout by assigning an @id@ to the element
 -- and changing the @.table@, @.table-row@ and @table-column@
 -- classes in a custom CSS file.
-grid    :: [[IO Element]] -> IO Element
+grid    :: [[UI Element]] -> UI Element
 grid mrows = do
         rows0 <- mapM (sequence) mrows
     
@@ -451,8 +493,8 @@ disconnect = Core.disconnect
 -- Example usage.
 --
 -- > on click element $ \_ -> ...
-on :: (element -> Event a) -> element -> (a -> IO void) -> IO ()
-on f x h = register (f x) (void . h) >> return ()
+on :: (element -> Event a) -> element -> (a -> UI void) -> UI ()
+on f x h = liftIO $ register (f x) (void . unUI . h) >> return ()
 
 
 {-----------------------------------------------------------------------------
@@ -475,7 +517,7 @@ infixl 8 #.
 (#) = flip ($)
 
 -- | Convenient combinator for setting the CSS class on element creation.
-(#.) :: IO Element -> String -> IO Element
+(#.) :: UI Element -> String -> UI Element
 (#.) mx s = mx # set (attr "class") s
 
 -- | Attributes can be 'set' and 'get'.
@@ -512,8 +554,8 @@ sink attr bi mx = do
     return x
 
 -- | Get attribute value.
-get :: ReadWriteAttr x i o -> x -> IO o
-get = get'
+get :: MonadIO m => ReadWriteAttr x i o -> x -> m o
+get attr = liftIO . get' attr
 
 -- | Build an attribute from a getter and a setter.
 mkReadWriteAttr
@@ -549,10 +591,10 @@ instance Widget Element where
 --
 -- > e <- mkElement "button"
 -- > element e # set text "Ok"
-element :: Widget w => w -> IO Element
+element :: MonadIO m => Widget w => w -> m Element
 element = return . getElement
 
 -- | Convience synonym for 'return' to make widgets work well with 'set'.
-widget  :: Widget w => w -> IO w
+widget  :: Widget w => w -> UI w
 widget  = return
 
