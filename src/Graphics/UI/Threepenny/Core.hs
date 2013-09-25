@@ -53,7 +53,7 @@ module Graphics.UI.Threepenny.Core (
     callDeferredFunction, atomic,
     
     -- * Internal and oddball functions
-    updateElement, updateElementWindow, manifestElement, fromProp,
+    fromProp, toElement,
     audioPlay, audioStop,
     
     ) where
@@ -67,6 +67,7 @@ import Data.String (fromString)
 
 import Control.Concurrent.MVar
 import Control.Monad
+import Control.Monad.Fix
 import Control.Monad.IO.Class
 import qualified Control.Monad.Trans.Reader as Reader
 
@@ -77,14 +78,15 @@ import Reactive.Threepenny
 import qualified Graphics.UI.Threepenny.Internal.Core  as Core
 import Graphics.UI.Threepenny.Internal.Core
     ( getRequestLocation
-    , ToJS, FFI, ffi, JSFunction
-    , debug, callFunction, runFunction, callDeferredFunction, atomic, )
+    , debug, callDeferredFunction, atomic, )
+import Graphics.UI.Threepenny.Internal.FFI
 import Graphics.UI.Threepenny.Internal.Types as Core
     ( Window, Config, defaultConfig, Events, EventData
     , ElementData(..), withElementData,)
 
 
-import Graphics.UI.Threepenny.Internal.Types as Core (unprotectedGetElementId)
+import Graphics.UI.Threepenny.Internal.Types as Core
+    (unprotectedGetElementId, withElementData, ElementData(..))
 
 
 type ReaderT = Reader.ReaderT
@@ -120,6 +122,9 @@ instance Monad UI where
 
 instance MonadIO UI where
     liftIO = UI . liftIO
+
+instance MonadFix UI where
+    mfix f = UI $ mfix (unUI . f)  
 
 runUI :: Window -> UI a -> IO a
 runUI w m = Reader.runReaderT (unUI m) w
@@ -171,93 +176,37 @@ loadDirectory w = liftIO . Core.loadDirectory w
 ------------------------------------------------------------------------------}
 -- | Title of the client window.
 title :: WriteAttr Window String
-title = mkWriteAttr Core.setTitle
+title = mkWriteAttr (\s -> liftIO . Core.setTitle s)
 
 -- | Cookies on the client.
 cookies :: ReadAttr Window [(String,String)]
-cookies = mkReadAttr Core.getRequestCookies
+cookies = mkReadAttr (liftIO . Core.getRequestCookies)
 
 {-----------------------------------------------------------------------------
     Elements
 ------------------------------------------------------------------------------}
-type Value = String
+data Element = Element { eEvents :: Core.Events, toElement :: Core.Element }
 
--- | Reference to an element in the DOM of the client window.
-data Element = Element Core.Events (MVar Elem) deriving (Typeable)
--- Element events mvar
---      events = Events associated to this element
---      mvar   = Current state of the MVar
-data    Elem
-    = Alive Core.Element                       -- element exists in a window
-    | Limbo Value (Window -> IO Core.Element)  -- still needs to be created
+fromElement :: Core.Element -> IO Element
+fromElement e = do
+    events <- Core.withElementData e $ \_ x -> return $ elEvents x 
+    return $ Element events e
 
--- Turn a live reference into an 'Element'.
--- Note that multiple MVars may now point to the same live reference,
--- but this is ok since live references never change.
-fromAlive :: Core.Element -> IO Element
-fromAlive e = Core.withElementData e $ \_ el ->
-    Element (elEvents el) <$> newMVar (Alive e)
-
--- Update an element that may be in Limbo.
-updateElement :: (Core.Element -> IO ()) -> Element -> IO ()
-updateElement f (Element _ me) = do
-    e <- takeMVar me
-    case e of
-        Alive e -> do   -- update immediately
-            f e
-            putMVar me $ Alive e
-        Limbo value create ->      -- update on creation
-            putMVar me $ Limbo value $ \w -> create w >>= \e -> f e >> return e
-
--- Update an element that may be in Limbo
--- Also supply  Window  associated to the element
-updateElementWindow :: (Core.Element -> Window -> IO ()) -> Element -> IO ()
-updateElementWindow f e = flip updateElement e $ \el -> do
-    window <- Core.getWindow el
-    f el window
-
--- Given a browser window, make sure that the element exists there.
--- TODO: 1. Throw exception if the element exists in another window.
---       2. Don't throw exception, but move the element across windows.
-manifestElement :: Window -> Element -> IO Core.Element
-manifestElement w (Element _ me) = do
-        e1 <- takeMVar me
-        e2 <- case e1 of
-            Alive e        -> return e
-            Limbo v create -> do
-                e2 <- create w
-                Core.setAttr "value" v e2
-                Core.withElementData e2 $ \elid _ ->
-                    Core.setAttr "debug" (show elid) e2
-                return e2
-        putMVar me $ Alive e2
-        return e2
-
--- Append a child element to a parent element. Non-blocking.
-appendTo
-    :: Element   -- ^ Parent.
-    -> Element   -- ^ Child.
-    -> IO ()
-appendTo parent child = do
-    flip updateElement parent $ \x -> do
-        window <- Core.getWindow x
-        y      <- manifestElement window child
-        Core.appendElementTo x y
+instance ToJS Element where
+    render = render . toElement
 
 -- | Make a new DOM element.
 mkElement
     :: String           -- ^ Tag name
     -> UI Element
-mkElement tag = liftIO $ mdo
-    -- create element in Limbo
-    ref <- newMVar (Limbo "" $ \w -> Core.newElement w tag events)
+mkElement tag = mdo
     -- create events and initialize them when element becomes Alive
-    let
-        initializeEvent (name,_,handler) = 
-            flip updateElement (Element undefined ref) $ \e -> do
-                Core.bind name e handler
-    events  <- newEventsNamed initializeEvent
-    return $ Element events ref
+    let initializeEvent (name,_,handler) = Core.bind name el handler
+    events  <- liftIO $ newEventsNamed initializeEvent
+    
+    window  <- getWindowUI
+    el      <- liftIO $ Core.newElement window tag events
+    return $ Element events el
 
 -- | Retrieve the browser 'Window' in which the element resides.
 -- 
@@ -268,73 +217,62 @@ mkElement tag = liftIO $ mdo
 -- WARNING: The ability to move elements from one browser window to another
 -- is currently not implemented yet.
 getWindow :: Element -> UI (Maybe Window)
-getWindow (Element _ ref) = liftIO $ do
-    e1 <- readMVar ref
-    case e1 of
-        Alive e   -> Just <$> Core.getWindow e
-        Limbo _ _ -> return Nothing
+getWindow e = liftIO $ Just <$> Core.getWindow (toElement e)
 
 -- | Delete the given element.
 delete :: Element -> UI ()
-delete = liftIO . updateElement (Core.delete)
+delete = liftIO . Core.delete . toElement
 
 -- | Append DOM elements as children to a given element.
 (#+) :: UI Element -> [UI Element] -> UI Element
 (#+) mx mys = do
     x  <- mx
     ys <- sequence mys
-    mapM_ (liftIO . appendTo x) ys
+    liftIO $ mapM_ (Core.appendElementTo (toElement x) . toElement) ys
     return x
 
 -- | Child elements of a given element.
 children :: WriteAttr Element [Element]
 children = mkWriteAttr set
     where
-    set xs x = do
-        updateElement Core.emptyEl x
-        mapM_ (appendTo x) xs
+    set xs x = liftIO $ do
+        Core.emptyEl $ toElement x
+        mapM_ (Core.appendElementTo (toElement x) . toElement) xs
 
 -- | Child elements of a given element as a HTML string.
 html :: WriteAttr Element String
-html = mkWriteAttr (updateElement . Core.setHtml)
+html = mkWriteAttr $ \s el ->
+    runFunction $ ffi "$(%1).html(%2)" el s
 
 -- | HTML attributes of an element.
 attr :: String -> WriteAttr Element String
-attr name = mkWriteAttr (updateElement . Core.setAttr name)
+attr name = mkWriteAttr $ \s el ->
+    runFunction $ ffi "$(%1).attr(%2,%3)" el name s
 
 -- | Set CSS style of an Element
 style :: WriteAttr Element [(String,String)]
-style = mkWriteAttr (updateElement . Core.setStyle)
+style = mkWriteAttr $ \xs el ->
+    liftIO $ Core.setStyle xs (toElement el)
 
 -- | Value attribute of an element.
 -- Particularly relevant for control widgets like 'input'.
 value :: Attr Element String
 value = mkReadWriteAttr get set
     where
-    get   (Element _ ref) = getValue =<< readMVar ref
-    set v (Element _ ref) = updateMVar (setValue v) ref
-    
-    getValue (Limbo v _) = return v
-    getValue (Alive e  ) = Core.getValue e
-    
-    setValue v (Limbo _ f) = return $ Limbo v f
-    setValue v (Alive e  ) = Core.setAttr "value" v e >> return (Alive e)
-    
-    updateMVar f ref = do
-        x <- takeMVar ref
-        y <- f x
-        putMVar ref y
+    get   el = liftIO $ Core.getValue (toElement el)
+    set v el = runFunction $ ffi "(%1).val(%2)" el v
 
 -- | Get values from inputs. Blocks. This is faster than many 'getValue' invocations.
 getValuesList
     :: [Element]   -- ^ A list of elements to get the values of.
     -> UI [String] -- ^ The list of plain text values.
-getValuesList = liftIO . mapM (get value)
+getValuesList = mapM (get value)
     -- TODO: improve this to use Core.getValuesList
 
 -- | Text content of an element.
 text :: WriteAttr Element String
-text = mkWriteAttr (updateElement . Core.setText)
+text = mkWriteAttr $ \s el ->
+    runFunction $ ffi "$(%1).text(%2)" el s
 
 -- | Make a @span@ element with a given text content.
 string :: String -> UI Element
@@ -343,11 +281,11 @@ string s = mkElement "span" # set text s
 
 -- | Get the head of the page.
 getHead :: Window -> UI Element
-getHead = liftIO . (fromAlive <=< Core.getHead)
+getHead w = liftIO $ fromElement =<< Core.getHead w
 
 -- | Get the body of the page.
 getBody :: Window -> UI Element
-getBody = liftIO . (fromAlive <=< Core.getBody)
+getBody w = liftIO $ fromElement =<< Core.getBody w
 
 -- | Get an element by its tag name.  Blocks.
 getElementByTagName
@@ -363,7 +301,7 @@ getElementsByTagName
     -> String        -- ^ The tag name.
     -> UI [Element]  -- ^ All elements with that tag name.
 getElementsByTagName window name = liftIO $
-    mapM fromAlive =<< Core.getElementsByTagName window name
+    mapM fromElement =<< Core.getElementsByTagName window name
 
 -- | Get an element by a particular ID.  Blocks.
 getElementById
@@ -379,7 +317,7 @@ getElementsById
     -> [String]      -- ^ The ID string.
     -> UI [Element]  -- ^ Elements with given ID.
 getElementsById window name = liftIO $
-    mapM fromAlive =<< Core.getElementsById window name
+    mapM fromElement =<< Core.getElementsById window name
 
 -- | Get a list of elements by particular class.  Blocks.
 getElementsByClassName
@@ -387,35 +325,46 @@ getElementsByClassName
     -> String        -- ^ The class string.
     -> UI [Element]  -- ^ Elements with given class.
 getElementsByClassName window cls = liftIO $
-    mapM fromAlive =<< Core.getElementsByClassName window cls
+    mapM fromElement =<< Core.getElementsByClassName window cls
+
+
+{-----------------------------------------------------------------------------
+    FFI
+------------------------------------------------------------------------------}
+-- | Run the given JavaScript function and carry on. Doesn't block.
+--
+-- The client window uses JavaScript's @eval()@ function to run the code.
+runFunction :: JSFunction () -> UI ()
+runFunction fun = do
+    window <- getWindowUI
+    liftIO $ Core.runFunction window fun 
+
+-- | Run the given JavaScript function and wait for results. Blocks.
+--
+-- The client window uses JavaScript's @eval()@ function to run the code.
+callFunction :: JSFunction a -> UI a
+callFunction fun = do
+    window <- getWindowUI
+    liftIO $ Core.callFunction window fun
+
 
 {-----------------------------------------------------------------------------
     Oddball
 ------------------------------------------------------------------------------}
 -- | Invoke the JavaScript expression @audioElement.play();@.
 audioPlay :: Element -> UI ()
-audioPlay e = liftIO $ flip updateElement e $ \el -> do
-    window <- Core.getWindow el
-    Core.runFunction window $
-        ffi "%1.play()" el
+audioPlay el = runFunction $ ffi "%1.play()" el
 
 -- | Invoke the JavaScript expression @audioElement.stop();@.
 audioStop :: Element -> UI ()
-audioStop e = liftIO $ flip updateElement e $ \el -> do
-    window <- Core.getWindow el
-    Core.runFunction window $
-        ffi "prim_audio_stop(%1)" el
+audioStop el = runFunction $ ffi "prim_audio_stop(%1)" el
 
 -- Turn a jQuery property @.prop()@ into an attribute.
 fromProp :: String -> (JSValue -> a) -> (a -> JSValue) -> Attr Element a
 fromProp name from to = mkReadWriteAttr get set
     where
-    set x = updateElement (Core.setProp name $ to x)
-    get (Element _ ref) = do
-        me <- readMVar ref
-        case me of
-            Limbo _ _ -> error "'checked' attribute: element must be in a browser window"
-            Alive e   -> from <$> Core.getProp name e
+    set v el = runFunction $ ffi "$(%1).prop(%2,%3)" el name (to v)
+    get   el = fmap from $ callFunction $ ffi "$(%1).prop(%2)" el name
 
 {-----------------------------------------------------------------------------
     Layout
@@ -474,21 +423,6 @@ domEvent
     -> Event EventData
 domEvent name (Element events _) = events name
 
-{-   
-    ref <- newIORef $ return ()
-    let
-        -- register handler and remember unregister function
-        register' = flip updateElement element $ \e -> do
-            unregister <- register (Core.bind name e) handler
-            writeIORef ref unregister
-        
-        -- update element to unregister the event handler
-        unregister' = flip updateElement element $ \_ -> do
-            join $ readIORef ref
-    
-    register'
-    return unregister'
--}
 
 -- | Event that occurs whenever the client has disconnected,
 -- be it by closing the browser window or by exception.
@@ -544,45 +478,46 @@ type WriteAttr x i = ReadWriteAttr x i ()
 
 -- | Generalized attribute with different types for getting and setting.
 data ReadWriteAttr x i o = ReadWriteAttr
-    { get' :: x -> IO o
-    , set' :: i -> x -> IO ()
+    { get' :: x -> UI o
+    , set' :: i -> x -> UI ()
     }
 
--- | Set value of an attribute in the 'IO' monad.
+-- | Set value of an attribute in the 'UI' monad.
 -- Best used in conjunction with '#'.
-set :: MonadIO m => ReadWriteAttr x i o -> i -> m x -> m x
-set attr i mx = do { x <- mx; liftIO (set' attr i x); return x; }
+set :: ReadWriteAttr x i o -> i -> UI x -> UI x
+set attr i mx = do { x <- mx; set' attr i x; return x; }
 
 -- | Set the value of an attribute to a 'Behavior', that is a time-varying value.
 --
 -- Note: For reasons of efficiency, the attribute is only
 -- updated when the value changes.
-sink :: ReadWriteAttr x i o -> Behavior i -> IO x -> IO x
+sink :: ReadWriteAttr x i o -> Behavior i -> UI x -> UI x
 sink attr bi mx = do
     x <- mx
     do
-        i <- currentValue bi
+        i <- liftIO $ currentValue bi
         set' attr i x
-        onChange bi $ \i -> set' attr i x  
+        window <- getWindowUI
+        liftIO $ onChange bi $ \i -> runUI window $ set' attr i x  
     return x
 
 -- | Get attribute value.
-get :: MonadIO m => ReadWriteAttr x i o -> x -> m o
-get attr = liftIO . get' attr
+get :: ReadWriteAttr x i o -> x -> UI o
+get attr = get' attr
 
 -- | Build an attribute from a getter and a setter.
 mkReadWriteAttr
-    :: (x -> IO o)          -- ^ Getter.
-    -> (i -> x -> IO ())    -- ^ Setter.
+    :: (x -> UI o)          -- ^ Getter.
+    -> (i -> x -> UI ())    -- ^ Setter.
     -> ReadWriteAttr x i o
 mkReadWriteAttr get set = ReadWriteAttr { get' = get, set' = set }
 
 -- | Build attribute from a getter.
-mkReadAttr :: (x -> IO o) -> ReadAttr x o
+mkReadAttr :: (x -> UI o) -> ReadAttr x o
 mkReadAttr get = mkReadWriteAttr get (\_ _ -> return ())
 
 -- | Build attribute from a setter.
-mkWriteAttr :: (i -> x -> IO ()) -> WriteAttr x i
+mkWriteAttr :: (i -> x -> UI ()) -> WriteAttr x i
 mkWriteAttr set = mkReadWriteAttr (\_ -> return ()) set
 
 

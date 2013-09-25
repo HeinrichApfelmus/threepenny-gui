@@ -18,16 +18,12 @@ type Canvas = Element
 type Vector = (Int,Int)
 
 -- | Draw the image of an image element onto the canvas at a specified position.
-drawImage :: Element -> Vector -> Canvas -> IO ()
-drawImage eimage (x,y) = updateElementWindow $ \canvas window -> do
-    image <- manifestElement window eimage
-    runFunction window $
-        ffi "%1.getContext('2d').drawImage(%2,%3,%4)" canvas image x y
+drawImage :: Element -> Vector -> Canvas -> UI ()
+drawImage image (x,y) canvas =
+    runFunction $ ffi "%1.getContext('2d').drawImage(%2,%3,%4)" canvas image x y
 
 -- | Clear the canvas
-clearCanvas :: Canvas -> IO ()
-clearCanvas = updateElementWindow $ \canvas window -> do
-    runFunction window $
-        ffi "%1.getContext('2d').clear()" canvas
+clearCanvas :: Canvas -> UI ()
+clearCanvas = runFunction . ffi "%1.getContext('2d').clear()"
 
 

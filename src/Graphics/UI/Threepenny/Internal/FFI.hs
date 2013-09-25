@@ -6,7 +6,7 @@ module Graphics.UI.Threepenny.Internal.FFI (
     
     -- * Documentation
     ffi,
-    FFI, ToJS,
+    FFI(..), ToJS(..),
     JSFunction,
     
     toCode, marshalResult,
