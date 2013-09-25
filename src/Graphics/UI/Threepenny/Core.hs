@@ -64,9 +64,12 @@ import qualified Data.Map as Map
 import Data.Maybe (listToMaybe)
 import Data.Functor
 import Data.String (fromString)
+
 import Control.Concurrent.MVar
 import Control.Monad
 import Control.Monad.IO.Class
+import qualified Control.Monad.Trans.Reader as Reader
+
 import Network.URI
 import Text.JSON
 import Reactive.Threepenny
@@ -83,6 +86,8 @@ import Graphics.UI.Threepenny.Internal.Types as Core
 
 import Graphics.UI.Threepenny.Internal.Types as Core (unprotectedGetElementId)
 
+
+type ReaderT = Reader.ReaderT
 
 {-----------------------------------------------------------------------------
     UI monad
@@ -104,7 +109,7 @@ uses a custom 'UI' monad instead of the standard 'IO' monad:
 
 -}
 
-newtype UI a = UI { unUI :: IO a }
+newtype UI a = UI { unUI :: ReaderT Window IO a }
 
 instance Functor UI where
     fmap f = UI . fmap f . unUI
@@ -114,8 +119,13 @@ instance Monad UI where
     m >>= k = UI $ unUI m >>= unUI . k
 
 instance MonadIO UI where
-    liftIO = UI
+    liftIO = UI . liftIO
 
+runUI :: Window -> UI a -> IO a
+runUI w m = Reader.runReaderT (unUI m) w
+
+getWindowUI :: UI Window
+getWindowUI = UI Reader.ask
 
 {-----------------------------------------------------------------------------
     Server
@@ -141,7 +151,7 @@ startGUI
     :: Config               -- ^ Server configuration.
     -> (Window -> UI ())    -- ^ Action to run whenever a client browser connects.
     -> IO ()
-startGUI config handler = Core.serve config (unUI . handler)
+startGUI config handler = Core.serve config (\w -> runUI w $ handler w)
 
 
 -- | Make a local file available as a relative URI.
@@ -494,7 +504,10 @@ disconnect = Core.disconnect
 --
 -- > on click element $ \_ -> ...
 on :: (element -> Event a) -> element -> (a -> UI void) -> UI ()
-on f x h = liftIO $ register (f x) (void . unUI . h) >> return ()
+on f x h = do
+    window <- getWindowUI
+    liftIO $ register (f x) (void . runUI window . h)
+    return ()
 
 
 {-----------------------------------------------------------------------------
