@@ -39,9 +39,9 @@ main = do
 
 type Message = (UTCTime, String, String)
 
-setup :: Chan Message -> Window -> IO ()
+setup :: Chan Message -> Window -> UI ()
 setup globalMsgs window = do
-    msgs <- Chan.dupChan globalMsgs
+    msgs <- liftIO $ Chan.dupChan globalMsgs
 
     return window # set title "Chat"
     
@@ -56,10 +56,9 @@ setup globalMsgs window = do
         , element messageArea
         ]
     
-    messageReceiver <- forkIO $ receiveMessages window msgs messageArea
+    messageReceiver <- liftIO $ forkIO $ receiveMessages window msgs messageArea
 
-    on UI.disconnect window $ const $ do
-        putStrLn "Disconnected!"
+    on UI.disconnect window $ const $ liftIO $ do
         killThread messageReceiver
         now   <- getCurrentTime
         nick  <- readIORef nickRef
@@ -69,26 +68,27 @@ setup globalMsgs window = do
 receiveMessages w msgs messageArea = do
     messages <- Chan.getChanContents msgs
     forM_ messages $ \msg -> do
-        atomic w $ do
+        atomic w $ withWindow w $ do
+          -- FIXME: withWindow  should include a call to  atomic ?
           element messageArea #+ [mkMessage msg]
           UI.scrollToBottom messageArea
 
-mkMessageArea :: Chan Message -> IORef String -> IO Element
+mkMessageArea :: Chan Message -> IORef String -> UI Element
 mkMessageArea msgs nickname = do
     input <- UI.textarea #. "send-textarea"
     
     on UI.sendValue input $ (. trim) $ \content -> do
-        when (not (null content)) $ do
+        element input # set value ""
+        when (not (null content)) $ liftIO $ do
             now  <- getCurrentTime
             nick <- readIORef nickname
-            element input # set value ""
             when (not (null nick)) $
                 Chan.writeChan msgs (now,nick,content)
 
     UI.div #. "message-area" #+ [UI.div #. "send-area" #+ [element input]]
 
 
-mkNickname :: IO (IORef String, Element)
+mkNickname :: UI (IORef String, Element)
 mkNickname = do
     input  <- UI.input #. "name-input"
     el     <- UI.div   #. "name-area"  #+
@@ -97,11 +97,11 @@ mkNickname = do
                 ]
     UI.setFocus input
     
-    nick <- newIORef ""
-    on UI.keyup input $ \_ -> writeIORef nick . trim =<< get value input
+    nick <- liftIO $ newIORef ""
+    on UI.keyup input $ \_ -> liftIO . writeIORef nick . trim =<< get value input
     return (nick,el)
 
-mkMessage :: Message -> IO Element
+mkMessage :: Message -> UI Element
 mkMessage (timestamp, nick, content) =
     UI.div #. "message" #+
         [ UI.div #. "timestamp" #+ [string $ show timestamp]
@@ -109,7 +109,7 @@ mkMessage (timestamp, nick, content) =
         , UI.div #. "content"   #+ [string content]
         ]
 
-viewSource :: IO Element
+viewSource :: UI Element
 viewSource =
     UI.anchor #. "view-source" # set UI.href url #+ [string "View source code"]
     where

@@ -11,7 +11,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * UI monad
     -- $ui
-    UI,
+    UI, withWindow,
     module Control.Monad.IO.Class,
     
     -- * Browser Window
@@ -53,7 +53,7 @@ module Graphics.UI.Threepenny.Core (
     callDeferredFunction, atomic,
     
     -- * Internal and oddball functions
-    fromProp, toElement, runUI,
+    fromProp, toElement,
     audioPlay, audioStop,
     
     ) where
@@ -126,8 +126,9 @@ instance MonadIO UI where
 instance MonadFix UI where
     mfix f = UI $ mfix (unUI . f)  
 
-runUI :: Window -> UI a -> IO a
-runUI w m = Reader.runReaderT (unUI m) w
+-- | Execute an 'UI' action in a particular browser window.
+withWindow :: Window -> UI a -> IO a
+withWindow w m = Reader.runReaderT (unUI m) w
 
 getWindowUI :: UI Window
 getWindowUI = UI Reader.ask
@@ -156,7 +157,7 @@ startGUI
     :: Config               -- ^ Server configuration.
     -> (Window -> UI ())    -- ^ Action to run whenever a client browser connects.
     -> IO ()
-startGUI config handler = Core.serve config (\w -> runUI w $ handler w)
+startGUI config handler = Core.serve config (\w -> withWindow w $ handler w)
 
 
 -- | Make a local file available as a relative URI.
@@ -434,7 +435,7 @@ disconnect = Core.disconnect
 on :: (element -> Event a) -> element -> (a -> UI void) -> UI ()
 on f x h = do
     window <- getWindowUI
-    liftIO $ register (f x) (void . runUI window . h)
+    liftIO $ register (f x) (void . withWindow window . h)
     return ()
 
 
@@ -492,7 +493,7 @@ sink attr bi mx = do
         i <- liftIO $ currentValue bi
         set' attr i x
         window <- getWindowUI
-        liftIO $ onChange bi $ \i -> runUI window $ set' attr i x  
+        liftIO $ onChange bi $ \i -> withWindow window $ set' attr i x  
     return x
 
 -- | Get attribute value.
