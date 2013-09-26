@@ -26,10 +26,6 @@ module Graphics.UI.Threepenny.Internal.Driver
   ,disconnect
   ,module Reactive.Threepenny
  
-  -- * Setting attributes
-  -- $settingattributes
-  ,setStyle
-  
   -- * Querying
   -- $querying
   ,getHead
@@ -595,23 +591,6 @@ initializeElements session@(Session{..}) = do
     createElement tag = mdo
         x <- newElement session tag =<< newEvents x
         return x
-
-
-{-----------------------------------------------------------------------------
-    Setting attributes
-------------------------------------------------------------------------------}
-{- $settingattributes
- 
-    Text, HTML and attributes of DOM nodes can be set using the
-    functions in this section. 
--}
-
--- | Set the style of the given element.
-setStyle :: [(String, String)] -- ^ Pairs of CSS (property,value).
-         -> Element            -- ^ The element to update.
-         -> IO ()
-setStyle props e = withElement e $ \el session ->
-    run session $ SetStyle el props
 
 {-----------------------------------------------------------------------------
     Querying the DOM

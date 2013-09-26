@@ -282,18 +282,6 @@ $.fn.livechange = function(ms,trigger){
         reply({ Elements: els });
         break;
       }
-      case "SetStyle": {
-        var set = event.SetStyle;
-        var id = set[0];
-        var style = set[1];
-        var el = elidToElement(id);
-        var len = style.length;
-        for(var i = 0; i < len; i++){
-          el.style[style[i][0]] = style[i][1];
-        }
-        reply();
-        break;
-      }
       case "GetValues": {
         var ids = event.GetValues;
         var len = ids.length;

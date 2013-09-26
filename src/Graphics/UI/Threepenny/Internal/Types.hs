@@ -167,7 +167,6 @@ data Instruction
   | GetElementsByClassName String
   | GetElementsById [String]
   | GetElementsByTagName String
-  | SetStyle ElementId [(String,String)]
   | Bind EventId ElementId
   | GetValues [ElementId]
   | RunJSFunction String

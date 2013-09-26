@@ -246,8 +246,8 @@ attr name = mkWriteAttr $ \s el ->
 
 -- | Set CSS style of an Element
 style :: WriteAttr Element [(String,String)]
-style = mkWriteAttr $ \xs el ->
-    liftIO $ Core.setStyle xs (toElement el)
+style = mkWriteAttr $ \xs el -> forM_ xs $ \(name,val) -> 
+    runFunction $ ffi "%1.style[%2] = %3" el name val
 
 -- | Value attribute of an element.
 -- Particularly relevant for control widgets like 'input'.
