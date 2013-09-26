@@ -53,7 +53,7 @@ module Graphics.UI.Threepenny.Core (
     callDeferredFunction, atomic,
     
     -- * Internal and oddball functions
-    fromProp, toElement,
+    fromProp, toElement, runUI,
     audioPlay, audioStop,
     
     ) where
@@ -209,15 +209,8 @@ mkElement tag = mdo
     return $ Element events el
 
 -- | Retrieve the browser 'Window' in which the element resides.
--- 
--- Note that elements do not reside in any browser window when they are first created.
--- To move the element to a particular browser window,
--- you have to append it to a parent, for instance with the `(#+)` operator.
---
--- WARNING: The ability to move elements from one browser window to another
--- is currently not implemented yet.
-getWindow :: Element -> UI (Maybe Window)
-getWindow e = liftIO $ Just <$> Core.getWindow (toElement e)
+getWindow :: Element -> IO Window
+getWindow e = Core.getWindow (toElement e)
 
 -- | Delete the given element.
 delete :: Element -> UI ()

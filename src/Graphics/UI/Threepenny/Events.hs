@@ -20,16 +20,18 @@ silence = fmap (const ())
 ------------------------------------------------------------------------------}
 -- | Event that occurs when the /user/ changes the value of the input element.
 valueChange :: Element -> Event String
-valueChange el = unsafeMapIO (const $ get value el) (domEvent "keydown" el)
+valueChange el = unsafeMapUI el (const $ get value el) (domEvent "keydown" el)
+
+unsafeMapUI el f = unsafeMapIO (\a -> getWindow el >>= \w -> runUI w (f a))
 
 -- | Event that occurs when the /user/ changes the selection of a @<select>@ element.
 selectionChange :: Element -> Event (Maybe Int)
-selectionChange el = unsafeMapIO (const $ get selection el) (click el)
+selectionChange el = unsafeMapUI el (const $ get selection el) (click el)
 
 -- | Event that occurs when the /user/ changes the checked status of an input
 -- element of type checkbox.
 checkedChange :: Element -> Event Bool
-checkedChange el = unsafeMapIO (const $ get checked el) (click el)
+checkedChange el = unsafeMapUI el (const $ get checked el) (click el)
 
 {-----------------------------------------------------------------------------
     DOM Events
