@@ -150,7 +150,8 @@ currentValue (B l _) = Prim.readLatch l
 instance Functor Event where
     fmap f e = E $ liftMemo1 (Prim.mapP f) (unE e)
 
-unsafeMapIO f e   = E $ liftMemo1 (Prim.unsafeMapIOP f) (unE e)
+unsafeMapIO :: (a -> IO b) -> Event a -> Event b
+unsafeMapIO f e = E $ liftMemo1 (Prim.unsafeMapIOP f) (unE e)
 
 -- | Event that never occurs.
 -- Think of it as @never = []@.
