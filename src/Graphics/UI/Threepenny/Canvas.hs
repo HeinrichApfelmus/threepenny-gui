@@ -8,7 +8,6 @@ module Graphics.UI.Threepenny.Canvas (
     ) where
 
 import Graphics.UI.Threepenny.Core
-import qualified Graphics.UI.Threepenny.Internal.Core as Core
 
 {-----------------------------------------------------------------------------
     Canvas

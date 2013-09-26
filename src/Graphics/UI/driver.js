@@ -294,23 +294,6 @@ $.fn.livechange = function(ms,trigger){
         reply();
         break;
       }
-      case "SetAttr": {
-        var set   = event.SetAttr;
-        var id    = set[0];
-        var key   = set[1];
-        var value = set[2];
-        var el    = elidToElement(id);
-        $(el).attr(key,value);
-        reply();
-        break;
-      }
-      case "GetValue": {
-        var id = event.GetValue;
-        var el = elidToElement(id);
-        var value = $(el).val();
-        reply({ Value: value });
-        break;
-      }
       case "GetValues": {
         var ids = event.GetValues;
         var len = ids.length;
@@ -319,29 +302,6 @@ $.fn.livechange = function(ms,trigger){
           values.push($(elidToElement(ids[i])).val());
         }
         reply({ Values: values });
-        break;
-      }
-      case "Append": {
-        var append = event.Append;
-        $(elidToElement(append[0])).append($(elidToElement(append[1])));
-        reply();
-        break;
-      }
-      case "SetText": {
-        var set = event.SetText;
-        $(elidToElement(set[0])).text(set[1]);
-        reply();
-        break;
-      }
-      case "SetTitle": {
-        document.title = event.SetTitle;
-        reply();
-        break;
-      }
-      case "SetHtml": {
-        var set = event.SetHtml;
-        $(elidToElement(set[0])).html(set[1]);
-        reply();
         break;
       }
       case "Bind": {

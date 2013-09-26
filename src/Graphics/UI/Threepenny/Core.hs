@@ -75,8 +75,8 @@ import Network.URI
 import Text.JSON
 import Reactive.Threepenny
 
-import qualified Graphics.UI.Threepenny.Internal.Core  as Core
-import Graphics.UI.Threepenny.Internal.Core
+import qualified Graphics.UI.Threepenny.Internal.Driver  as Core
+import Graphics.UI.Threepenny.Internal.Driver
     ( getRequestLocation
     , debug, callDeferredFunction, atomic, )
 import Graphics.UI.Threepenny.Internal.FFI
@@ -176,7 +176,8 @@ loadDirectory w = liftIO . Core.loadDirectory w
 ------------------------------------------------------------------------------}
 -- | Title of the client window.
 title :: WriteAttr Window String
-title = mkWriteAttr (\s -> liftIO . Core.setTitle s)
+title = mkWriteAttr $ \s _ ->
+    runFunction $ ffi "document.title = %1;" s
 
 -- | Cookies on the client.
 cookies :: ReadAttr Window [(String,String)]
@@ -252,8 +253,8 @@ style = mkWriteAttr $ \xs el ->
 value :: Attr Element String
 value = mkReadWriteAttr get set
     where
-    get   el = liftIO $ Core.getValue (toElement el)
-    set v el = runFunction $ ffi "(%1).val(%2)" el v
+    get   el = callFunction $ ffi "$(%1).val()" el
+    set v el = runFunction  $ ffi "$(%1).val(%2)" el v
 
 -- | Get values from inputs. Blocks. This is faster than many 'getValue' invocations.
 getValuesList

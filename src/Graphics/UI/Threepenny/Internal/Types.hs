@@ -168,14 +168,8 @@ data Instruction
   | GetElementsById [String]
   | GetElementsByTagName String
   | SetStyle ElementId [(String,String)]
-  | SetAttr ElementId String String
-  | Append ElementId ElementId
-  | SetText ElementId String
-  | SetHtml ElementId String
   | Bind EventId ElementId
-  | GetValue ElementId
   | GetValues [ElementId]
-  | SetTitle String
   | RunJSFunction String
   | CallJSFunction String
   | CallDeferredFunction (Closure,String,[String])
@@ -191,7 +185,6 @@ data Signal
   = Quit ()
   | Elements [ElementId]
   | Event ElementId EventId [Maybe String]
-  | Value String
   | Values [String]
   | FunctionCallValues [Maybe String]
   | FunctionResult JSValue
@@ -210,12 +203,11 @@ instance JSON Signal where
           arguments <- valFromObj "Params"  e
           args      <- mapM nullable arguments
           return $ Event elid eventId args
-        value = Value <$> valFromObj "Value" obj
         values = Values <$> valFromObj "Values" obj
         fcallvalues = do
           FunctionCallValues <$> (valFromObj "FunctionCallValues" obj >>= mapM nullable)
         fresult = FunctionResult <$> valFromObj "FunctionResult" obj
-    quit <|> elements <|> event <|> value <|> values <|> fcallvalues <|> fresult
+    quit <|> elements <|> event <|> values <|> fcallvalues <|> fresult
 
 -- | Read a JSValue that may be null.
 nullable :: JSON a => JSValue -> Result (Maybe a)

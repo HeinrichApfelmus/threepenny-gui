@@ -83,7 +83,7 @@ Library
   Other-modules:
                      Control.Concurrent.Chan.Extra
                     ,Control.Concurrent.Delay
-                    ,Graphics.UI.Threepenny.Internal.Core
+                    ,Graphics.UI.Threepenny.Internal.Driver
                     ,Graphics.UI.Threepenny.Internal.FFI
                     ,Graphics.UI.Threepenny.Internal.Include
                     ,Graphics.UI.Threepenny.Internal.Resources

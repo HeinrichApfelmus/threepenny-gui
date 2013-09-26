@@ -6,7 +6,7 @@ import Data.Char
 import Data.Default
 import Data.Maybe
 import Graphics.UI.Threepenny.Core
-import qualified Graphics.UI.Threepenny.Internal.Core as Core
+import qualified Graphics.UI.Threepenny.Internal.Driver as Core
 import qualified Graphics.UI.Threepenny.Internal.Types as Core
 import Text.JSON
 import Reactive.Threepenny

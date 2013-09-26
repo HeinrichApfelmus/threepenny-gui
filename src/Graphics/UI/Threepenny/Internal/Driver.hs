@@ -4,7 +4,7 @@
 {-# LANGUAGE RecursiveDo #-}
 {-# OPTIONS -fno-warn-name-shadowing #-}
 
-module Graphics.UI.Threepenny.Internal.Core
+module Graphics.UI.Threepenny.Internal.Driver
   (
   -- * Synopsis
   -- | The main internal functionality.
@@ -14,10 +14,11 @@ module Graphics.UI.Threepenny.Internal.Core
   ,loadFile
   ,loadDirectory
 
-  -- * Manipulating tree structure
-  -- $treestructure
+  -- * Elements
   ,newElement
   ,appendElementTo
+  ,emptyEl
+  ,delete
   
   -- * Event handling
   -- $eventhandling
@@ -28,13 +29,6 @@ module Graphics.UI.Threepenny.Internal.Core
   -- * Setting attributes
   -- $settingattributes
   ,setStyle
-  ,setAttr
-  ,setProp
-  ,setText
-  ,setHtml
-  ,setTitle
-  ,emptyEl
-  ,delete
   
   -- * Querying
   -- $querying
@@ -44,8 +38,6 @@ module Graphics.UI.Threepenny.Internal.Core
   ,getElementsById
   ,getElementsByClassName
   ,getWindow
-  ,getProp
-  ,getValue
   ,getValuesList
   ,getRequestCookies
   ,getRequestLocation
@@ -465,10 +457,6 @@ loadDirectory Session{..} path = do
     Elements
         Creation, Management, Finalization
 ------------------------------------------------------------------------------}
--- $treestructure
---
--- Functions for creating, deleting, moving, appending, prepending, DOM nodes.
-
 -- | Create a new element of the given tag name.
 newElement :: Window        -- ^ Browser window in which context to create the element
            -> String        -- ^ The tag name.
@@ -477,11 +465,10 @@ newElement :: Window        -- ^ Browser window in which context to create the e
 newElement elSession@(Session{..}) elTagName elEvents = do
     elHandlers <- newMVar M.empty
     el         <- Foreign.newItem sPrizeBooth ElementData{..}
-    Foreign.addFinalizer el $ withElement el $ \elid session -> do
+    Foreign.addFinalizer el $ delete el
         -- FIXME: Do not try to delete elements from the session when
         -- the session is broken/disconnected already.
         -- A fix should be part of the  run  function, though.
-        run session $ Delete elid
     return el
 
 -- | Get 'Window' associated to an 'Element'.
@@ -502,8 +489,8 @@ appendElementTo eParent eChild =
     --       Implement transfer of elements across browser windows
     withElement eParent $ \parent session ->
     withElement eChild  $ \child  _       -> do
-        Foreign.addReachable eParent eChild 
-        run session $ Append parent child
+        Foreign.addReachable eParent eChild
+        runFunction session $ ffi "$(%1).append($(%2))" parent child
 
 -- | Get the head of the page.
 getHead :: Window -> IO Element
@@ -521,8 +508,10 @@ emptyEl el = withElement el $ \elid window -> do
 
 -- | Delete the given element.
 delete :: Element -> IO ()
-delete e = withElement e $ \el session ->
-    run session $ Delete el
+delete el = withElement el $ \elid window ->
+    run window $ Delete elid
+    -- Note: We want a primitive 'Delete' here, because 
+    -- we do not want the implicit conversion from ElementId to element.
 
 
 {-----------------------------------------------------------------------------
@@ -624,43 +613,6 @@ setStyle :: [(String, String)] -- ^ Pairs of CSS (property,value).
 setStyle props e = withElement e $ \el session ->
     run session $ SetStyle el props
 
--- | Set the attribute of the given element.
-setAttr :: String  -- ^ The attribute name.
-        -> String  -- ^ The attribute value.
-        -> Element -- ^ The element to update.
-        -> IO ()
-setAttr key value e = withElement e $ \el session ->
-    run session $ SetAttr el key value
-
--- | Set the property of the given element.
-setProp :: String  -- ^ The property name.
-        -> JSValue -- ^ The property value.
-        -> Element -- ^ The element to update.
-        -> IO ()
-setProp key value e = withElement e $ \el session ->
-    runFunction session $ ffi "$(%1).prop(%2,%3);" el key value
-
--- | Set the text of the given element.
-setText :: String  -- ^ The plain text.
-        -> Element -- ^ The element to update.
-        -> IO ()
-setText props e = withElement e $ \el session ->
-    run session $ SetText el props
-
--- | Set the HTML of the given element.
-setHtml :: String  -- ^ The HTML.
-        -> Element -- ^ The element to update.
-        -> IO ()
-setHtml props e = withElement e $ \el session ->
-    run session $ SetHtml el props
-
--- | Set the title of the document.
-setTitle
-    :: String  -- ^ The title.
-    -> Window  -- ^ The document window
-    -> IO ()
-setTitle title session = run session $ SetTitle title
-
 {-----------------------------------------------------------------------------
     Querying the DOM
 ------------------------------------------------------------------------------}
@@ -702,25 +654,7 @@ getElementsByClassName window cls =
       Elements els -> Just <$> lookupElements els window
       _            -> return Nothing
 
--- | Get the value of an input. Blocks.
-getValue
-    :: Element   -- ^ The element to get the value of.
-    -> IO String -- ^ The plain text value.
-getValue e = withElement e $ \el window ->
-  call window (GetValue el) $ \signal ->
-    case signal of
-      Value str -> return (Just str)
-      _         -> return Nothing
-
--- | Get the property of an element. Blocks.
-getProp
-    :: String     -- ^ The property name.
-    -> Element    -- ^ The element to get the value of.
-    -> IO JSValue -- ^ The plain text value.
-getProp prop e = withElement e $ \el window ->
-    callFunction window (ffi "$(%1).prop(%2)" el prop)
-
--- | Get values from inputs. Blocks. This is faster than many 'getValue' invocations.
+-- | Get values from inputs. Blocks. This is faster than many @getValue@ invocations.
 getValuesList
     :: [Element]   -- ^ A list of elements to get the values of.
     -> IO [String] -- ^ The list of plain text values.
