@@ -15,14 +15,9 @@ import Paths
     Enabled
 ------------------------------------------------------------------------------}
 main :: IO ()
-main = do
-    static <- getStaticDir
-    startGUI defaultConfig
-        { tpPort       = 10000
-        , tpStatic     = Just static
-        } setup
+main = startGUI defaultConfig { tpPort = 10000 } setup
 
-setup :: Window -> IO ()
+setup :: Window -> UI ()
 setup w = void $ do
     return w # set title "Input Elements"
     
