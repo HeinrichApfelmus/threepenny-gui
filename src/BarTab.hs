@@ -16,7 +16,7 @@ import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
 #endif
 
--- | Main entry point. Starts a TP server.
+-- | Main entry point.
 main :: IO ()
 main = startGUI defaultConfig { tpPort = 10000 } setup
 

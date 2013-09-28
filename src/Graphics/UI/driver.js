@@ -245,41 +245,17 @@ $.fn.livechange = function(ms,trigger){
       }
       case "GetElementsByTagName": {
         var elements = document.getElementsByTagName(event.GetElementsByTagName);
-        var els = [];
-        var len = elements.length;
-        for(var i = 0; i < len; i++) {
-          els.push({
-            Element: elementToElid(elements[i])
-          });
-        }
-        reply({ Elements: els });
+        reply(elementsToElid(elements));
         break;
       }
       case "GetElementsById": {
-        // Note that this is the html ID, not the elid that is the key of the el_table.
-        var ids = event.GetElementsById;
-        var els = [];
-        for(var i = 0; i < ids.length; i++) {
-            var match = document.getElementById(ids[i]);
-            if (match != null) {
-                els.push({
-                  Element: elementToElid(match)
-                });
-            }
-        }
-        reply({ Elements: els });
+        var element = document.getElementById(event.GetElementsById);
+        reply(elementsToElid([element]));
         break;
       }
       case "GetElementsByClassName": {
         var elements = document.getElementsByClassName(event.GetElementsByClassName);
-        var els = [];
-        var len = elements.length;
-        for(var i = 0; i < len; i++) {
-          els.push({
-            Element: elementToElid(elements[i])
-          });
-        }
-        reply({ Elements: els });
+        reply(elementsToElid(elements));
         break;
       }
       case "GetValues": {
@@ -382,6 +358,18 @@ $.fn.livechange = function(ms,trigger){
     else {
       throw "Element requested, but does not have elid: " + element;
     }
+  }
+  
+  // plural of the mapping from elements to elids
+  function elementsToElid(elements){
+    var els = [], match;
+    for(var i = 0; i < elements.length; i++) {
+      match = elements[i];
+      if (match != null) {
+        els.push({ Element: elementToElid(match) });
+      }
+    }
+    return ({ Elements : els });
   }
   
   // Delete element from the table
