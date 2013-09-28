@@ -243,21 +243,6 @@ $.fn.livechange = function(ms,trigger){
         reply();
         break;
       }
-      case "GetElementsByTagName": {
-        var elements = document.getElementsByTagName(event.GetElementsByTagName);
-        reply(elementsToElid(elements));
-        break;
-      }
-      case "GetElementsById": {
-        var element = document.getElementById(event.GetElementsById);
-        reply(elementsToElid([element]));
-        break;
-      }
-      case "GetElementsByClassName": {
-        var elements = document.getElementsByClassName(event.GetElementsByClassName);
-        reply(elementsToElid(elements));
-        break;
-      }
       case "GetValues": {
         var ids = event.GetValues;
         var len = ids.length;
@@ -361,7 +346,7 @@ $.fn.livechange = function(ms,trigger){
   }
   
   // plural of the mapping from elements to elids
-  function elementsToElid(elements){
+  function elementsToElids(elements){
     var els = [], match;
     for(var i = 0; i < elements.length; i++) {
       match = elements[i];
@@ -369,7 +354,7 @@ $.fn.livechange = function(ms,trigger){
         els.push({ Element: elementToElid(match) });
       }
     }
-    return ({ Elements : els });
+    return els;
   }
   
   // Delete element from the table

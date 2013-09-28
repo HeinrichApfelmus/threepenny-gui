@@ -74,11 +74,10 @@ class FFI a where
 instance (ToJS a, FFI b) => FFI (a -> b) where
     fancy f a = fancy $ f . (render a:)
 
-instance FFI (JSFunction ())        where fancy f = fromJSCode $ f []
-instance FFI (JSFunction String)    where fancy   = mkResult "%1.toString()"
-instance FFI (JSFunction JSValue)   where fancy   = mkResult "%1"
-instance FFI (JSFunction ElementId) where
-    fancy   = mkResult "{ Element: elementToElid(%1) }"
+instance FFI (JSFunction ())         where fancy f = fromJSCode $ f []
+instance FFI (JSFunction String)     where fancy   = mkResult "%1.toString()"
+instance FFI (JSFunction JSValue)    where fancy   = mkResult "%1"
+instance FFI (JSFunction [ElementId]) where fancy  = mkResult "elementsToElids(%1)"
 
 -- FIXME: We need access to IO in order to turn a Coupon into an Element.
 {- 

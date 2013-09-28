@@ -472,8 +472,8 @@ getWindow :: Element -> IO Window
 getWindow e = withElement e $ \_ window -> return window
 
 -- | Look up several elements in the browser window.
-lookupElements :: [ElementId] -> Session -> IO [Element]
-lookupElements els window = mapM (flip lookupElement window) els
+lookupElements :: Session -> [ElementId] -> IO [Element]
+lookupElements window = mapM (flip lookupElement window)
 
 -- | Append a child element to a parent element. Non-blocking.
 appendElementTo
@@ -605,33 +605,28 @@ getElementsByTagName
     :: Window        -- ^ Browser window
     -> String        -- ^ The tag name.
     -> IO [Element]  -- ^ All elements with that tag name.
-getElementsByTagName window tagName =
-  call window (GetElementsByTagName tagName) $ \signal ->
-    case signal of
-      Elements els -> Just <$> lookupElements els window
-      _            -> return Nothing
+getElementsByTagName window tag = do
+    elids <- callFunction window $ ffi "document.getElementsByTagName(%1)" tag
+    lookupElements window elids
 
 -- | Get a list of elements by particular IDs.  Blocks.
 getElementsById
     :: Window        -- ^ Browser window
     -> [String]      -- ^ The ID string.
     -> IO [Element]  -- ^ Elements with given ID.
-getElementsById window ids =
-  call window (GetElementsById ids) $ \signal ->
-    case signal of
-      Elements els -> Just <$> lookupElements els window
-      _            -> return Nothing
+getElementsById window ids = do
+    elids <- forM ids $ \x ->
+        callFunction window $ ffi "[document.getElementById(%1)]" x
+    lookupElements window $ concat elids
 
 -- | Get a list of elements by particular class.  Blocks.
 getElementsByClassName
     :: Window        -- ^ Browser window
     -> String        -- ^ The class string.
     -> IO [Element]  -- ^ Elements with given class.
-getElementsByClassName window cls =
-  call window (GetElementsByClassName cls) $ \signal ->
-    case signal of
-      Elements els -> Just <$> lookupElements els window
-      _            -> return Nothing
+getElementsByClassName window cls = do
+    elids <- callFunction window $ ffi "document.getElementsByClassName(%1)" cls
+    lookupElements window elids
 
 -- | Get values from inputs. Blocks. This is faster than many @getValue@ invocations.
 getValuesList

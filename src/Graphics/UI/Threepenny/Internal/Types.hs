@@ -164,9 +164,6 @@ defaultConfig = Config
 data Instruction
   = Debug String
   | SetToken Integer
-  | GetElementsByClassName String
-  | GetElementsById [String]
-  | GetElementsByTagName String
   | Bind EventId ElementId
   | GetValues [ElementId]
   | RunJSFunction String
@@ -182,7 +179,6 @@ instance JSON Instruction where
 -- | A signal (mostly events) that are sent from the client to the server.
 data Signal
   = Quit ()
-  | Elements [ElementId]
   | Event ElementId EventId [Maybe String]
   | Values [String]
   | FunctionCallValues [Maybe String]
@@ -194,7 +190,6 @@ instance JSON Signal where
   readJSON obj = do
     obj <- readJSON obj
     let quit     = Quit <$> valFromObj "Quit" obj
-        elements = Elements <$> valFromObj "Elements" obj
         event = do
           e         <- valFromObj "Event" obj
           elid      <- valFromObj "Element" e
@@ -206,7 +201,7 @@ instance JSON Signal where
         fcallvalues = do
           FunctionCallValues <$> (valFromObj "FunctionCallValues" obj >>= mapM nullable)
         fresult = FunctionResult <$> valFromObj "FunctionResult" obj
-    quit <|> elements <|> event <|> values <|> fcallvalues <|> fresult
+    quit <|> event <|> values <|> fcallvalues <|> fresult
 
 -- | Read a JSValue that may be null.
 nullable :: JSON a => JSValue -> Result (Maybe a)

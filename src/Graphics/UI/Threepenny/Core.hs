@@ -23,9 +23,7 @@ module Graphics.UI.Threepenny.Core (
         getHead, getBody,
         children, text, html, attr, style, value,
     getValuesList,
-    getElementsByTagName, getElementByTagName, 
-    getElementsById, getElementById,
-    getElementsByClassName,
+    getElementsByTagName, getElementById, getElementsByClassName,
     
     -- * Layout
     -- | Combinators for quickly creating layouts.
@@ -282,14 +280,6 @@ getHead w = liftIO $ fromElement =<< Core.getHead w
 getBody :: Window -> UI Element
 getBody w = liftIO $ fromElement =<< Core.getBody w
 
--- | Get an element by its tag name.  Blocks.
-getElementByTagName
-    :: Window             -- ^ Browser window
-    -> String             -- ^ The tag name.
-    -> UI (Maybe Element) -- ^ An element (if any) with that tag name.
-getElementByTagName window =
-    liftM listToMaybe . getElementsByTagName window
-
 -- | Get all elements of the given tag name.  Blocks.
 getElementsByTagName
     :: Window        -- ^ Browser window
@@ -303,16 +293,8 @@ getElementById
     :: Window              -- ^ Browser window
     -> String              -- ^ The ID string.
     -> UI (Maybe Element)  -- ^ Element (if any) with given ID.
-getElementById window id =
-    listToMaybe `fmap` getElementsById window [id]
-
--- | Get a list of elements by particular IDs.  Blocks.
-getElementsById
-    :: Window        -- ^ Browser window
-    -> [String]      -- ^ The ID string.
-    -> UI [Element]  -- ^ Elements with given ID.
-getElementsById window name = liftIO $
-    mapM fromElement =<< Core.getElementsById window name
+getElementById window id = liftIO $
+    fmap listToMaybe $ mapM fromElement =<< Core.getElementsById window [id]
 
 -- | Get a list of elements by particular class.  Blocks.
 getElementsByClassName
