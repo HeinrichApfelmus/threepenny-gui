@@ -28,8 +28,8 @@ data Timer = Timer
     } deriving (Typeable)
 
 -- | Create a new timer
-timer :: IO Timer
-timer = do
+timer :: UI Timer
+timer = liftIO $ do
     tvRunning     <- newTVarIO False
     tvInterval    <- newTVarIO 1000
     (tTick, fire) <- newEvent

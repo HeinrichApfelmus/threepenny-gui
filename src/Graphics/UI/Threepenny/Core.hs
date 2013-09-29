@@ -76,7 +76,7 @@ import Reactive.Threepenny
 import qualified Graphics.UI.Threepenny.Internal.Driver  as Core
 import Graphics.UI.Threepenny.Internal.Driver
     ( getRequestLocation
-    , debug, callDeferredFunction, atomic, )
+    , callDeferredFunction, atomic, )
 import Graphics.UI.Threepenny.Internal.FFI
 import Graphics.UI.Threepenny.Internal.Types as Core
     ( Window, Config, defaultConfig, Events, EventData
@@ -160,15 +160,16 @@ startGUI config handler = Core.serve config (\w -> withWindow w $ handler w)
 
 -- | Make a local file available as a relative URI.
 loadFile
-    :: Window     -- ^ Browser window
-    -> String     -- ^ MIME type
+    :: String     -- ^ MIME type
     -> FilePath   -- ^ Local path to the file
     -> UI String  -- ^ Generated URI
-loadFile w mime path = liftIO $ Core.loadFile w (fromString mime) path
+loadFile mime path = getWindowUI >>= \w -> liftIO $
+    Core.loadFile w (fromString mime) path
 
 -- | Make a local directory available as a relative URI.
-loadDirectory :: Window -> FilePath -> UI String
-loadDirectory w = liftIO . Core.loadDirectory w
+loadDirectory :: FilePath -> UI String
+loadDirectory path = getWindowUI >>= \w -> liftIO $
+    Core.loadDirectory w path
 
 {-----------------------------------------------------------------------------
     Browser window
@@ -328,6 +329,10 @@ callFunction fun = do
 {-----------------------------------------------------------------------------
     Oddball
 ------------------------------------------------------------------------------}
+-- | Print a message on the client console if the client has debugging enabled.
+debug :: String -> UI ()
+debug s = getWindowUI >>= \w -> liftIO $ Core.debug w s
+
 -- | Invoke the JavaScript expression @audioElement.play();@.
 audioPlay :: Element -> UI ()
 audioPlay el = runFunction $ ffi "%1.play()" el

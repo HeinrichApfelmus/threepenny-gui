@@ -19,7 +19,7 @@ import System.FilePath
 main :: IO ()
 main = startGUI defaultConfig { tpPort = 10000 } setup
 
-setup :: Window -> IO ()
+setup :: Window -> UI ()
 setup window = do
     return window # set title "Drawing"
     
@@ -34,8 +34,8 @@ setup window = do
         ,element clear
         ]
     
-    dir <- getStaticDir
-    url <- loadFile window "image/png" (dir </> "game" </> "BlackMage" <.> "png")
+    dir <- liftIO $ getStaticDir
+    url <- loadFile "image/png" (dir </> "game" </> "BlackMage" <.> "png")
     img <- UI.img # set UI.src url
     
     let positions = [(x,y) | x <- [0,20..300], y <- [0,20..300]] :: [(Int,Int)]

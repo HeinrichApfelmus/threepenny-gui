@@ -1,8 +1,6 @@
 {-# LANGUAGE CPP, PackageImports #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Main where
-
 import Control.Applicative hiding ((<|>),many)
 import Control.Monad
 import Control.Arrow (second)
@@ -31,12 +29,12 @@ main = do
         } setup
 
 
-setup :: Window -> IO ()
+setup :: Window -> UI ()
 setup w = do
-    filename <- fmap (</> "and-then-haskell.txt") getStaticDir 
-    andthen  <- readFile filename
+    filename <- liftIO $ fmap (</> "and-then-haskell.txt") getStaticDir 
+    andthen  <- liftIO $ readFile filename
     case parts filename andthen of
-        Left parseerror -> debug w $ show parseerror
+        Left parseerror -> debug $ show parseerror
         Right parts     -> void $ do
             UI.addStyleSheet w "use-words.css"
 
@@ -57,7 +55,7 @@ setup w = do
             
 type VariableViews = [(Name, Element)]
 
-renderVarChoice :: VariableViews -> Variable -> IO Element
+renderVarChoice :: VariableViews -> Variable -> UI Element
 renderVarChoice views (label,(name,def)) = do
     input <- UI.input #. "var-value" # set value def
     
@@ -68,19 +66,19 @@ renderVarChoice views (label,(name,def)) = do
     
     UI.li #+ [UI.string (label ++ ":"), element input]
 
-renderParts :: [Part] -> IO ([Element], VariableViews)
+renderParts :: [Part] -> UI ([Element], VariableViews)
 renderParts parts = do
     views <- mapM renderPart parts
     let variables = [(var, view) | (Ref var, view) <- zip parts views]
     return (views, variables)
 
-renderPart :: Part -> IO Element
+renderPart :: Part -> UI Element
 renderPart (Text str) = UI.div #. "text" #+ [UI.string str]
 renderPart (Ref  var) = UI.div #. "var"
     # maybe (set text $ "{" ++ var ++ "}") (either (set html) (set text))
             (lookup var templatevars)
 
-viewSource :: IO Element
+viewSource :: UI Element
 viewSource = UI.p #+
     [UI.anchor #. "view-source" # set UI.href url #+ [UI.string "View source code"]]
     where

@@ -24,7 +24,7 @@ main = do
         } setup
 
 
-setup :: Window -> IO ()
+setup :: Window -> UI ()
 setup w = void $ do
     return w # set title "Missing Dollars"
     UI.addStyleSheet w "missing-dollars.css"
@@ -35,13 +35,13 @@ setup w = void $ do
     getBody w #+ [UI.div #. "wrap" #+ layout]
 
 
-mkHeader :: IO (Element, Element)
+mkHeader :: UI (Element, Element)
 mkHeader = do
     headerMe <- string "..."
     view     <- UI.h1   #+ [string "The ", element headerMe, string " Dollars"]
     return (view, headerMe)
 
-attributionSource :: [IO Element]
+attributionSource :: [UI Element]
 attributionSource =
     [ UI.p #+
         [ UI.anchor #. "view-source" # set UI.href urlSource
@@ -57,7 +57,7 @@ attributionSource =
     urlAttribution = "http://www.vex.net/~trebla/humour/missing_dollar.html"
 
 
-mkMissingDollarRiddle :: Element -> IO [IO Element]
+mkMissingDollarRiddle :: Element -> UI [UI Element]
 mkMissingDollarRiddle headerMe = do
     -- declare input and display values
     (hotelOut : hotelCost : hotelHold : _)

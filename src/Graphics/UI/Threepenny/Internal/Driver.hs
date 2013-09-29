@@ -600,30 +600,21 @@ initializeElements session@(Session{..}) = do
 -- The DOM can be searched for elements of a given name, and nodes can
 -- be inspected for their values.
 
--- | Get all elements of the given tag name.  Blocks.
-getElementsByTagName
-    :: Window        -- ^ Browser window
-    -> String        -- ^ The tag name.
-    -> IO [Element]  -- ^ All elements with that tag name.
+-- | Get all elements of the given tag name. Blocks.
+getElementsByTagName :: Window -> String -> IO [Element]
 getElementsByTagName window tag = do
     elids <- callFunction window $ ffi "document.getElementsByTagName(%1)" tag
     lookupElements window elids
 
 -- | Get a list of elements by particular IDs.  Blocks.
-getElementsById
-    :: Window        -- ^ Browser window
-    -> [String]      -- ^ The ID string.
-    -> IO [Element]  -- ^ Elements with given ID.
+getElementsById :: Window -> [String] -> IO [Element]
 getElementsById window ids = do
     elids <- forM ids $ \x ->
         callFunction window $ ffi "[document.getElementById(%1)]" x
     lookupElements window $ concat elids
 
 -- | Get a list of elements by particular class.  Blocks.
-getElementsByClassName
-    :: Window        -- ^ Browser window
-    -> String        -- ^ The class string.
-    -> IO [Element]  -- ^ Elements with given class.
+getElementsByClassName :: Window -> String -> IO [Element]
 getElementsByClassName window cls = do
     elids <- callFunction window $ ffi "document.getElementsByClassName(%1)" cls
     lookupElements window elids

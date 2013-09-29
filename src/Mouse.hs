@@ -16,7 +16,7 @@ import Graphics.UI.Threepenny.Core
 main :: IO ()
 main = startGUI defaultConfig { tpPort = 10000 } setup
 
-setup :: Window -> IO ()
+setup :: Window -> UI ()
 setup w = do
     return w # set title "Mouse"
     
