@@ -6,7 +6,7 @@ module Graphics.UI.Threepenny.Events (
     valueChange, selectionChange, checkedChange,
     
     -- * Standard DOM events
-    click, mousemove, hover, blur, leave,
+    click, mousemove, mousedown, mouseup, hover, blur, leave,
     KeyCode, keyup, keydown,
     ) where
 
@@ -47,14 +47,27 @@ hover = silence . domEvent "mouseenter"
 -- | Event that periodically occurs while the mouse is moving over an element.
 --
 -- The event value represents the mouse coordinates
--- relative to the upper left corner of the entire page.
+-- relative to the upper left corner of the element.
 --
 -- Note: The @<body>@ element responds to mouse move events,
 -- but only in the area occupied by actual content,
 -- not the whole browser window.
 mousemove :: Element -> Event (Int,Int)
-mousemove = fmap readPair . domEvent "mousemove"
-    where readPair (EventData (Just x:Just y:_)) = (read x, read y)
+mousemove = fmap readCoordinates . domEvent "mousemove"
+
+readCoordinates :: EventData -> (Int,Int)
+readCoordinates (EventData (Just x:Just y:_)) = (read x, read y)
+
+-- | Mouse down event.
+-- The mouse coordinates are relative to the element. 
+mousedown :: Element -> Event (Int,Int)
+mousedown = fmap readCoordinates . domEvent "mousedown"
+
+-- | Mouse up event.
+-- The mouse coordinates are relative to the element. 
+mouseup :: Element -> Event (Int,Int)
+mouseup = fmap readCoordinates . domEvent "mouseup"
+
 
 -- | Mouse leaving an element.
 leave :: Element -> Event ()

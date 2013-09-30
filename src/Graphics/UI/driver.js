@@ -277,9 +277,12 @@ $.fn.livechange = function(ms,trigger){
               );
             return true;
           });
-        } else if(eventType.match('mousemove')) {
+        } else if(eventType.match('mousemove|mousedown|mouseup')) {
           $(el).bind(eventType,function(e){
-            sendEvent(elid,eventType, [e.pageX.toString(), e.pageY.toString()]);
+            var offset = $(this).offset();
+            var x      = e.pageX - offset.left;
+            var y      = e.pageY - offset.top;         
+            sendEvent(elid,eventType, [x.toString(), y.toString()]);
             return true;
           });
         } else if(eventType.match('keydown|keyup')) {
