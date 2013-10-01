@@ -22,7 +22,7 @@ silence = fmap (const ())
 valueChange :: Element -> Event String
 valueChange el = unsafeMapUI el (const $ get value el) (domEvent "keydown" el)
 
-unsafeMapUI el f = unsafeMapIO (\a -> getWindow el >>= \w -> withWindow w (f a))
+unsafeMapUI el f = unsafeMapIO (\a -> getWindow el >>= \w -> runUI w (f a))
 
 -- | Event that occurs when the /user/ changes the selection of a @<select>@ element.
 selectionChange :: Element -> Event (Maybe Int)

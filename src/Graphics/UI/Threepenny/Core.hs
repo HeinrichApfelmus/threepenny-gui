@@ -11,8 +11,9 @@ module Graphics.UI.Threepenny.Core (
     
     -- * UI monad
     -- $ui
-    UI, withWindow,
+    UI, runUI,
     module Control.Monad.IO.Class,
+    module Control.Monad.Fix,
     
     -- * Browser Window
     Window, title, cookies, getRequestLocation,
@@ -67,69 +68,27 @@ import Control.Concurrent.MVar
 import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.IO.Class
-import qualified Control.Monad.Trans.Reader as Reader
 
 import Network.URI
 import Text.JSON
 import Reactive.Threepenny
 
+import qualified Graphics.UI.Threepenny.MonadUI          as Core
+import           Graphics.UI.Threepenny.MonadUI
+    ( UI, runUI )
+
 import qualified Graphics.UI.Threepenny.Internal.Driver  as Core
-import Graphics.UI.Threepenny.Internal.Driver
+import           Graphics.UI.Threepenny.Internal.Driver
     ( getRequestLocation
     , callDeferredFunction, atomic, )
-import Graphics.UI.Threepenny.Internal.FFI
-import Graphics.UI.Threepenny.Internal.Types as Core
+import           Graphics.UI.Threepenny.Internal.FFI
+import           Graphics.UI.Threepenny.Internal.Types   as Core
     ( Window, Config, defaultConfig, Events, EventData
     , ElementData(..), withElementData,)
 
 
 import Graphics.UI.Threepenny.Internal.Types as Core
     (unprotectedGetElementId, withElementData, ElementData(..))
-
-
-type ReaderT = Reader.ReaderT
-
-{-----------------------------------------------------------------------------
-    UI monad
-------------------------------------------------------------------------------}
-{- $ui
-
-User interface elements are created and manipulated in the 'UI' monad.
-
-This monad is essentially just a thin wrapper around the familiar 'IO' monad.
-Use the 'liftIO' function to access 'IO' operations like reading
-and writing from files.
-
-There are several subtle reasons why Threepenny
-uses a custom 'UI' monad instead of the standard 'IO' monad:
-
-* More convenience when calling JavaScript.
-
-* Recursion for functional reactive programming.
-
--}
-
-newtype UI a = UI { unUI :: ReaderT Window IO a }
-
-instance Functor UI where
-    fmap f = UI . fmap f . unUI
-
-instance Monad UI where
-    return  = UI . return
-    m >>= k = UI $ unUI m >>= unUI . k
-
-instance MonadIO UI where
-    liftIO = UI . liftIO
-
-instance MonadFix UI where
-    mfix f = UI $ mfix (unUI . f)  
-
--- | Execute an 'UI' action in a particular browser window.
-withWindow :: Window -> UI a -> IO a
-withWindow w m = Reader.runReaderT (unUI m) w
-
-getWindowUI :: UI Window
-getWindowUI = UI Reader.ask
 
 {-----------------------------------------------------------------------------
     Server
@@ -155,7 +114,7 @@ startGUI
     :: Config               -- ^ Server configuration.
     -> (Window -> UI ())    -- ^ Action to run whenever a client browser connects.
     -> IO ()
-startGUI config handler = Core.serve config (\w -> withWindow w $ handler w)
+startGUI config handler = Core.serve config (\w -> runUI w $ handler w)
 
 
 -- | Make a local file available as a relative URI.
@@ -163,12 +122,12 @@ loadFile
     :: String     -- ^ MIME type
     -> FilePath   -- ^ Local path to the file
     -> UI String  -- ^ Generated URI
-loadFile mime path = getWindowUI >>= \w -> liftIO $
+loadFile mime path = Core.getWindowUI >>= \w -> liftIO $
     Core.loadFile w (fromString mime) path
 
 -- | Make a local directory available as a relative URI.
 loadDirectory :: FilePath -> UI String
-loadDirectory path = getWindowUI >>= \w -> liftIO $
+loadDirectory path = Core.getWindowUI >>= \w -> liftIO $
     Core.loadDirectory w path
 
 {-----------------------------------------------------------------------------
@@ -205,7 +164,7 @@ mkElement tag = mdo
     let initializeEvent (name,_,handler) = Core.bind name el handler
     events  <- liftIO $ newEventsNamed initializeEvent
     
-    window  <- getWindowUI
+    window  <- Core.getWindowUI
     el      <- liftIO $ Core.newElement window tag events
     return $ Element events el
 
@@ -314,7 +273,7 @@ getElementsByClassName window cls = liftIO $
 -- The client window uses JavaScript's @eval()@ function to run the code.
 runFunction :: JSFunction () -> UI ()
 runFunction fun = do
-    window <- getWindowUI
+    window <- Core.getWindowUI
     liftIO $ Core.runFunction window fun 
 
 -- | Run the given JavaScript function and wait for results. Blocks.
@@ -322,7 +281,7 @@ runFunction fun = do
 -- The client window uses JavaScript's @eval()@ function to run the code.
 callFunction :: JSFunction a -> UI a
 callFunction fun = do
-    window <- getWindowUI
+    window <- Core.getWindowUI
     liftIO $ Core.callFunction window fun
 
 
@@ -331,7 +290,7 @@ callFunction fun = do
 ------------------------------------------------------------------------------}
 -- | Print a message on the client console if the client has debugging enabled.
 debug :: String -> UI ()
-debug s = getWindowUI >>= \w -> liftIO $ Core.debug w s
+debug s = Core.getWindowUI >>= \w -> liftIO $ Core.debug w s
 
 -- | Invoke the JavaScript expression @audioElement.play();@.
 audioPlay :: Element -> UI ()
@@ -421,8 +380,8 @@ disconnect = Core.disconnect
 -- > on click element $ \_ -> ...
 on :: (element -> Event a) -> element -> (a -> UI void) -> UI ()
 on f x h = do
-    window <- getWindowUI
-    liftIO $ register (f x) (void . withWindow window . h)
+    window <- Core.getWindowUI
+    liftIO $ register (f x) (void . runUI window . h)
     return ()
 
 
@@ -479,8 +438,8 @@ sink attr bi mx = do
     do
         i <- liftIO $ currentValue bi
         set' attr i x
-        window <- getWindowUI
-        liftIO $ onChange bi $ \i -> withWindow window $ set' attr i x  
+        window <- Core.getWindowUI
+        liftIO $ onChange bi $ \i -> runUI window $ set' attr i x  
     return x
 
 -- | Get attribute value.
