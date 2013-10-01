@@ -11,7 +11,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * UI monad
     -- $ui
-    UI, runUI, liftIOLater,
+    UI, runUI, askWindow, liftIOLater,
     module Control.Monad.IO.Class,
     module Control.Monad.Fix,
     
@@ -68,6 +68,7 @@ import Control.Concurrent.MVar
 import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.IO.Class
+import qualified Control.Monad.Trans.RWS.Lazy as Monad
 
 import Network.URI
 import Text.JSON
@@ -75,7 +76,6 @@ import Text.JSON
 import           Reactive.Threepenny hiding (onChange)
 import qualified Reactive.Threepenny as Reactive
 
-import           Graphics.UI.Threepenny.MonadUI
 import qualified Graphics.UI.Threepenny.Internal.Driver  as Core
 import           Graphics.UI.Threepenny.Internal.Driver
     ( getRequestLocation
@@ -121,13 +121,66 @@ loadFile
     :: String     -- ^ MIME type
     -> FilePath   -- ^ Local path to the file
     -> UI String  -- ^ Generated URI
-loadFile mime path = getWindowUI >>= \w -> liftIO $
+loadFile mime path = askWindow >>= \w -> liftIO $
     Core.loadFile w (fromString mime) path
 
 -- | Make a local directory available as a relative URI.
 loadDirectory :: FilePath -> UI String
-loadDirectory path = getWindowUI >>= \w -> liftIO $
+loadDirectory path = askWindow >>= \w -> liftIO $
     Core.loadDirectory w path
+
+
+{-----------------------------------------------------------------------------
+    UI monad
+------------------------------------------------------------------------------}
+{- |
+
+User interface elements are created and manipulated in the 'UI' monad.
+
+This monad is essentially just a thin wrapper around the familiar 'IO' monad.
+Use the 'liftIO' function to access 'IO' operations like reading
+and writing from files.
+
+There are several subtle reasons why Threepenny
+uses a custom 'UI' monad instead of the standard 'IO' monad:
+
+* More convenience when calling JavaScript.
+The monad keeps track of a browser 'Window' context
+in which JavaScript function calls are executed.
+
+* Recursion for functional reactive programming.
+
+-}
+newtype UI a = UI { unUI :: Monad.RWST Window [IO ()] () IO a }
+
+instance Functor UI where
+    fmap f = UI . fmap f . unUI
+
+instance Monad UI where
+    return  = UI . return
+    m >>= k = UI $ unUI m >>= unUI . k
+
+instance MonadIO UI where
+    liftIO = UI . liftIO
+
+instance MonadFix UI where
+    mfix f = UI $ mfix (unUI . f)  
+
+-- | Execute an 'UI' action in a particular browser window.
+-- Also runs all scheduled 'IO' action.
+runUI :: Window -> UI a -> IO a
+runUI window m = do
+    (a, _, actions) <- Monad.runRWST (unUI m) window ()
+    sequence_ actions
+    return a
+
+-- | Retrieve current 'Window' context in the 'UI' monad.
+askWindow :: UI Window
+askWindow = UI Monad.ask
+
+-- | Schedule an 'IO' action to be run later.
+liftIOLater :: IO () -> UI ()
+liftIOLater x = UI $ Monad.tell [x]
 
 {-----------------------------------------------------------------------------
     Browser window
@@ -163,7 +216,7 @@ mkElement tag = mdo
     let initializeEvent (name,_,handler) = Core.bind name el handler
     events  <- liftIO $ newEventsNamed initializeEvent
     
-    window  <- getWindowUI
+    window  <- askWindow
     el      <- liftIO $ Core.newElement window tag events
     return $ Element events el
 
@@ -272,7 +325,7 @@ getElementsByClassName window cls = liftIO $
 -- The client window uses JavaScript's @eval()@ function to run the code.
 runFunction :: JSFunction () -> UI ()
 runFunction fun = do
-    window <- getWindowUI
+    window <- askWindow
     liftIO $ Core.runFunction window fun 
 
 -- | Run the given JavaScript function and wait for results. Blocks.
@@ -280,7 +333,7 @@ runFunction fun = do
 -- The client window uses JavaScript's @eval()@ function to run the code.
 callFunction :: JSFunction a -> UI a
 callFunction fun = do
-    window <- getWindowUI
+    window <- askWindow
     liftIO $ Core.callFunction window fun
 
 
@@ -289,7 +342,7 @@ callFunction fun = do
 ------------------------------------------------------------------------------}
 -- | Print a message on the client console if the client has debugging enabled.
 debug :: String -> UI ()
-debug s = getWindowUI >>= \w -> liftIO $ Core.debug w s
+debug s = askWindow >>= \w -> liftIO $ Core.debug w s
 
 -- | Invoke the JavaScript expression @audioElement.play();@.
 audioPlay :: Element -> UI ()
@@ -379,7 +432,7 @@ disconnect = Core.disconnect
 -- > on click element $ \_ -> ...
 on :: (element -> Event a) -> element -> (a -> UI void) -> UI ()
 on f x h = do
-    window <- getWindowUI
+    window <- askWindow
     liftIO $ register (f x) (void . runUI window . h)
     return ()
 
@@ -387,7 +440,7 @@ on f x h = do
 -- Use sparingly, it is recommended that you use 'sink' instead.
 onChanges :: Behavior a -> (a -> UI void) -> UI ()
 onChanges b f = do
-    window <- getWindowUI
+    window <- askWindow
     liftIO $ Reactive.onChange b (void . runUI window . f)
 
 
@@ -441,7 +494,7 @@ set attr i mx = do { x <- mx; set' attr i x; return x; }
 sink :: ReadWriteAttr x i o -> Behavior i -> UI x -> UI x
 sink attr bi mx = do
     x <- mx
-    window <- getWindowUI
+    window <- askWindow
     liftIOLater $ do
         i <- currentValue bi
         runUI window $ set' attr i x
