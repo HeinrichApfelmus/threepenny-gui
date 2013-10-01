@@ -14,48 +14,29 @@ import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.RWS     as Monad
 
-import Data.Hashable
 import Data.IORef
 import Data.Monoid (Endo(..))
 
-import Data.Unique.Really
-import qualified Data.Vault.Lazy   as Vault
-import qualified Data.HashMap.Lazy as Map
+import           Data.Hashable
+import qualified Data.HashMap.Strict as Map
+import qualified Data.Vault.Strict   as Vault
+import           Data.Unique.Really
 
-type Vault = Vault.Vault
-type Map   = Map.HashMap
+import Reactive.Threepenny.Monads
+import Reactive.Threepenny.Types
 
-
-type Build = IO
+type Map = Map.HashMap
 
 {-----------------------------------------------------------------------------
     Pulse
 ------------------------------------------------------------------------------}
-type EvalP = Monad.RWST () () Vault IO
-
-runEvalP :: Vault -> EvalP a -> IO (a, Vault)
-runEvalP pulses m = do
-    (a, s, w) <- Monad.runRWST m () pulses
-    return (a, s)
-
-
-type Handler  = EvalP (IO ())
-data Priority = DoLatch | DoIO deriving (Eq,Show,Ord,Enum)
-
-instance Hashable Priority where hashWithSalt _ = fromEnum
-
-data Pulse a = Pulse
-    { addHandlerP :: ((Unique, Priority), Handler) -> Build ()
-    , evalP       :: EvalP (Maybe a)
-    }
-
 -- Turn evaluation action into pulse that caches the value.
 cacheEval :: EvalP (Maybe a) -> Build (Pulse a)
 cacheEval e = do
     key <- Vault.newKey
     return $ Pulse
         { addHandlerP = \_ -> return ()
-        , evalP = do
+        , evalP       = do
             vault <- Monad.get
             case Vault.lookup key vault of
                 Just a  -> return a
@@ -76,11 +57,6 @@ whenPulse p f = do
     case ma of
         Just a  -> return (f a)
         Nothing -> return $ return ()
-
-{-----------------------------------------------------------------------------
-    Latch
-------------------------------------------------------------------------------}
-data Latch a = Latch { readL :: IO a }
 
 {-----------------------------------------------------------------------------
     Interface to the outside world.

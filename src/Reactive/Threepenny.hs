@@ -43,6 +43,7 @@ module Reactive.Threepenny (
 
 import Control.Applicative
 import Control.Monad (void)
+import Control.Monad.IO.Class
 import Data.IORef
 import qualified Data.Map as Map
 
@@ -202,8 +203,8 @@ b <@ e = (const <$> b) <@> e
 -- 
 -- Note that the value of the behavior changes \"slightly after\"
 -- the events occur. This allows for recursive definitions.
-accumB :: a -> Event (a -> a) -> IO (Behavior a)
-accumB a e = do
+accumB :: MonadIO m => a -> Event (a -> a) -> m (Behavior a)
+accumB a e = liftIO $ do
     (l1,p1) <- Prim.accumL a =<< at (unE e)
     p2      <- Prim.mapP (const ()) p1
     return $ B l1 (E $ fromPure p2)
@@ -218,7 +219,7 @@ accumB a e = do
 -- Note that the smaller-than-sign in the comparision @timex < time@ means 
 -- that the value of the behavior changes \"slightly after\"
 -- the event occurrences. This allows for recursive definitions.
-stepper :: a -> Event a -> IO (Behavior a)
+stepper :: MonadIO m => a -> Event a -> m (Behavior a)
 stepper a e = accumB a (const <$> e)
 
 -- | The 'accumE' function accumulates a stream of events.
@@ -229,8 +230,8 @@ stepper a e = accumB a (const <$> e)
 --
 -- Note that the output events are simultaneous with the input events,
 -- there is no \"delay\" like in the case of 'accumB'.
-accumE :: a -> Event (a -> a) -> IO (Event a)
-accumE a e = do
+accumE :: MonadIO m =>  a -> Event (a -> a) -> m (Event a)
+accumE a e = liftIO $ do
     p <- fmap snd . Prim.accumL a =<< at (unE e)
     return $ E $ fromPure p
 
@@ -328,7 +329,7 @@ acc -> (x,acc) is the order used by 'unfoldr' and 'State'.
 -}
 
 -- | Efficient combination of 'accumE' and 'accumB'.
-mapAccum :: acc -> Event (acc -> (x,acc)) -> IO (Event x, Behavior acc)
+mapAccum :: MonadIO m => acc -> Event (acc -> (x,acc)) -> m (Event x, Behavior acc)
 mapAccum acc ef = do
     e <- accumE (undefined,acc) ((. snd) <$> ef)
     b <- stepper acc (snd <$> e)
