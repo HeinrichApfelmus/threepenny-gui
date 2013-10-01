@@ -33,7 +33,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * Events
     -- | For a list of predefined events, see "Graphics.UI.Threepenny.Events".
-    EventData(..), domEvent, disconnect, on, onChanges,
+    EventData(..), domEvent, disconnect, on, onEvent, onChanges,
     module Reactive.Threepenny,
     
     -- * Attributes
@@ -431,9 +431,15 @@ disconnect = Core.disconnect
 --
 -- > on click element $ \_ -> ...
 on :: (element -> Event a) -> element -> (a -> UI void) -> UI ()
-on f x h = do
+on f x = onEvent (f x)
+
+-- | Register an 'UI' action to be executed whenever the 'Event' happens.
+-- 
+-- FIXME: Should be unified with 'on'?
+onEvent :: Event a -> (a -> UI void) -> UI ()
+onEvent e h = do
     window <- askWindow
-    liftIO $ register (f x) (void . runUI window . h)
+    liftIO $ register e (void . runUI window . h)
     return ()
 
 -- | Execute a 'UI' action whenever a 'Behavior' changes.

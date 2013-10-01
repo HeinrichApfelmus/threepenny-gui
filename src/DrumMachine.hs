@@ -28,28 +28,23 @@ bpm2ms bpm = ceiling $ 1000*60 / fromIntegral bpm
 
 instruments = words "kick snare hihat"
 
-loadInstrumentSample w name = do
-    static <- getStaticDir
-    loadFile w "audio/wav" (static </> name <.> "wav")
+loadInstrumentSample name = do
+    static <- liftIO $ getStaticDir
+    loadFile "audio/wav" (static </> name <.> "wav")
 
 {-----------------------------------------------------------------------------
     Main
 ------------------------------------------------------------------------------}
 main :: IO ()
-main = do
-    static <- getStaticDir
-    startGUI defaultConfig
-        { tpPort       = 10000
-        , tpStatic     = Just static
-        } setup
+main = startGUI defaultConfig { tpPort = 10000 } setup
 
-setup :: Window -> IO ()
+setup :: Window -> UI ()
 setup w = void $ do
     return w # set title "Ha-ha-ha-ks-ks-ks-ha-ha-ha-ell-ell-ell"
 
     elBpm  <- UI.input # set value (show defaultBpm)
     elTick <- UI.span
-    (kit, elInstruments) <- mkDrumKit w
+    (kit, elInstruments) <- mkDrumKit
     let status = grid [[UI.string "BPM:" , element elBpm]
                       ,[UI.string "Beat:", element elTick]]
     getBody w #+ [UI.div #. "wrap" #+ (status : map element elInstruments)]
@@ -57,7 +52,7 @@ setup w = void $ do
     timer <- UI.timer # set UI.interval (bpm2ms defaultBpm)
     eBeat <- accumE (0::Int) $
         (\beat -> (beat + 1) `mod` (beats * bars)) <$ UI.tick timer
-    _ <- register eBeat $ \beat -> do
+    onEvent eBeat $ \beat -> do
         -- display beat count
         element elTick # set text (show $ beat + 1)
         -- play corresponding sounds
@@ -74,23 +69,22 @@ setup w = void $ do
 
 type Kit        = [Instrument]
 type Instrument = [Beat]
-type Beat       = IO ()         -- play the corresponding sound
+type Beat       = UI ()         -- play the corresponding sound
 
-mkDrumKit :: Window -> IO (Kit, [Element])
-mkDrumKit w = unzip <$> mapM (mkInstrument w) instruments
+mkDrumKit :: UI (Kit, [Element])
+mkDrumKit = unzip <$> mapM mkInstrument instruments
 
-mkInstrument :: Window -> String -> IO (Instrument, Element)
-mkInstrument window name = do
+mkInstrument :: String -> UI (Instrument, Element)
+mkInstrument name = do
     elCheckboxes <-
         sequence $ replicate bars  $
         sequence $ replicate beats $
             UI.input # set UI.type_ "checkbox"
 
-    url     <- loadInstrumentSample window name
+    url     <- loadInstrumentSample name
     elAudio <- UI.audio # set (attr "preload") "1" # set UI.src url
 
-    let
-        play box = do
+    let play box = do
             checked <- get UI.checked box
             when checked $ do
                 audioStop elAudio -- just in case the sound is already playing

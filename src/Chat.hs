@@ -68,7 +68,7 @@ setup globalMsgs window = do
 receiveMessages w msgs messageArea = do
     messages <- Chan.getChanContents msgs
     forM_ messages $ \msg -> do
-        atomic w $ withWindow w $ do
+        atomic w $ runUI w $ do
           -- FIXME: withWindow  should include a call to  atomic ?
           element messageArea #+ [mkMessage msg]
           UI.scrollToBottom messageArea
