@@ -2,7 +2,7 @@ module Graphics.UI.Threepenny.MonadUI where
 
 import Control.Monad.Fix
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Reader
+import Control.Monad.Trans.RWS.Lazy
 
 import Graphics.UI.Threepenny.Internal.Types (Window)
 
@@ -25,7 +25,7 @@ uses a custom 'UI' monad instead of the standard 'IO' monad:
 * Recursion for functional reactive programming.
 
 -}
-newtype UI a = UI { unUI :: ReaderT Window IO a }
+newtype UI a = UI { unUI :: RWST Window [IO ()] () IO a }
 
 instance Functor UI where
     fmap f = UI . fmap f . unUI
@@ -42,7 +42,14 @@ instance MonadFix UI where
 
 -- | Execute an 'UI' action in a particular browser window.
 runUI :: Window -> UI a -> IO a
-runUI w m = runReaderT (unUI m) w
+runUI window m = do
+    (a, _, actions) <- runRWST (unUI m) window ()
+    sequence_ actions
+    return a
 
 getWindowUI :: UI Window
 getWindowUI = UI ask
+
+liftIOLater :: IO () -> UI ()
+liftIOLater x = UI $ tell [x]
+

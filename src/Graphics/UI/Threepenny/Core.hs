@@ -11,7 +11,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * UI monad
     -- $ui
-    UI, runUI,
+    UI, runUI, liftIOLater,
     module Control.Monad.IO.Class,
     module Control.Monad.Fix,
     
@@ -33,7 +33,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * Events
     -- | For a list of predefined events, see "Graphics.UI.Threepenny.Events".
-    EventData(..), domEvent, on, disconnect,
+    EventData(..), domEvent, disconnect, on, onChanges,
     module Reactive.Threepenny,
     
     -- * Attributes
@@ -71,12 +71,11 @@ import Control.Monad.IO.Class
 
 import Network.URI
 import Text.JSON
-import Reactive.Threepenny
 
-import qualified Graphics.UI.Threepenny.MonadUI          as Core
+import           Reactive.Threepenny hiding (onChange)
+import qualified Reactive.Threepenny as Reactive
+
 import           Graphics.UI.Threepenny.MonadUI
-    ( UI, runUI )
-
 import qualified Graphics.UI.Threepenny.Internal.Driver  as Core
 import           Graphics.UI.Threepenny.Internal.Driver
     ( getRequestLocation
@@ -122,12 +121,12 @@ loadFile
     :: String     -- ^ MIME type
     -> FilePath   -- ^ Local path to the file
     -> UI String  -- ^ Generated URI
-loadFile mime path = Core.getWindowUI >>= \w -> liftIO $
+loadFile mime path = getWindowUI >>= \w -> liftIO $
     Core.loadFile w (fromString mime) path
 
 -- | Make a local directory available as a relative URI.
 loadDirectory :: FilePath -> UI String
-loadDirectory path = Core.getWindowUI >>= \w -> liftIO $
+loadDirectory path = getWindowUI >>= \w -> liftIO $
     Core.loadDirectory w path
 
 {-----------------------------------------------------------------------------
@@ -164,7 +163,7 @@ mkElement tag = mdo
     let initializeEvent (name,_,handler) = Core.bind name el handler
     events  <- liftIO $ newEventsNamed initializeEvent
     
-    window  <- Core.getWindowUI
+    window  <- getWindowUI
     el      <- liftIO $ Core.newElement window tag events
     return $ Element events el
 
@@ -273,7 +272,7 @@ getElementsByClassName window cls = liftIO $
 -- The client window uses JavaScript's @eval()@ function to run the code.
 runFunction :: JSFunction () -> UI ()
 runFunction fun = do
-    window <- Core.getWindowUI
+    window <- getWindowUI
     liftIO $ Core.runFunction window fun 
 
 -- | Run the given JavaScript function and wait for results. Blocks.
@@ -281,7 +280,7 @@ runFunction fun = do
 -- The client window uses JavaScript's @eval()@ function to run the code.
 callFunction :: JSFunction a -> UI a
 callFunction fun = do
-    window <- Core.getWindowUI
+    window <- getWindowUI
     liftIO $ Core.callFunction window fun
 
 
@@ -290,7 +289,7 @@ callFunction fun = do
 ------------------------------------------------------------------------------}
 -- | Print a message on the client console if the client has debugging enabled.
 debug :: String -> UI ()
-debug s = Core.getWindowUI >>= \w -> liftIO $ Core.debug w s
+debug s = getWindowUI >>= \w -> liftIO $ Core.debug w s
 
 -- | Invoke the JavaScript expression @audioElement.play();@.
 audioPlay :: Element -> UI ()
@@ -380,9 +379,16 @@ disconnect = Core.disconnect
 -- > on click element $ \_ -> ...
 on :: (element -> Event a) -> element -> (a -> UI void) -> UI ()
 on f x h = do
-    window <- Core.getWindowUI
+    window <- getWindowUI
     liftIO $ register (f x) (void . runUI window . h)
     return ()
+
+-- | Execute a 'UI' action whenever a 'Behavior' changes.
+-- Use sparingly, it is recommended that you use 'sink' instead.
+onChanges :: Behavior a -> (a -> UI void) -> UI ()
+onChanges b f = do
+    window <- getWindowUI
+    liftIO $ Reactive.onChange b (void . runUI window . f)
 
 
 {-----------------------------------------------------------------------------
@@ -435,11 +441,11 @@ set attr i mx = do { x <- mx; set' attr i x; return x; }
 sink :: ReadWriteAttr x i o -> Behavior i -> UI x -> UI x
 sink attr bi mx = do
     x <- mx
-    do
-        i <- liftIO $ currentValue bi
-        set' attr i x
-        window <- Core.getWindowUI
-        liftIO $ onChange bi $ \i -> runUI window $ set' attr i x  
+    window <- getWindowUI
+    liftIOLater $ do
+        i <- currentValue bi
+        runUI window $ set' attr i x
+        Reactive.onChange bi  $ \i -> runUI window $ set' attr i x  
     return x
 
 -- | Get attribute value.
