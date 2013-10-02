@@ -19,8 +19,7 @@ import Control.Concurrent
 import Control.Monad
 import Control.Exception (evaluate)
 
-import Data.String as BS
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS
 import Data.Functor
 import Data.IORef
 import qualified Data.Map as Map
@@ -110,7 +109,7 @@ lookup coupon PrizeBooth{..} = do
 -- coupon ceases to be valid.
 newItem :: PrizeBooth a -> a -> IO (Item a)
 newItem PrizeBooth{..} value = do
-    coupon   <- BS.fromString . show <$> modifyMVar bCounter (\(n:ns) -> return (ns,n))
+    coupon   <- BS.pack . show <$> modifyMVar bCounter (\(n:ns) -> return (ns,n))
     children <- newIORef []
     let self = undefined
     item     <- newIORef ItemData{..}
