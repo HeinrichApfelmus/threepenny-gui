@@ -28,14 +28,21 @@ This project was originally called Ji in its earliest iterations.
 
 ## Examples
 
-* [BarTab.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/BarTab.hs) - Dynamic creation of widgets.
-* [Buttons.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Buttons.hs) - Simple buttons to click on.
-* [Chat.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs) - Multi-user chat.
-* [CurrencyConverter.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/CurrencyConverter.hs) - Simple demonstration of two reactive input elements.
-* [DragNDropExample.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/DragNDropExample.hs) - Simple drag'N'drop demo.
-* [DrumMachine.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/DrumMachine.hs) - Specify rhythm by activating and deactivating checkboxes.
-* [MissingDollars.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/MissingDollars.hs) - Text with configurable values.
-* [UseWords.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/UseWords.hs)  - Text with configurable words. (Apologies for the male-centric story.)
+The library comes with many examples, which can be found in the [samples](samples/) directory. To run them, use the provided `runhaskell` and `ghci` scripts:
+
+    cd samples
+    ./runhaskell Chat.hs
+
+These scripts set up the correct paths.
+
+* [BarTab.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/BarTab.hs) - Dynamic creation of widgets.
+* [Buttons.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/Buttons.hs) - Simple buttons to click on.
+* [Chat.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/Chat.hs) - Multi-user chat.
+* [CurrencyConverter.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/CurrencyConverter.hs) - Simple demonstration of two reactive input elements.
+* [DragNDropExample.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/DragNDropExample.hs) - Simple drag'N'drop demo.
+* [DrumMachine.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/DrumMachine.hs) - Specify rhythm by activating and deactivating checkboxes.
+* [MissingDollars.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/MissingDollars.hs) - Text with configurable values.
+* [UseWords.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/UseWords.hs)  - Text with configurable words. (Apologies for the male-centric story.)
 
 
 

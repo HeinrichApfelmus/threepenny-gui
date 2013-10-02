@@ -1,16 +1,10 @@
-{-# LANGUAGE CPP, PackageImports #-}
-
 import Control.Monad
 import Safe
 
-#ifdef CABAL
-import qualified  "threepenny-gui" Graphics.UI.Threepenny as UI
-import "threepenny-gui" Graphics.UI.Threepenny.Core
-#else
+import Paths
+
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
-#endif
-import Paths
 
 {-----------------------------------------------------------------------------
     Missing Dollars

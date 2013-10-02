@@ -8,7 +8,7 @@ import Language.Haskell.TH.Quote
 #ifdef CABAL
 root = "src/"
 #else
-root = ""
+root = "../src/" -- running examples from ghci
 #endif
 
 include = QuasiQuoter

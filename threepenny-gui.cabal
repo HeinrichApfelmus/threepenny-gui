@@ -21,7 +21,7 @@ Description:
     .
     Changelog:
     .
-    * 0.4.0.0 - Snapshot release. Garbage collection for DOM elements.
+    * 0.4.0.0 - Snapshot release. New @UI@ monad for easier JavaScript FFI and recursion in FRP. Garbage collection for DOM elements.
     .
     * 0.3.0.0 - Snapshot release. Browser communication with WebSockets. First stab at FRP integration.
     .
@@ -69,8 +69,7 @@ Source-repository head
 Library
   Hs-source-dirs:    src
   Exposed-modules:
-                     Reactive.Threepenny
-                    ,Graphics.UI.Threepenny
+                     Graphics.UI.Threepenny
                     ,Graphics.UI.Threepenny.Attributes
                     ,Graphics.UI.Threepenny.Core
                     ,Graphics.UI.Threepenny.Canvas
@@ -79,6 +78,7 @@ Library
                     ,Graphics.UI.Threepenny.Events
                     ,Graphics.UI.Threepenny.JQuery
                     ,Graphics.UI.Threepenny.Timer
+                    ,Reactive.Threepenny
                     ,Foreign.Coupon
   Other-modules:
                      Control.Concurrent.Chan.Extra
@@ -88,8 +88,10 @@ Library
                     ,Graphics.UI.Threepenny.Internal.Include
                     ,Graphics.UI.Threepenny.Internal.Resources
                     ,Graphics.UI.Threepenny.Internal.Types
-                    ,Reactive.Threepenny.PulseLatch
                     ,Reactive.Threepenny.Memo
+                    ,Reactive.Threepenny.Monads
+                    ,Reactive.Threepenny.PulseLatch
+                    ,Reactive.Threepenny.Types
                     ,Paths_threepenny_gui
   CPP-Options:      -DCABAL
   if flag(rebug)
@@ -129,7 +131,7 @@ Executable threepenny-examples-bartab
         buildable: False
     main-is:           BarTab.hs
     other-modules:     Paths_threepenny_gui, Paths
-    hs-source-dirs:    src
+    hs-source-dirs:    samples
 
 Executable threepenny-examples-buttons
     if flag(buildExamples)
@@ -141,68 +143,7 @@ Executable threepenny-examples-buttons
         buildable: False
     main-is:           Buttons.hs
     other-modules:     Paths_threepenny_gui, Paths
-    hs-source-dirs:    src
-
-Executable threepenny-examples-currencyconverter
-    if flag(buildExamples)
-        cpp-options:       -DCABAL
-        build-depends:     base                      >= 4     && < 5
-                          ,threepenny-gui
-                          ,safe
-    else
-        buildable: False
-    main-is:           CurrencyConverter.hs
-    hs-source-dirs:    src
-
-Executable threepenny-examples-dragndropexample
-    if flag(buildExamples)
-        cpp-options:       -DCABAL
-        build-depends:     base                      >= 4     && < 5
-                          ,threepenny-gui
-                          ,filepath
-    else
-        buildable: False
-    main-is:           DragNDropExample.hs
-    other-modules:     Paths_threepenny_gui, Paths
-    hs-source-dirs:    src
-
-Executable threepenny-examples-drummachine
-    if flag(buildExamples)
-        cpp-options:       -DCABAL
-        build-depends:     base                      >= 4     && < 5
-                          ,threepenny-gui
-                          ,filepath
-    else
-        buildable: False
-    main-is:           DrumMachine.hs
-    other-modules:     Paths_threepenny_gui, Paths
-    hs-source-dirs:    src
-
-Executable threepenny-examples-missing-dollars
-    if flag(buildExamples)
-        cpp-options:       -DCABAL
-        build-depends:     base                      >= 4     && < 5
-                          ,filepath
-                          ,threepenny-gui
-                          ,safe
-    else
-        buildable: False
-    main-is:           MissingDollars.hs
-    other-modules:     Paths_threepenny_gui, Paths
-    hs-source-dirs:    src
-
-Executable threepenny-examples-use-words
-    if flag(buildExamples)
-        cpp-options:       -DCABAL
-        build-depends:     base                      >= 4     && < 5
-                          ,threepenny-gui
-                          ,filepath
-                          ,parsec
-    else
-        buildable: False
-    main-is:           UseWords.hs
-    other-modules:     Paths_threepenny_gui, Paths
-    hs-source-dirs:    src
+    hs-source-dirs:    samples
 
 Executable threepenny-examples-chat
     if flag(buildExamples)
@@ -216,4 +157,77 @@ Executable threepenny-examples-chat
         buildable: False
     main-is:           Chat.hs
     other-modules:     Paths_threepenny_gui, Paths, Data.List.Extra
-    hs-source-dirs:    src
+    hs-source-dirs:    samples
+
+Executable threepenny-examples-crud
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,containers
+                          ,threepenny-gui
+    else
+        buildable: False
+    main-is:           CRUD.hs
+    other-modules:     Tidings
+    hs-source-dirs:    samples
+
+Executable threepenny-examples-currencyconverter
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,threepenny-gui
+                          ,safe
+    else
+        buildable: False
+    main-is:           CurrencyConverter.hs
+    hs-source-dirs:    samples
+
+Executable threepenny-examples-dragndropexample
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,threepenny-gui
+                          ,filepath
+    else
+        buildable: False
+    main-is:           DragNDropExample.hs
+    other-modules:     Paths_threepenny_gui, Paths
+    hs-source-dirs:    samples
+
+Executable threepenny-examples-drummachine
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,threepenny-gui
+                          ,filepath
+    else
+        buildable: False
+    main-is:           DrumMachine.hs
+    other-modules:     Paths_threepenny_gui, Paths
+    hs-source-dirs:    samples
+
+Executable threepenny-examples-missing-dollars
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,filepath
+                          ,threepenny-gui
+                          ,safe
+    else
+        buildable: False
+    main-is:           MissingDollars.hs
+    other-modules:     Paths_threepenny_gui, Paths
+    hs-source-dirs:    samples
+
+Executable threepenny-examples-use-words
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,threepenny-gui
+                          ,filepath
+                          ,parsec
+    else
+        buildable: False
+    main-is:           UseWords.hs
+    other-modules:     Paths_threepenny_gui, Paths
+    hs-source-dirs:    samples

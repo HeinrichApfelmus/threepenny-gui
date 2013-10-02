@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP, PackageImports #-}
 {-# LANGUAGE ViewPatterns #-}
 
 import Control.Applicative hiding ((<|>),many)
@@ -6,16 +5,11 @@ import Control.Monad
 import Control.Arrow (second)
 import Data.Maybe
 import Text.Parsec
+import System.FilePath ((</>))
 
-#ifdef CABAL
-import qualified  "threepenny-gui" Graphics.UI.Threepenny as UI
-import "threepenny-gui" Graphics.UI.Threepenny.Core hiding (string, (<|>), many)
-#else
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core hiding (string, (<|>), many)
-#endif
 import Paths
-import System.FilePath ((</>))
 
 {-----------------------------------------------------------------------------
     GUI

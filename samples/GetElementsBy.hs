@@ -1,20 +1,10 @@
-{-# LANGUAGE CPP, PackageImports #-}
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
-
 import Control.Applicative
 import Control.Monad
 import Data.IORef
 import Data.Maybe
 
-import Paths
-
-#ifdef CABAL
-import qualified "threepenny-gui" Graphics.UI.Threepenny as UI
-import "threepenny-gui" Graphics.UI.Threepenny.Core
-#else
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
-#endif
 
 -- | Main entry point.
 main :: IO ()

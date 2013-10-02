@@ -1,22 +1,10 @@
-{-----------------------------------------------------------------------------
-    threepenny-gui
-    
-    Example: Currency Converter
-------------------------------------------------------------------------------}
-{-# LANGUAGE CPP, PackageImports #-}
-
 import Control.Monad (void)
 import Data.Maybe
 import Text.Printf
 import Safe          (readMay)
 
-#ifdef CABAL
-import qualified "threepenny-gui" Graphics.UI.Threepenny as UI
-import "threepenny-gui" Graphics.UI.Threepenny.Core
-#else
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
-#endif
 
 {-----------------------------------------------------------------------------
     Main

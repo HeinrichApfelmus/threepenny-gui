@@ -1,6 +1,3 @@
-{-# LANGUAGE CPP, PackageImports #-}
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
-
 import Control.Concurrent
 import qualified Control.Concurrent.Chan as Chan
 import Control.Exception
@@ -11,17 +8,10 @@ import Data.Time
 import Data.IORef
 import Prelude hiding (catch)
 
-import Control.Monad.Trans.Reader as Reader
-import Control.Monad.IO.Class
+import Paths
 
-#ifdef CABAL
-import qualified "threepenny-gui" Graphics.UI.Threepenny as UI
-import "threepenny-gui" Graphics.UI.Threepenny.Core hiding (text)
-#else
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core hiding (text)
-#endif
-import Paths
 
 {-----------------------------------------------------------------------------
     Chat
