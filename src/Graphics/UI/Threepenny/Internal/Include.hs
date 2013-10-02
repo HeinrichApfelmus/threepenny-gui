@@ -2,6 +2,7 @@
 module Graphics.UI.Threepenny.Internal.Include (include) where
  
 import Data.Functor
+import System.IO
 import qualified Language.Haskell.TH as TH
 import Language.Haskell.TH.Quote
 
@@ -18,4 +19,9 @@ include = QuasiQuoter
         , quoteDec  = undefined
         }
     where
-    f s = TH.LitE . TH.StringL <$> TH.runIO (readFile $ root ++ s)
+    f s = TH.LitE . TH.StringL <$> TH.runIO (readFileUTF8 $ root ++ s)
+
+readFileUTF8 path = do
+    h <- openFile path ReadMode
+    hSetEncoding h utf8
+    hGetContents h
