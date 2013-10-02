@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, CPP #-}
 {-# LANGUAGE MagicHash, UnboxedTuples #-}
 module Foreign.Coupon (
     -- * Synopsis
@@ -37,10 +37,15 @@ mkWeakIORefValue :: IORef a -> value -> IO () -> IO (Weak value)
 mkWeakIORefValue r@(GHC.IORef (GHC.STRef r#)) v f = GHC.IO $ \s ->
   case GHC.mkWeak# r# v f s of (# s1, w #) -> (# s1, GHC.Weak w #)
 
-type Map = Map.Map
+#if MIN_VERSION_base(4,6,0)
+#else
+atomicModifyIORef' = atomicModifyIORef
+#endif
 
 debug m = m
 -- debug m = return ()
+
+type Map = Map.Map
 
 {-----------------------------------------------------------------------------
     Types
