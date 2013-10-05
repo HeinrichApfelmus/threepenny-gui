@@ -21,7 +21,7 @@ Description:
     .
     Changelog:
     .
-    * 0.4.0.0 - Snapshot release. New @UI@ monad for easier JavaScript FFI and recursion in FRP. Garbage collection for DOM elements.
+    * 0.4.0.0 - Snapshot release. New @UI@ monad for easier JavaScript FFI and recursion in FRP. Garbage collection for DOM elements. First stab at widgets.
     .
     * 0.3.0.0 - Snapshot release. Browser communication with WebSockets. First stab at FRP integration.
     .
@@ -78,6 +78,7 @@ Library
                     ,Graphics.UI.Threepenny.Events
                     ,Graphics.UI.Threepenny.JQuery
                     ,Graphics.UI.Threepenny.Timer
+                    ,Graphics.UI.Threepenny.Widgets
                     ,Reactive.Threepenny
                     ,Foreign.Coupon
   other-modules:

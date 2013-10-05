@@ -35,6 +35,9 @@ module Reactive.Threepenny (
     -- * Additional Notes
     -- $recursion
     
+    -- * Tidings
+    Tidings, tidings, facts, rumors,
+    
     -- * Internal
     -- | Functions reserved for special circumstances.
     -- Do not use unless you know what you're doing.
@@ -334,6 +337,36 @@ mapAccum acc ef = do
     e <- accumE (undefined,acc) ((. snd) <$> ef)
     b <- stepper acc (snd <$> e)
     return (fst <$> e, b)
+
+
+{-----------------------------------------------------------------------------
+    Tidings
+------------------------------------------------------------------------------}
+-- | Data type representing a behavior ('facts')
+-- and suggestions to change it ('rumors').
+data Tidings a = T { facts :: Behavior a, rumors :: Event a }
+
+-- | Smart constructor. Combine facts and rumors into 'Tidings'.
+tidings :: Behavior a -> Event a -> Tidings a
+tidings b e = T b e
+
+instance Functor Tidings where
+    fmap f (T b e) = T (fmap f b) (fmap f e)
+
+-- | The applicative instance combines 'rumors'
+-- and uses 'facts' when some of the 'rumors' are not available.
+instance Applicative Tidings where
+    pure x  = T (pure x) never
+    f <*> x = uncurry ($) <$> pair f x
+
+pair :: Tidings a -> Tidings b -> Tidings (a,b)
+pair (T bx ex) (T by ey) = T b e
+    where
+    b = (,) <$> bx <*> by
+    x = flip (,) <$> by <@> ex
+    y = (,) <$> bx <@> ey
+    e = unionWith (\(x,_) (_,y) -> (x,y)) x y
+
 
 {-----------------------------------------------------------------------------
     Test
