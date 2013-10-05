@@ -6,7 +6,8 @@ module Graphics.UI.Threepenny.Events (
     valueChange, selectionChange, checkedChange,
     
     -- * Standard DOM events
-    click, mousemove, mousedown, mouseup, hover, blur, leave,
+    click, mousemove, mousedown, mouseup, hover, leave,
+    focus, blur,
     KeyCode, keyup, keydown,
     ) where
 
@@ -40,7 +41,7 @@ checkedChange el = unsafeMapUI el (const $ get checked el) (click el)
 click :: Element -> Event ()
 click = silence . domEvent "click"
 
--- | Mouse hovering over an element.
+-- | Mouse enters an element.
 hover :: Element -> Event ()
 hover = silence . domEvent "mouseenter"
 
@@ -68,10 +69,13 @@ mousedown = fmap readCoordinates . domEvent "mousedown"
 mouseup :: Element -> Event (Int,Int)
 mouseup = fmap readCoordinates . domEvent "mouseup"
 
-
 -- | Mouse leaving an element.
 leave :: Element -> Event ()
 leave = silence . domEvent "mouseleave"
+
+-- | Element receives focus.
+focus :: Element -> Event ()
+focus = silence . domEvent "focus"
 
 -- | Element loses focus.
 blur :: Element -> Event ()
