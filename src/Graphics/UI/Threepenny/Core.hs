@@ -152,6 +152,7 @@ in which JavaScript function calls are executed.
 
 -}
 newtype UI a = UI { unUI :: Monad.RWST Window [IO ()] () IO a }
+    deriving (Typeable)
 
 instance Functor UI where
     fmap f = UI . fmap f . unUI
@@ -198,6 +199,7 @@ cookies = mkReadAttr (liftIO . Core.getRequestCookies)
     Elements
 ------------------------------------------------------------------------------}
 data Element = Element { eEvents :: Core.Events, toElement :: Core.Element }
+    deriving (Typeable)
 
 fromElement :: Core.Element -> IO Element
 fromElement e = do

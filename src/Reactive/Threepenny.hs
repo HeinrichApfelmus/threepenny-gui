@@ -144,8 +144,8 @@ onChange (B l e) h = void $ do
     register e (\_ -> h =<< Prim.readLatch l)
 
 -- | Read the current value of a 'Behavior'.
-currentValue :: Behavior a -> IO a
-currentValue (B l _) = Prim.readLatch l
+currentValue :: MonadIO m => Behavior a -> m a
+currentValue (B l _) = liftIO $ Prim.readLatch l
 
 
 {-----------------------------------------------------------------------------
