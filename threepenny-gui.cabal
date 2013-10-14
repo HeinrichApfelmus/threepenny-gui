@@ -122,6 +122,7 @@ Library
                     ,stm
                     ,attoparsec-enumerator
                     ,MonadCatchIO-transformers
+                    ,deepseq
                     
 Executable threepenny-examples-bartab
     if flag(buildExamples)

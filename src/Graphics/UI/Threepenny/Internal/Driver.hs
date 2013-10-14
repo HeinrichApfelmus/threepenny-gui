@@ -60,6 +60,7 @@ import           Control.Applicative
 import           Control.Concurrent
 import           Control.Concurrent.Chan.Extra
 import           Control.Concurrent.Delay
+import           Control.DeepSeq
 import qualified Control.Exception
 import           Control.Monad
 import           Control.Monad.IO.Class
@@ -272,6 +273,7 @@ webSocket Session{..} req = void $ do
     send     <- WS.getSink
     sendData <- liftIO . forkIO . forever $ do
         x <- readChan sInstructions
+        -- see note [Instruction strictness]
         WS.sendSink send . WS.textData . Text.pack . JSON.encode $ x
 
     -- read data
@@ -289,6 +291,24 @@ webSocket Session{..} req = void $ do
             killThread sendData             -- kill sending thread when done
             writeChan sSignals $ Quit ()    -- signal  Quit  event
 
+
+{- note [Instruction strictness]
+
+The  Instruction  may contain components that evaluate to _|_.
+An exception will be thrown when we try to send one of those to the browser.
+However, the  WS.sendSink  function is called in a different thread
+than where the faulty instruction was constructed.
+We want to throw an exception in the latter thread.
+Hence, we make sure that the  Instruction  is fully evaluated (deepseq)
+before passing it to the thread that sends it to the web browser.
+
+(Another, probably preferred, solution would be to make the  Instruction
+data type fully strict by default.)
+
+-}
+
+
+
 {-----------------------------------------------------------------------------
     FFI implementation on top of the communication channel
 ------------------------------------------------------------------------------}
@@ -303,8 +323,10 @@ atomic window@(Session{..}) m = do
 -- | Send an instruction and read the signal response.
 call :: Session -> Instruction -> (Signal -> IO (Maybe a)) -> IO a
 call session@(Session{..}) instruction withSignal = do
+  -- see note [Instruction strictness]
+  Control.Exception.evaluate $ force instruction
   takeMVar sMutex
-  run session $ instruction
+  writeChan sInstructions instruction
   newChan <- dupChan sSignals
   go sMutex newChan
 
@@ -321,7 +343,8 @@ call session@(Session{..}) instruction withSignal = do
 
 -- Run the given instruction wihtout waiting for a response.
 run :: Session -> Instruction -> IO ()
-run (Session{..}) i = writeChan sInstructions i
+run (Session{..}) instruction =
+    writeChan sInstructions $!! instruction  -- see note [Instruction strictness]
 
 -- | Call the given function with the given continuation. Doesn't block.
 callDeferredFunction

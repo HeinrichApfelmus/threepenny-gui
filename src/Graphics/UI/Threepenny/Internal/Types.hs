@@ -8,6 +8,7 @@ import Prelude              hiding (init)
 
 import Control.Applicative
 import Control.Concurrent
+import Control.DeepSeq
 import qualified Reactive.Threepenny    as E
 import           Data.ByteString.Char8  (ByteString)
 import qualified Data.ByteString.Char8  as BS
@@ -33,8 +34,10 @@ data ElementData = ElementData
     , elHandlers :: MVar Handlers   -- event handlers associated with that element
     , elEvents   :: Events          -- events         associated with that element
     }
-data ElementId   = ElementId BS.ByteString
-                   deriving (Data,Typeable,Show,Eq,Ord)
+newtype ElementId = ElementId BS.ByteString
+    deriving (Data,Typeable,Show,Eq,Ord)
+
+instance NFData ElementId where rnf (ElementId x) = rnf x
 
 type EventId  = String
 type Handlers = Map EventId (E.Handler EventData)
@@ -127,6 +130,7 @@ data ConnectedState
 data Closure = Closure (ElementId,EventId)
     deriving (Typeable,Data,Show)
 
+instance NFData Closure where rnf (Closure x) = rnf x
 
 {-----------------------------------------------------------------------------
     Public types
@@ -175,6 +179,16 @@ data Instruction
 instance JSON Instruction where
     readJSON _ = error "JSON.Instruction.readJSON: No method implemented."
     showJSON x = toJSON x 
+
+instance NFData Instruction where
+    rnf (Debug    x  ) = rnf x
+    rnf (SetToken x  ) = rnf x
+    rnf (Bind     x y) = rnf x `seq` rnf y
+    rnf (GetValues xs) = rnf xs
+    rnf (RunJSFunction  x) = rnf x
+    rnf (CallJSFunction x) = rnf x
+    rnf (CallDeferredFunction x) = rnf x
+    rnf (Delete x)     = rnf x
 
 -- | A signal (mostly events) that are sent from the client to the server.
 data Signal
