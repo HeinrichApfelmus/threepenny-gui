@@ -29,7 +29,7 @@ setup window = do
         ]
     
     dir <- liftIO $ getStaticDir
-    url <- loadFile "image/png" (dir </> "game" </> "BlackMage" <.> "png")
+    url <- loadFile "image/png" (dir </> "game" </> "wizard-blue" <.> "png")
     img <- UI.img # set UI.src url
     
     let positions = [(x,y) | x <- [0,20..300], y <- [0,20..300]] :: [(Int,Int)]

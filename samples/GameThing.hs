@@ -3,31 +3,34 @@ import Control.Monad
 
 import Paths
 import System.FilePath
+import System.Directory
 
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
+import Reactive.Threepenny
 
 {-----------------------------------------------------------------------------
     Main
 ------------------------------------------------------------------------------}
 main :: IO ()
 main = do
-    static <- getStaticDir
+    static     <- getStaticDir
+    playground <- mkPlayground
     startGUI defaultConfig
         { tpPort       = 10000
         , tpStatic     = Just static
-        } setup
+        } $ setup playground
 
-setup :: Window -> UI ()
-setup window = void $ do
+setup :: Playground -> Window -> UI ()
+setup playground window = void $ do
     return window # set title "Game Thing"
     
-    images <- mapM mkImage $ words "BlackMage floor wall"
+    (images, eLoaded) <- loadImages =<< liftIO getImageUrls
 
     bCurrentImage <- stepper (head images) $
         head <$> unions [img <$ UI.click img | img <- images]
 
-    canvas <- mkBoard window bCurrentImage
+    canvas <- mkBoardView eLoaded playground bCurrentImage
     
     getBody window #+
         [row (map element images)
@@ -37,24 +40,43 @@ setup window = void $ do
     onChanges bCurrentImage $ \img -> do
         element img # set style [("border", "solid black 1px")]
 
-
 {-----------------------------------------------------------------------------
     Board
 ------------------------------------------------------------------------------}
 type Image = Maybe Element
 type Board = Array (Int,Int) Image
 
-mkBoard :: Window -> Behavior Element -> UI Element
-mkBoard window bCurrentImage = do
+type Move  = Board -> Board
+
+type Playground = (Event Board, Behavior Board, Move -> IO ())
+
+mkPlayground :: IO Playground
+mkPlayground = do
+    (e, fire) <- newEvent
+    eBoard    <- accumE emptyBoard e
+    bBoard    <- stepper emptyBoard eBoard
+    return (eBoard, bBoard, fire)
+
+onBehavior :: Behavior a -> (a -> UI ()) -> UI ()
+onBehavior b f = do
+    onChanges b f
+    window <- askWindow
+    liftIOLater $ runUI window $ f =<< currentValue b
+
+
+-- | Create a canvas that reflects the current state of the board.
+mkBoardView :: Event () -> Playground -> Behavior Element -> UI Element
+mkBoardView eImagesLoaded (eBoard, bBoard,fireMove) bCurrentImage = do
     canvas <- UI.canvas
         # set UI.height 320
         # set UI.width  320
         # set style [("border", "solid black 1px")]
 
-    bBoard <- accumB emptyBoard $
-        place <$> bCurrentImage <@> UI.mousedown canvas
+    onEvent (place <$> bCurrentImage <@> UI.mousedown canvas) $
+        liftIO . fireMove
 
-    onChanges bBoard $ \board -> do
+    let eDraw = unionWith const eBoard (bBoard <@ eImagesLoaded)
+    onEvent eDraw $ \board -> do
         forM_ (assocs board) $ \(pos,mimg) -> case mimg of
             Just image -> UI.drawImage image (gridToPixels pos) canvas
             Nothing    -> return ()
@@ -68,7 +90,7 @@ height = 10
 emptyBoard = array ((1,1),(width,height))
     [((x,y), Nothing) | x <- [1..width], y <- [1..height]]
 
-place :: Element -> (Int,Int) -> (Board -> Board)
+place :: Element -> (Int,Int) -> Move
 place image pixels board = board // [(location, Just image)]
     where location = pixelsToGrid pixels
 
@@ -78,12 +100,19 @@ gridToPixels (x,y) = (32*(x-1),32*(y-1))
 {-----------------------------------------------------------------------------
     Images
 ------------------------------------------------------------------------------}
-getImagePath :: String -> FilePath
-getImagePath s = "static" </> "game" </> s <.> "png"
+-- | Load image URLs from the resource directory
+getImageUrls :: IO [String]
+getImageUrls = do
+    dir <- getStaticDir
+    xs  <- getDirectoryContents (dir </> "game")
+    return ["static/game/" ++ takeBaseName x ++ ".png"
+           | x <- xs, takeExtension x == ".png"]
 
-mkImage :: String -> UI Element
-mkImage s = UI.img # set UI.src (getImagePath s)
-
-
+-- | Load image elements and fire an event when the images are all loaded.
+loadImages :: [String] -> UI ([Element], Event ())
+loadImages urls = do
+    images <- mapM (\url -> UI.img # set UI.src url) urls
+    e      <- accumE 0 $ (+1) <$ (unions $ map (domEvent "load") images)
+    return (images, () <$ filterE (== length images) e)
 
 
