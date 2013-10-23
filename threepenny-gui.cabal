@@ -99,30 +99,30 @@ Library
   if flag(rebug)
       cpp-options:  -DREBUG
       ghc-options:  -O2   
-  build-depends:     base                      >= 4     && < 5
-                    ,snap-server
-                    ,snap-core
-                    ,websockets
-                    ,websockets-snap
-                    ,text
-                    ,safe
-                    ,containers
-                    ,unordered-containers
-                    ,hashable
-                    ,vault == 0.3.*
-                    ,bytestring
-                    ,json >= 0.4.4 && < 0.6
-                    ,time
-                    ,utf8-string
-                    ,network
-                    ,filepath
-                    ,data-default
-                    ,template-haskell
-                    ,transformers
-                    ,stm
-                    ,attoparsec-enumerator
-                    ,MonadCatchIO-transformers
-                    ,deepseq
+  build-depends:     base                   >= 4     && < 5
+                    ,snap-server            == 0.9.*
+                    ,snap-core              == 0.9.*
+                    ,websockets             == 0.7.*
+                    ,websockets-snap        == 0.7.*
+                    ,text                   == 0.11.*
+                    ,safe                   == 0.3.*
+                    ,containers             == 0.5.*
+                    ,unordered-containers   == 0.2.*
+                    ,hashable               == 1.1.*
+                    ,vault                  == 0.3.*
+                    ,bytestring             == 0.10.*
+                    ,json                   >= 0.4.4 && < 0.6
+                    ,time                   == 1.4.*
+                    ,utf8-string            == 0.3.*
+                    ,network                == 2.4.*
+                    ,filepath               == 1.3.*
+                    ,data-default           == 0.5.*
+                    ,template-haskell       == 2.8.*
+                    ,transformers           == 0.3.*
+                    ,stm                    == 2.4.*
+                    ,attoparsec-enumerator  == 0.3.*
+                    ,MonadCatchIO-transformers  == 0.3.*
+                    ,deepseq                == 1.3.*
                     
 Executable threepenny-examples-bartab
     if flag(buildExamples)
