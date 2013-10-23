@@ -102,8 +102,8 @@ Library
   build-depends:     base                   >= 4     && < 5
                     ,snap-server            == 0.9.*
                     ,snap-core              == 0.9.*
-                    ,websockets             == 0.7.*
-                    ,websockets-snap        == 0.7.*
+                    ,websockets             == 0.8.*
+                    ,websockets-snap        == 0.8.*
                     ,text                   == 0.11.*
                     ,safe                   == 0.3.*
                     ,containers             == 0.5.*

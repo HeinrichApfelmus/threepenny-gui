@@ -263,34 +263,33 @@ routeWebsockets worker server =
         error "Threepenny.Internal.Core: runWebSocketsSnap should never return."
 
 
-webSocket :: Session -> WS.Request -> WS.WebSockets WS.Hybi00 ()
-webSocket Session{..} req = void $ do
-    WS.acceptRequest req
+webSocket :: Session -> WS.PendingConnection -> IO ()
+webSocket Session{..} request = void $ do
+    connection <- WS.acceptRequest request
     -- websockets are always connected, don't let the custodian kill you.
-    liftIO $ modifyMVar_ sConnectedState (const (return Connected))
+    modifyMVar_ sConnectedState (const (return Connected))
 
     -- write data (in another thread)
-    send     <- WS.getSink
-    sendData <- liftIO . forkIO . forever $ do
+    sendData <- forkIO . forever $ do
         x <- readChan sInstructions
         -- see note [Instruction strictness]
-        WS.sendSink send . WS.textData . Text.pack . JSON.encode $ x
+        WS.sendTextData connection . Text.pack . JSON.encode $ x
 
     -- read data
     let readData = do
-            input <- WS.receiveData
+            input <- WS.receiveData connection
             case input of
-                "ping" -> liftIO . WS.sendSink send . WS.textData . Text.pack $ "pong"
-                "quit" -> WS.throwWsError WS.ConnectionClosed
+                "ping" -> WS.sendTextData connection . Text.pack $ "pong"
+                "quit" -> E.throw WS.ConnectionClosed
                 input  -> case JSON.decode . Text.unpack $ input of
-                    Ok signal -> liftIO $ writeChan sSignals signal
-                    Error err -> WS.throwWsError . WS.ParseError $ Atto.ParseError [] err
+                    Ok signal -> writeChan sSignals signal
+                    Error err -> E.throw $ Atto.ParseError [] err
     
-    forever readData `WS.catchWsError`
-        \_ -> liftIO $ do
+    forever readData `E.finally`
+        (do
             killThread sendData             -- kill sending thread when done
             writeChan sSignals $ Quit ()    -- signal  Quit  event
-
+        )
 
 {- note [Instruction strictness]
 
