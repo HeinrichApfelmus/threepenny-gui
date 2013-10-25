@@ -1,6 +1,8 @@
 language: haskell
 notifications:
   email: false
+install:
+  - cabal install --only-dependencies --enable-tests --force-reinstalls
 before_script:
   - cabal configure -fbuildExamples
   - cabal sdist
