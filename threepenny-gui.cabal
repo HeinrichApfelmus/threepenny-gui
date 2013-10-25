@@ -34,6 +34,7 @@ License-file:        LICENSE
 Author:              Chris Done, Heinrich Apfelmus
 Maintainer:          Heinrich Apfelmus <apfelmus at quantentunnel dot de>
 Homepage:            http://www.haskell.org/haskellwiki/Threepenny-gui
+bug-reports:         https://github.com/HeinrichApfelmus/threepenny-gui/issues
 Category:            Web, GUI
 Build-type:          Simple
 Cabal-version:       >=1.8
