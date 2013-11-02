@@ -166,6 +166,7 @@ never = E $ fromPure Prim.neverP
 -- Think of it as
 -- 
 -- > filterJust es = [(time,a) | (time,Just a) <- es]
+filterJust :: Event (Maybe a) -> Event a
 filterJust e = E $ liftMemo1 Prim.filterJustP (unE e)
 
 -- | Merge two event streams of the same type.
