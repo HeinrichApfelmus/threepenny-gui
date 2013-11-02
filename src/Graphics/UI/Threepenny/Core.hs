@@ -40,7 +40,7 @@ module Graphics.UI.Threepenny.Core (
     -- | For a list of predefined attributes, see "Graphics.UI.Threepenny.Attributes".
     (#), (#.),
     Attr, WriteAttr, ReadAttr, ReadWriteAttr(..),
-    set, sink, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
+    set, sink, sinkWhen, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
     
     -- * Widgets
     Widget(..), element, widget,
@@ -507,6 +507,23 @@ sink attr bi mx = do
         i <- currentValue bi
         runUI window $ set' attr i x
         Reactive.onChange bi  $ \i -> runUI window $ set' attr i x  
+    return x
+
+-- | Like 'sink', but the attribute is only updated if the boolean 'Behavior'
+-- is 'True'.
+--
+-- Note: If the boolean 'Behavior' changes to 'True', the attribute will be
+-- updated to the current value of the other 'Behavior'.
+sinkWhen :: Behavior Bool -> ReadWriteAttr x i o -> Behavior i -> UI x -> UI x
+sinkWhen bp attr bi mx = do
+    x <- mx
+    window <- askWindow
+    let bpi = pure (,) <*> bp <*> bi
+    liftIOLater $ do
+        (p, i) <- currentValue bpi
+        runUI window $ when p $ set' attr i x
+        Reactive.onChange bpi $
+            \(p, i) -> runUI window $ when p $ set' attr i x
     return x
 
 -- | Get attribute value.
