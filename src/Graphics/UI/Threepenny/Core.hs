@@ -140,7 +140,8 @@ data    Elem
 -- but this is ok since live references never change.
 fromAlive :: Core.Element -> IO Element
 fromAlive e@(Core.Element elid Session{..}) = do
-    Just events <- Map.lookup elid <$> readMVar sElementEvents
+    mevents <- Map.lookup elid <$> readMVar sElementEvents
+    let Just events = mevents
     Element events <$> newMVar (Alive e)
 
 -- Update an element that may be in Limbo.
