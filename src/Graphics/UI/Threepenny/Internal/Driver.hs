@@ -1,8 +1,10 @@
+{-# LANGUAGE CPP, PackageImports #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings, PackageImports #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecursiveDo #-}
 {-# OPTIONS -fno-warn-name-shadowing #-}
 
-module Graphics.UI.Threepenny.Internal.Core
+module Graphics.UI.Threepenny.Internal.Driver
   (
   -- * Synopsis
   -- | The main internal functionality.
@@ -11,29 +13,19 @@ module Graphics.UI.Threepenny.Internal.Core
    serve
   ,loadFile
   ,loadDirectory
+
+  -- * Elements
+  ,newElement
+  ,appendElementTo
+  ,emptyEl
+  ,delete
   
   -- * Event handling
   -- $eventhandling
   ,bind
   ,disconnect
   ,module Reactive.Threepenny
-  
-  -- * Setting attributes
-  -- $settingattributes
-  ,setStyle
-  ,setAttr
-  ,setProp
-  ,setText
-  ,setHtml
-  ,setTitle
-  ,emptyEl
-  ,delete
-  
-  -- * Manipulating tree structure
-  -- $treestructure
-  ,newElement
-  ,appendElementTo
-  
+ 
   -- * Querying
   -- $querying
   ,getHead
@@ -42,17 +34,12 @@ module Graphics.UI.Threepenny.Internal.Core
   ,getElementsById
   ,getElementsByClassName
   ,getWindow
-  ,getProp
-  ,getValue
   ,getValuesList
-  ,readValue
-  ,readValuesList
   ,getRequestCookies
   ,getRequestLocation
   
   -- * Utilities
   ,debug
-  ,clear
   ,callDeferredFunction
   ,atomic
 
@@ -69,15 +56,12 @@ module Graphics.UI.Threepenny.Internal.Core
 
 
 
-import           Graphics.UI.Threepenny.Internal.Types     as Threepenny
-import           Graphics.UI.Threepenny.Internal.Resources
-
 import           Control.Applicative
 import           Control.Concurrent
 import           Control.Concurrent.Chan.Extra
 import           Control.Concurrent.Delay
+import           Control.DeepSeq
 import qualified Control.Exception
-import           Reactive.Threepenny
 import           Control.Monad
 import           Control.Monad.IO.Class
 import qualified "MonadCatchIO-transformers" Control.Monad.CatchIO as E
@@ -103,6 +87,14 @@ import           System.FilePath
 import qualified Text.JSON as JSON
 import           Text.JSON.Generic
 
+
+import           Graphics.UI.Threepenny.Internal.Types     as Threepenny
+import           Graphics.UI.Threepenny.Internal.Resources
+import           Graphics.UI.Threepenny.Internal.FFI
+import           Reactive.Threepenny
+
+import qualified Foreign.Coupon as Foreign
+import qualified System.Mem
 
 {-----------------------------------------------------------------------------
     Server and and session management
@@ -183,17 +175,16 @@ newSession sServerState sStartInfo sToken = do
     sSignals          <- newChan
     sInstructions     <- newChan
     sMutex            <- newMVar ()
-    sEventHandlers    <- newMVar M.empty
-    sElementEvents    <- newMVar M.empty
     sEventQuit        <- newEvent
-    sElementIds       <- newMVar [0..]
+    sPrizeBooth      <- Foreign.newPrizeBooth
+    let sHeadElement  =  undefined -- filled in later
+    let sBodyElement  =  undefined
     now               <- getCurrentTime
     sConnectedState   <- newMVar (Disconnected now)
     sThreadId         <- myThreadId
     sClosures         <- newMVar [0..]
     let session = Session {..}
-    initializeElementEvents session    
-    return session
+    initializeElements session    
 
 -- | Make a new session and add it to the server
 createSession :: (Session -> IO void) -> ServerState -> Snap Session
@@ -272,32 +263,50 @@ routeWebsockets worker server =
         error "Threepenny.Internal.Core: runWebSocketsSnap should never return."
 
 
-webSocket :: Session -> WS.Request -> WS.WebSockets WS.Hybi00 ()
-webSocket Session{..} req = void $ do
-    WS.acceptRequest req
+webSocket :: Session -> WS.PendingConnection -> IO ()
+webSocket Session{..} request = void $ do
+    connection <- WS.acceptRequest request
     -- websockets are always connected, don't let the custodian kill you.
-    liftIO $ modifyMVar_ sConnectedState (const (return Connected))
+    modifyMVar_ sConnectedState (const (return Connected))
 
     -- write data (in another thread)
-    send     <- WS.getSink
-    sendData <- liftIO . forkIO . forever $ do
+    sendData <- forkIO . forever $ do
         x <- readChan sInstructions
-        WS.sendSink send . WS.textData . Text.pack . JSON.encode $ x
+        -- see note [Instruction strictness]
+        WS.sendTextData connection . Text.pack . JSON.encode $ x
 
     -- read data
     let readData = do
-            input <- WS.receiveData
+            input <- WS.receiveData connection
             case input of
-                "ping" -> liftIO . WS.sendSink send . WS.textData . Text.pack $ "pong"
-                "quit" -> WS.throwWsError WS.ConnectionClosed
+                "ping" -> WS.sendTextData connection . Text.pack $ "pong"
+                "quit" -> E.throw WS.ConnectionClosed
                 input  -> case JSON.decode . Text.unpack $ input of
-                    Ok signal -> liftIO $ writeChan sSignals signal
-                    Error err -> WS.throwWsError . WS.ParseError $ Atto.ParseError [] err
+                    Ok signal -> writeChan sSignals signal
+                    Error err -> E.throw $ Atto.ParseError [] err
     
-    forever readData `WS.catchWsError`
-        \_ -> liftIO $ do
+    forever readData `E.finally`
+        (do
             killThread sendData             -- kill sending thread when done
             writeChan sSignals $ Quit ()    -- signal  Quit  event
+        )
+
+{- note [Instruction strictness]
+
+The  Instruction  may contain components that evaluate to _|_.
+An exception will be thrown when we try to send one of those to the browser.
+However, the  WS.sendSink  function is called in a different thread
+than where the faulty instruction was constructed.
+We want to throw an exception in the latter thread.
+Hence, we make sure that the  Instruction  is fully evaluated (deepseq)
+before passing it to the thread that sends it to the web browser.
+
+(Another, probably preferred, solution would be to make the  Instruction
+data type fully strict by default.)
+
+-}
+
+
 
 {-----------------------------------------------------------------------------
     FFI implementation on top of the communication channel
@@ -313,8 +322,10 @@ atomic window@(Session{..}) m = do
 -- | Send an instruction and read the signal response.
 call :: Session -> Instruction -> (Signal -> IO (Maybe a)) -> IO a
 call session@(Session{..}) instruction withSignal = do
+  -- see note [Instruction strictness]
+  Control.Exception.evaluate $ force instruction
   takeMVar sMutex
-  run session $ instruction
+  writeChan sInstructions instruction
   newChan <- dupChan sSignals
   go sMutex newChan
 
@@ -331,7 +342,8 @@ call session@(Session{..}) instruction withSignal = do
 
 -- Run the given instruction wihtout waiting for a response.
 run :: Session -> Instruction -> IO ()
-run (Session{..}) i = writeChan sInstructions i
+run (Session{..}) instruction =
+    writeChan sInstructions $!! instruction  -- see note [Instruction strictness]
 
 -- | Call the given function with the given continuation. Doesn't block.
 callDeferredFunction
@@ -340,28 +352,43 @@ callDeferredFunction
   -> [String]                  -- ^ Parameters.
   -> ([Maybe String] -> IO ()) -- ^ The continuation to call if/when the function completes.
   -> IO ()
-callDeferredFunction session@(Session{..}) func params closure = do
-  cid      <- modifyMVar sClosures (\(x:xs) -> return (xs,x))
-  closure' <- newClosure session func (show cid) closure
-  run session $ CallDeferredFunction (closure',func,params)
+callDeferredFunction window fun params thunk = do
+    closure <- newClosure window fun $ \(EventData xs) -> thunk xs
+    run window $ CallDeferredFunction (closure,fun,params)
 
 -- | Run the given JavaScript function and carry on. Doesn't block.
 --
 -- The client window uses JavaScript's @eval()@ function to run the code.
 runFunction :: Window -> JSFunction () -> IO ()
-runFunction session = run session . RunJSFunction . unJSCode . code
+runFunction session = run session . RunJSFunction . toCode
 
 -- | Run the given JavaScript function and wait for results. Blocks.
 --
 -- The client window uses JavaScript's @eval()@ function to run the code.
 callFunction :: Window -> JSFunction a -> IO a
-callFunction window (JSFunction code marshal) = 
-    call window (CallJSFunction . unJSCode $ code) $ \signal ->
+callFunction window jsfunction = 
+    call window (CallJSFunction . toCode $ jsfunction) $ \signal ->
         case signal of
-            FunctionResult v -> case marshal window v of
+            FunctionResult v -> case marshalResult jsfunction window v of
                 Ok    a -> return $ Just a
                 Error _ -> return Nothing
             _ -> return Nothing
+
+
+-- | Package a Haskell function such that it can be called from JavaScript.
+-- 
+-- At the moment, we implement this as an event handler that is
+-- attached to the @head@ element.
+newClosure
+    :: Window               -- ^ Browser window context
+    -> String               -- ^ Function name (for debugging).
+    -> (EventData -> IO ()) -- ^ Function to call
+    -> IO Closure
+newClosure window@(Session{..}) fun thunk = do
+    cid <- modifyMVar sClosures $ \(x:xs) -> return (xs,x)
+    let eventId = fun ++ "-" ++ show cid
+    attachClosure sHeadElement eventId thunk
+    return $ Closure (unprotectedGetElementId sHeadElement, eventId)
 
 
 {-----------------------------------------------------------------------------
@@ -445,6 +472,67 @@ loadDirectory Session{..} path = do
 
 
 {-----------------------------------------------------------------------------
+    Elements
+        Creation, Management, Finalization
+------------------------------------------------------------------------------}
+-- | Create a new element of the given tag name.
+newElement :: Window        -- ^ Browser window in which context to create the element
+           -> String        -- ^ The tag name.
+           -> Events        -- ^ Events associated to that element.
+           -> IO Element    -- ^ A tag reference. Non-blocking.
+newElement elSession@(Session{..}) elTagName elEvents = do
+    elHandlers <- newMVar M.empty
+    el         <- Foreign.newItem sPrizeBooth ElementData{..}
+    Foreign.addFinalizer el $ delete el
+        -- FIXME: Do not try to delete elements from the session when
+        -- the session is broken/disconnected already.
+        -- A fix should be part of the  run  function, though.
+    return el
+
+-- | Get 'Window' associated to an 'Element'.
+getWindow :: Element -> IO Window
+getWindow e = withElement e $ \_ window -> return window
+
+-- | Look up several elements in the browser window.
+lookupElements :: Session -> [ElementId] -> IO [Element]
+lookupElements window = mapM (flip lookupElement window)
+
+-- | Append a child element to a parent element. Non-blocking.
+appendElementTo
+    :: Element     -- ^ Parent.
+    -> Element     -- ^ Child.
+    -> IO ()
+appendElementTo eParent eChild =
+    -- TODO: Right now, parent and child need to be from the same session/browser window
+    --       Implement transfer of elements across browser windows
+    withElement eParent $ \parent session ->
+    withElement eChild  $ \child  _       -> do
+        Foreign.addReachable eParent eChild
+        runFunction session $ ffi "$(%1).append($(%2))" parent child
+
+-- | Get the head of the page.
+getHead :: Window -> IO Element
+getHead session = return $ sHeadElement session
+
+-- | Get the body of the page.
+getBody :: Window -> IO Element
+getBody session = return $ sBodyElement session
+
+-- | Empty the given element.
+emptyEl :: Element -> IO ()
+emptyEl el = withElement el $ \elid window -> do
+    Foreign.clearReachable el
+    runFunction window $ ffi "$(%1).contents().detach()" elid
+
+-- | Delete the given element.
+delete :: Element -> IO ()
+delete el = withElement el $ \elid window ->
+    run window $ Delete elid
+    -- Note: We want a primitive 'Delete' here, because 
+    -- we do not want the implicit conversion from ElementId to element.
+
+
+{-----------------------------------------------------------------------------
     Event handling
 ------------------------------------------------------------------------------}
 {- $eventhandling
@@ -463,8 +551,12 @@ handleEvents :: Window -> IO ()
 handleEvents window@(Session{..}) = do
     signal <- getSignal window
     case signal of
-        Threepenny.Event (elid,eventType,params) -> do
-            handleEvent1 window ((elid,eventType),EventData params)
+        Threepenny.Event elid eventId params -> do
+            handleEvent1 window (elid,eventId,EventData params)
+#ifdef REBUG
+            -- debug garbage collection of elements:
+            System.Mem.performGC
+#endif
             handleEvents window
         Quit () -> do
             snd sEventQuit ()
@@ -472,144 +564,55 @@ handleEvents window@(Session{..}) = do
         _       -> do
             handleEvents window
 
--- | Add a new event handler for a given key
-addEventHandler :: Window -> (EventKey, Handler EventData) -> IO () 
-addEventHandler Session{..} (key,handler) =
-    modifyMVar_ sEventHandlers $ return .
-        M.insertWith (\h1 h a -> h1 a >> h a) key handler        
-
-
--- | Handle a single event
-handleEvent1 :: Window -> (EventKey,EventData) -> IO ()
-handleEvent1 Session{..} (key,params) = do
-    handlers <- readMVar sEventHandlers
-    case M.lookup key handlers of
-        Just handler -> handler params
-        Nothing      -> return ()
+-- | Handle a single event.
+handleEvent1 :: Window -> (ElementId, EventId, EventData) -> IO ()
+handleEvent1 window (elid,eventId,params) = do
+    el <- lookupElement elid window
+    withElementData el $ \_ eldata -> do
+        handlers <- readMVar $ elHandlers eldata
+        case M.lookup eventId handlers of
+            Just handler -> handler params
+            Nothing      -> return ()
 
 -- Get the latest signal sent from the client.
 getSignal :: Window -> IO Signal
 getSignal (Session{..}) = readChan sSignals
 
+-- | Associate a new closure with an element.
+attachClosure :: Element -> EventId -> Handler EventData -> IO () 
+attachClosure el eventId handler = withElementData el $ \_ eldata ->
+    modifyMVar_ (elHandlers eldata) $ return .
+        M.insertWith (\h1 h a -> h1 a >> h a) eventId handler
+
 -- | Bind an event handler for a dom event to an 'Element'.
 bind
-    :: String               -- ^ The eventType, see any DOM documentation for a list of these.
+    :: EventId              -- ^ The eventType, see any DOM documentation for a list of these.
     -> Element              -- ^ The element to bind to.
     -> Handler EventData    -- ^ The event handler to bind.
     -> IO ()
-bind eventType (Element el@(ElementId elid) session) handler = do
-    let key = (elid, eventType)
+bind eventId e handler = withElementData e $ \elid el -> do
+    handlers <- readMVar $ elHandlers el
     -- register with client if it has never been registered on the server
-    handlers <- readMVar $ sEventHandlers session
-    when (not $ key `M.member` handlers) $
-        run session $ Bind eventType el (Closure key)
+    when (not $ eventId `M.member` handlers) $
+        run (elSession el) $ Bind eventId elid
     -- register with server
-    addEventHandler session (key, handler)
+    attachClosure e eventId handler
 
 -- | Register event handler that occurs when the client has disconnected.
 disconnect :: Window -> Event ()
 disconnect = fst . sEventQuit
 
-
-initializeElementEvents :: Window -> IO ()
-initializeElementEvents session@(Session{..}) = do
-        initEvents =<< getHead session
-        initEvents =<< getBody session
+-- | Initialize the 'head' and 'body' elements when the session starts.
+initializeElements :: Session -> IO Session
+initializeElements session@(Session{..}) = do
+        sHeadElement <- createElement "head"
+        sBodyElement <- createElement "body"
+        return $ Session{..}
     where
-    initEvents el@(Element elid _) = do
-        x <- newEventsNamed $ \(name,_,handler) -> bind name el handler
-        modifyMVar_ sElementEvents $ return . M.insert elid x
-
--- Make a uniquely numbered event handler.
-newClosure :: Window -> String -> String -> ([Maybe String] -> IO ()) -> IO Closure
-newClosure window eventType elid thunk = do
-    let key = (elid, eventType)
-    addEventHandler window (key, \(EventData xs) -> thunk xs)
-    return (Closure key)
-
-{-----------------------------------------------------------------------------
-    Setting attributes
-------------------------------------------------------------------------------}
-{- $settingattributes
- 
-    Text, HTML and attributes of DOM nodes can be set using the
-    functions in this section. 
--}
-
--- | Set the style of the given element.
-setStyle :: [(String, String)] -- ^ Pairs of CSS (property,value).
-         -> Element            -- ^ The element to update.
-         -> IO ()
-setStyle props e@(Element el session) = run session $ SetStyle el props
-
--- | Set the attribute of the given element.
-setAttr :: String  -- ^ The attribute name.
-        -> String  -- ^ The attribute value.
-        -> Element -- ^ The element to update.
-        -> IO ()
-setAttr key value e@(Element el session) = run session $ SetAttr el key value
-
--- | Set the property of the given element.
-setProp :: String  -- ^ The property name.
-        -> JSValue -- ^ The property value.
-        -> Element -- ^ The element to update.
-        -> IO ()
-setProp key value e@(Element el session) =
-    runFunction session $ ffi "$(%1).prop(%2,%3);" el key value
-
--- | Set the text of the given element.
-setText :: String  -- ^ The plain text.
-        -> Element -- ^ The element to update.
-        -> IO ()
-setText props e@(Element el session) = run session $ SetText el props
-
--- | Set the HTML of the given element.
-setHtml :: String  -- ^ The HTML.
-        -> Element -- ^ The element to update.
-        -> IO ()
-setHtml props e@(Element el session) = run session $ SetHtml el props
-
--- | Set the title of the document.
-setTitle
-    :: String  -- ^ The title.
-    -> Window  -- ^ The document window
-    -> IO ()
-setTitle title session = run session $ SetTitle title
-
--- | Empty the given element.
-emptyEl :: Element -> IO ()
-emptyEl e@(Element el session) = run session $ EmptyEl el
-
--- | Delete the given element.
-delete :: Element -> IO ()
-delete e@(Element el session)  = run session $ Delete el
-
-
-{-----------------------------------------------------------------------------
-    Manipulating tree structure
-------------------------------------------------------------------------------}
--- $treestructure
---
---  Functions for creating, deleting, moving, appending, prepending, DOM nodes.
-
--- | Create a new element of the given tag name.
-newElement :: Window      -- ^ Browser window in which context to create the element
-           -> String      -- ^ The tag name.
-           -> IO Element  -- ^ A tag reference. Non-blocking.
-newElement session@(Session{..}) tagName = do
-    elid <- modifyMVar sElementIds $ \elids ->
-        return (tail elids,"*" ++ show (head elids) ++ ":" ++ tagName)
-    return (Element (ElementId elid) session)
-
--- | Append a child element to a parent element. Non-blocking.
-appendElementTo
-    :: Element     -- ^ Parent.
-    -> Element     -- ^ Child.
-    -> IO () 
-appendElementTo (Element parent session) e@(Element child _) =
-    -- TODO: Right now, parent and child need to be from the same session/browser window
-    --       Implement transfer of elements across browser windows
-    run session $ Append parent child
+    newEvents     e   = newEventsNamed $ \(name,_,handler) -> bind name e handler
+    createElement tag = mdo
+        x <- newElement session tag =<< newEvents x
+        return x
 
 {-----------------------------------------------------------------------------
     Querying the DOM
@@ -619,94 +622,36 @@ appendElementTo (Element parent session) e@(Element child _) =
 -- The DOM can be searched for elements of a given name, and nodes can
 -- be inspected for their values.
 
--- | Get all elements of the given tag name.  Blocks.
-getElementsByTagName
-    :: Window        -- ^ Browser window
-    -> String        -- ^ The tag name.
-    -> IO [Element]  -- ^ All elements with that tag name.
-getElementsByTagName window tagName =
-  call window (GetElementsByTagName tagName) $ \signal ->
-    case signal of
-      Elements els -> return $ Just $ [Element el window | el <- els]
-      _            -> return Nothing
+-- | Get all elements of the given tag name. Blocks.
+getElementsByTagName :: Window -> String -> IO [Element]
+getElementsByTagName window tag = do
+    elids <- callFunction window $ ffi "document.getElementsByTagName(%1)" tag
+    lookupElements window elids
 
 -- | Get a list of elements by particular IDs.  Blocks.
-getElementsById
-    :: Window        -- ^ Browser window
-    -> [String]      -- ^ The ID string.
-    -> IO [Element]  -- ^ Elements with given ID.
-getElementsById window ids =
-  call window (GetElementsById ids) $ \signal ->
-    case signal of
-      Elements els -> return $ Just [Element el window | el <- els]
-      _            -> return Nothing
+getElementsById :: Window -> [String] -> IO [Element]
+getElementsById window ids = do
+    elids <- forM ids $ \x ->
+        callFunction window $ ffi "[document.getElementById(%1)]" x
+    lookupElements window $ concat elids
 
 -- | Get a list of elements by particular class.  Blocks.
-getElementsByClassName
-    :: Window        -- ^ Browser window
-    -> String        -- ^ The class string.
-    -> IO [Element]  -- ^ Elements with given class.
-getElementsByClassName window cls =
-  call window (GetElementsByClassName cls) $ \signal ->
-    case signal of
-      Elements els -> return $ Just [Element el window | el <- els]
-      _            -> return Nothing
+getElementsByClassName :: Window -> String -> IO [Element]
+getElementsByClassName window cls = do
+    elids <- callFunction window $ ffi "document.getElementsByClassName(%1)" cls
+    lookupElements window elids
 
--- | Get the value of an input. Blocks.
-getValue
-    :: Element   -- ^ The element to get the value of.
-    -> IO String -- ^ The plain text value.
-getValue e@(Element el window) =
-  call window (GetValue el) $ \signal ->
-    case signal of
-      Value str -> return (Just str)
-      _         -> return Nothing
-
--- | Get the property of an element. Blocks.
-getProp
-    :: String     -- ^ The property name.
-    -> Element    -- ^ The element to get the value of.
-    -> IO JSValue -- ^ The plain text value.
-getProp prop e@(Element el window) =
-    callFunction window (ffi "$(%1).prop(%2)" el prop)
-
--- | Get 'Window' associated to an 'Element'.
-getWindow :: Element -> Window
-getWindow (Element _ window) = window
-
--- | Get values from inputs. Blocks. This is faster than many 'getValue' invocations.
+-- | Get values from inputs. Blocks. This is faster than many @getValue@ invocations.
 getValuesList
     :: [Element]   -- ^ A list of elements to get the values of.
     -> IO [String] -- ^ The list of plain text values.
-getValuesList [] = return []
-getValuesList es@(Element _ window : _) =
-    let elids = [elid | Element elid _ <- es] in
+getValuesList []        = return []
+getValuesList es@(e0:_) = withElement e0 $ \_ window -> do
+    let elids  = map unprotectedGetElementId es
     call window (GetValues elids) $ \signal ->
         case signal of
             Values strs -> return $ Just strs
             _           -> return Nothing
-
--- | Read a value from an input. Blocks.
-readValue
-    :: Read a
-    => Element      -- ^ The element to read a value from.
-    -> IO (Maybe a) -- ^ Maybe the read value.
-readValue = liftM readMay . getValue
-
--- | Read values from inputs. Blocks. This is faster than many 'readValue' invocations.
-readValuesList
-    :: Read a
-    => [Element]      -- ^ The element to read a value from.
-    -> IO (Maybe [a]) -- ^ Maybe the read values. All or none.
-readValuesList = liftM (sequence . map readMay) . getValuesList
-
--- | Get the head of the page.
-getHead :: Window -> IO Element
-getHead session = return $ Element (ElementId "head") session
-
--- | Get the body of the page.
-getBody :: Window -> IO Element
-getBody session = return $ Element (ElementId "body") session
 
 -- | Get the request location.
 getRequestLocation :: Window -> IO URI
@@ -726,7 +671,3 @@ debug
     -> String -- ^ Some plain text to send to the client.
     -> IO ()
 debug window = run window . Debug
-
--- | Clear the client's DOM.
-clear :: Window -> IO ()
-clear window = runFunction window $ ffi "$('body').contents().detach()"

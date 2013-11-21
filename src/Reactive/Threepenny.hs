@@ -35,6 +35,9 @@ module Reactive.Threepenny (
     -- * Additional Notes
     -- $recursion
     
+    -- * Tidings
+    Tidings, tidings, facts, rumors,
+    
     -- * Internal
     -- | Functions reserved for special circumstances.
     -- Do not use unless you know what you're doing.
@@ -43,6 +46,7 @@ module Reactive.Threepenny (
 
 import Control.Applicative
 import Control.Monad (void)
+import Control.Monad.IO.Class
 import Data.IORef
 import qualified Data.Map as Map
 
@@ -140,8 +144,8 @@ onChange (B l e) h = void $ do
     register e (\_ -> h =<< Prim.readLatch l)
 
 -- | Read the current value of a 'Behavior'.
-currentValue :: Behavior a -> IO a
-currentValue (B l _) = Prim.readLatch l
+currentValue :: MonadIO m => Behavior a -> m a
+currentValue (B l _) = liftIO $ Prim.readLatch l
 
 
 {-----------------------------------------------------------------------------
@@ -150,7 +154,8 @@ currentValue (B l _) = Prim.readLatch l
 instance Functor Event where
     fmap f e = E $ liftMemo1 (Prim.mapP f) (unE e)
 
-unsafeMapIO f e   = E $ liftMemo1 (Prim.unsafeMapIOP f) (unE e)
+unsafeMapIO :: (a -> IO b) -> Event a -> Event b
+unsafeMapIO f e = E $ liftMemo1 (Prim.unsafeMapIOP f) (unE e)
 
 -- | Event that never occurs.
 -- Think of it as @never = []@.
@@ -201,8 +206,8 @@ b <@ e = (const <$> b) <@> e
 -- 
 -- Note that the value of the behavior changes \"slightly after\"
 -- the events occur. This allows for recursive definitions.
-accumB :: a -> Event (a -> a) -> IO (Behavior a)
-accumB a e = do
+accumB :: MonadIO m => a -> Event (a -> a) -> m (Behavior a)
+accumB a e = liftIO $ do
     (l1,p1) <- Prim.accumL a =<< at (unE e)
     p2      <- Prim.mapP (const ()) p1
     return $ B l1 (E $ fromPure p2)
@@ -217,7 +222,7 @@ accumB a e = do
 -- Note that the smaller-than-sign in the comparision @timex < time@ means 
 -- that the value of the behavior changes \"slightly after\"
 -- the event occurrences. This allows for recursive definitions.
-stepper :: a -> Event a -> IO (Behavior a)
+stepper :: MonadIO m => a -> Event a -> m (Behavior a)
 stepper a e = accumB a (const <$> e)
 
 -- | The 'accumE' function accumulates a stream of events.
@@ -228,8 +233,8 @@ stepper a e = accumB a (const <$> e)
 --
 -- Note that the output events are simultaneous with the input events,
 -- there is no \"delay\" like in the case of 'accumB'.
-accumE :: a -> Event (a -> a) -> IO (Event a)
-accumE a e = do
+accumE :: MonadIO m =>  a -> Event (a -> a) -> m (Event a)
+accumE a e = liftIO $ do
     p <- fmap snd . Prim.accumL a =<< at (unE e)
     return $ E $ fromPure p
 
@@ -327,11 +332,41 @@ acc -> (x,acc) is the order used by 'unfoldr' and 'State'.
 -}
 
 -- | Efficient combination of 'accumE' and 'accumB'.
-mapAccum :: acc -> Event (acc -> (x,acc)) -> IO (Event x, Behavior acc)
+mapAccum :: MonadIO m => acc -> Event (acc -> (x,acc)) -> m (Event x, Behavior acc)
 mapAccum acc ef = do
     e <- accumE (undefined,acc) ((. snd) <$> ef)
     b <- stepper acc (snd <$> e)
     return (fst <$> e, b)
+
+
+{-----------------------------------------------------------------------------
+    Tidings
+------------------------------------------------------------------------------}
+-- | Data type representing a behavior ('facts')
+-- and suggestions to change it ('rumors').
+data Tidings a = T { facts :: Behavior a, rumors :: Event a }
+
+-- | Smart constructor. Combine facts and rumors into 'Tidings'.
+tidings :: Behavior a -> Event a -> Tidings a
+tidings b e = T b e
+
+instance Functor Tidings where
+    fmap f (T b e) = T (fmap f b) (fmap f e)
+
+-- | The applicative instance combines 'rumors'
+-- and uses 'facts' when some of the 'rumors' are not available.
+instance Applicative Tidings where
+    pure x  = T (pure x) never
+    f <*> x = uncurry ($) <$> pair f x
+
+pair :: Tidings a -> Tidings b -> Tidings (a,b)
+pair (T bx ex) (T by ey) = T b e
+    where
+    b = (,) <$> bx <*> by
+    x = flip (,) <$> by <@> ex
+    y = (,) <$> bx <@> ey
+    e = unionWith (\(x,_) (_,y) -> (x,y)) x y
+
 
 {-----------------------------------------------------------------------------
     Test

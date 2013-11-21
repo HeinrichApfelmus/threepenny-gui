@@ -1,17 +1,11 @@
-{-# LANGUAGE CPP, PackageImports #-}
 {-# LANGUAGE RecordWildCards #-}
 
 import Control.Monad
 import Control.Monad.IO.Class
 import qualified Data.Map as Map
 
-#ifdef CABAL
-import qualified  "threepenny-gui" Graphics.UI.Threepenny as UI
-import "threepenny-gui" Graphics.UI.Threepenny.Core
-#else
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
-#endif
 import Paths
 import VideoAnnotate.MediaPlayer
 

@@ -38,7 +38,7 @@ import Graphics.UI.Threepenny.Core
 addStyleSheet
     :: Window
     -> FilePath
-    -> IO ()
+    -> UI ()
 addStyleSheet w filename = void $ do
     el <- mkElement "link"
             # set (attr "rel" ) "stylesheet"
@@ -47,7 +47,7 @@ addStyleSheet w filename = void $ do
     getHead w #+ [element el]
 
 -- | Make a new @div@ element, synonym for 'div'.
-new :: IO Element
+new :: UI Element
 new = div
 
 {-----------------------------------------------------------------------------

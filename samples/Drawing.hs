@@ -1,17 +1,11 @@
-{-# LANGUAGE CPP, PackageImports #-}
-
 import Control.Monad
-
-#ifdef CABAL
-import qualified "threepenny-gui" Graphics.UI.Threepenny as UI
-import "threepenny-gui" Graphics.UI.Threepenny.Core
-#else
-import qualified Graphics.UI.Threepenny as UI
-import Graphics.UI.Threepenny.Core
-#endif
 
 import Paths
 import System.FilePath
+
+import qualified Graphics.UI.Threepenny as UI
+import Graphics.UI.Threepenny.Core
+
 
 {-----------------------------------------------------------------------------
     Main
@@ -19,7 +13,7 @@ import System.FilePath
 main :: IO ()
 main = startGUI defaultConfig { tpPort = 10000 } setup
 
-setup :: Window -> IO ()
+setup :: Window -> UI ()
 setup window = do
     return window # set title "Drawing"
     
@@ -34,8 +28,8 @@ setup window = do
         ,element clear
         ]
     
-    dir <- getStaticDir
-    url <- loadFile window "image/png" (dir </> "game" </> "BlackMage" <.> "png")
+    dir <- liftIO $ getStaticDir
+    url <- loadFile "image/png" (dir </> "game" </> "wizard-blue" <.> "png")
     img <- UI.img # set UI.src url
     
     let positions = [(x,y) | x <- [0,20..300], y <- [0,20..300]] :: [(Int,Int)]

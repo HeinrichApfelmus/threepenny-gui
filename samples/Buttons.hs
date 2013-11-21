@@ -1,16 +1,10 @@
-{-# LANGUAGE CPP, PackageImports #-}
-
 import Control.Monad
 import Control.Concurrent (threadDelay)
 
-#ifdef CABAL
-import qualified "threepenny-gui" Graphics.UI.Threepenny as UI
-import "threepenny-gui" Graphics.UI.Threepenny.Core
-#else
+import Paths
+
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
-#endif
-import Paths
 
 {-----------------------------------------------------------------------------
     Buttons
@@ -24,7 +18,7 @@ main = do
         , tpStatic     = Just static
         } setup
 
-setup :: Window -> IO ()
+setup :: Window -> UI ()
 setup w = void $ do
     return w # set title "Buttons"
     UI.addStyleSheet w "buttons.css"
@@ -33,20 +27,20 @@ setup w = void $ do
     getBody w #+
         [UI.div #. "wrap" #+ (greet ++ map element buttons ++ [viewSource])]
 
-greet :: [IO Element]
+greet :: [UI Element]
 greet =
     [ UI.h1  #+ [string "Hello, Haskell!"]
     , UI.div #+ [string "Try the buttons below, they hover and click."]
     ]
 
 
-mkButton :: String -> IO (Element, Element)
+mkButton :: String -> UI (Element, Element)
 mkButton title = do
     button <- UI.button #. "button" #+ [string title]
     view   <- UI.p #+ [element button]
     return (button, view)
 
-mkButtons :: IO [Element]
+mkButtons :: UI [Element]
 mkButtons = do
     list    <- UI.ul #. "buttons-list"
     
@@ -58,7 +52,7 @@ mkButtons = do
         element button1 # set text button1Title
     on UI.click button1 $ \_ -> do
         element button1 # set text (button1Title ++ " [pressed]")
-        threadDelay $ 1000 * 1000 * 1
+        liftIO $ threadDelay $ 1000 * 1000 * 1
         element list    #+ [UI.li # set html "<b>Delayed</b> result!"]
     
     (button2, view2) <- mkButton button2Title
@@ -76,7 +70,7 @@ mkButtons = do
   where button1Title = "Click me, I delay a bit"
         button2Title = "Click me, I work immediately"
 
-viewSource :: IO Element
+viewSource :: UI Element
 viewSource = UI.p #+
     [UI.anchor #. "view-source" # set UI.href url #+ [string "View source code"]]
     where

@@ -1,28 +1,15 @@
-{-# LANGUAGE CPP, PackageImports #-}
-
 import Control.Monad (void)
 
-#ifdef CABAL
-import qualified "threepenny-gui" Graphics.UI.Threepenny as UI
-import "threepenny-gui" Graphics.UI.Threepenny.Core
-#else
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
-#endif
-import Paths
 
 {-----------------------------------------------------------------------------
     Enabled
 ------------------------------------------------------------------------------}
 main :: IO ()
-main = do
-    static <- getStaticDir
-    startGUI defaultConfig
-        { tpPort       = 10000
-        , tpStatic     = Just static
-        } setup
+main = startGUI defaultConfig { tpPort = 10000 } setup
 
-setup :: Window -> IO ()
+setup :: Window -> UI ()
 setup w = void $ do
     return w # set title "Input Elements"
     

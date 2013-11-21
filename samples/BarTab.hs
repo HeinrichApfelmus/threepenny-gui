@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP, PackageImports #-}
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
 import Control.Applicative
@@ -6,26 +5,15 @@ import Control.Monad
 import Data.IORef
 import Data.Maybe
 
-import Paths
-
-#ifdef CABAL
-import qualified "threepenny-gui" Graphics.UI.Threepenny as UI
-import "threepenny-gui" Graphics.UI.Threepenny.Core
-#else
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
-#endif
 
--- | Main entry point. Starts a TP server.
+
+-- | Main entry point.
 main :: IO ()
-main = do
-    static <- getStaticDir
-    startGUI defaultConfig
-        { tpPort       = 10000
-        , tpStatic     = Just static
-        } setup
+main = startGUI defaultConfig { tpPort = 10000 } setup
 
-setup :: Window -> IO ()
+setup :: Window -> UI ()
 setup w = do
     -- active elements
     return w # set title "BarTab"
@@ -34,21 +22,21 @@ setup w = do
     elRemove <- UI.button # set UI.text "Remove"
     elResult <- UI.span
 
-    inputs   <- newIORef []
+    inputs   <- liftIO $ newIORef []
     
     -- functionality
     let
         displayTotal = void $ do
-            xs <- getValuesList =<< readIORef inputs
+            xs <- getValuesList =<< liftIO (readIORef inputs)
             element elResult # set text (showNumber . sum $ map readNumber xs)
         
-        redoLayout :: IO ()
+        redoLayout :: UI ()
         redoLayout = void $ do
-            layout <- mkLayout =<< readIORef inputs
+            layout <- mkLayout =<< liftIO (readIORef inputs)
             getBody w # set children [layout]
             displayTotal
 
-        mkLayout :: [Element] -> IO Element
+        mkLayout :: [Element] -> UI Element
         mkLayout xs = column $
             [row [element elAdd, element elRemove]
             ,UI.hr]
@@ -57,14 +45,17 @@ setup w = do
             ,row [UI.span # set text "Sum: ", element elResult]
             ]
         
-        addInput :: IO ()
+        addInput :: UI ()
         addInput = do
             elInput <- UI.input # set value "0"
             on (domEvent "livechange") elInput $ \_ -> displayTotal
-            modifyIORef inputs (elInput:)
+            liftIO $ modifyIORef inputs (elInput:)
+        
+        removeInput :: UI ()
+        removeInput = liftIO $ modifyIORef inputs (drop 1)
     
-    on UI.click elAdd    $ \_ -> addInput                    >> redoLayout
-    on UI.click elRemove $ \_ -> modifyIORef inputs (drop 1) >> redoLayout
+    on UI.click elAdd    $ \_ -> addInput    >> redoLayout
+    on UI.click elRemove $ \_ -> removeInput >> redoLayout
     addInput >> redoLayout
 
 

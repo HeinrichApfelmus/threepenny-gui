@@ -6,7 +6,7 @@ import Data.Char
 import Data.Default
 import Data.Maybe
 import Graphics.UI.Threepenny.Core
-import qualified Graphics.UI.Threepenny.Internal.Core as Core
+import qualified Graphics.UI.Threepenny.Internal.Driver as Core
 import qualified Graphics.UI.Threepenny.Internal.Types as Core
 import Text.JSON
 import Reactive.Threepenny
@@ -20,10 +20,10 @@ instance Default Easing where
 -- | Animate property changes of a function.
 animate :: Element -> [(String,String)] -> Int -> Easing -> IO () -> IO ()
 animate el props duration easing complete =
-    flip updateElement el $ \(Core.Element el window) ->
+    Core.withElement (toElement el) $ \elid window ->
         callDeferredFunction window
             "jquery_animate"
-            [encode el,encode (makeObj (map (second showJSON) props)),show duration,map toLower (show easing)]
+            [encode elid,encode (makeObj (map (second showJSON) props)),show duration,map toLower (show easing)]
             (const complete)
 
 -- | Fade in an element.
@@ -43,11 +43,9 @@ sendValue el = fmap f (domEvent "sendvalue" el)
     f (EventData x) = concat . catMaybes $ x
 
 -- | Focus an element.
-setFocus :: Element -> IO ()
-setFocus = updateElement $ \(Core.Element el window) ->
-    runFunction window (ffi "$(%1).focus()" el)
+setFocus :: Element -> UI ()
+setFocus = runFunction . ffi "$(%1).focus()"
 
 -- | Scroll to the bottom of an element.
-scrollToBottom :: Element -> IO ()
-scrollToBottom = updateElement $ \(Core.Element area window) ->
-    runFunction window (ffi "jquery_scrollToBottom(%1)" area)
+scrollToBottom :: Element -> UI ()
+scrollToBottom = runFunction . ffi "jquery_scrollToBottom(%1)"
