@@ -18,16 +18,6 @@ Description:
     To build and install the example, use the @buildExamples@ flag like this
     .
     @cabal install threepenny-gui -fbuildExamples@
-    .
-    Changelog:
-    .
-    * 0.4.0.0 - Snapshot release. New @UI@ monad for easier JavaScript FFI and recursion in FRP. Garbage collection for DOM elements. First stab at widgets.
-    .
-    * 0.3.0.0 - Snapshot release. Browser communication with WebSockets. First stab at FRP integration.
-    .
-    * 0.2.0.0 - Snapshot release. First stab at easy JavaScript FFI.
-    .
-    * 0.1.0.0 - Initial release.
 
 License:             BSD3
 License-file:        LICENSE
@@ -38,7 +28,8 @@ Category:            Web, GUI
 Build-type:          Simple
 Cabal-version:       >=1.8
 
-Extra-Source-Files:  src/Graphics/UI/*.html
+Extra-Source-Files:  CHANGELOG.md
+                    ,src/Graphics/UI/*.html
                     ,src/Graphics/UI/*.js
                     ,src/Graphics/UI/*.css
 
