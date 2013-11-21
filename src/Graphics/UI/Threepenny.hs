@@ -70,7 +70,7 @@ Whenever a browser connects to the server,
 the following function will be executed to start the GUI interaction.
 It builds the initial HTML page.
 
-> setup :: Window -> IO ()
+> setup :: Window -> UI ()
 > setup window = do
 
 First, set the title of the HTML document
@@ -101,7 +101,7 @@ When that happens, we change the text of the button.
 That's it for a first example!
 
 The libary comes with a
-<https://github.com/HeinrichApfelmus/threepenny-gui/tree/master/src plethora of additional example code>.
+<https://github.com/HeinrichApfelmus/threepenny-gui#examples plethora of additional example code>.
 
 
 -}
