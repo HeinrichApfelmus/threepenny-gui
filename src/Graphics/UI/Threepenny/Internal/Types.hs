@@ -9,6 +9,7 @@ import Prelude              hiding (init)
 import Control.Applicative
 import Control.Concurrent
 import Control.DeepSeq
+import Control.Monad
 import qualified Reactive.Threepenny    as E
 import           Data.ByteString.Char8  (ByteString)
 import qualified Data.ByteString.Char8  as BS
@@ -17,7 +18,11 @@ import Data.String                      (fromString)
 import Data.Time
 
 import Network.URI
-import Text.JSON.Generic
+import Data.Data
+import           Data.Aeson             as JSON
+import qualified Data.Aeson.Types       as JSON
+import qualified Data.Aeson.Generic
+
 import System.IO (stderr)
 import System.IO.Unsafe
 
@@ -45,11 +50,11 @@ type Events   = EventId -> E.Event EventData
 
 
 -- Marshalling ElementId
-instance JSON ElementId where
-  showJSON (ElementId o) = showJSON o
-  readJSON obj = do
-    obj <- readJSON obj
-    ElementId <$> valFromObj "Element" obj
+instance ToJSON ElementId where
+    toJSON (ElementId o)  = toJSON o
+instance FromJSON ElementId where
+    parseJSON (Object v)  = ElementId <$> v .: "Element"
+    parseJSON _           = mzero
 
 
 -- | Perform an action on the element.
@@ -176,9 +181,8 @@ data Instruction
   | Delete ElementId
   deriving (Typeable,Data,Show)
 
-instance JSON Instruction where
-    readJSON _ = error "JSON.Instruction.readJSON: No method implemented."
-    showJSON x = toJSON x 
+instance ToJSON Instruction where
+    toJSON x = Data.Aeson.Generic.toJSON x 
 
 instance NFData Instruction where
     rnf (Debug    x  ) = rnf x
@@ -196,29 +200,28 @@ data Signal
   | Event ElementId EventId [Maybe String]
   | Values [String]
   | FunctionCallValues [Maybe String]
-  | FunctionResult JSValue
+  | FunctionResult JSON.Value
   deriving (Typeable,Show)
 
-instance JSON Signal where
-  showJSON _ = error "JSON.Signal.showJSON: No method implemented."
-  readJSON obj = do
-    obj <- readJSON obj
-    let quit     = Quit <$> valFromObj "Quit" obj
+instance FromJSON Signal where
+  parseJSON (Object v) = do
+    let quit  = Quit <$> v .: "Quit"
         event = do
-          e         <- valFromObj "Event" obj
-          elid      <- valFromObj "Element" e
-          eventId   <- valFromObj "EventId" e
-          arguments <- valFromObj "Params"  e
+          e         <- v .: "Event"
+          elid      <- e .: "Element"
+          eventId   <- e .: "EventId"
+          arguments <- e .: "Params"
           args      <- mapM nullable arguments
           return $ Event elid eventId args
-        values = Values <$> valFromObj "Values" obj
+        values = Values <$> v .: "Values"
         fcallvalues = do
-          FunctionCallValues <$> (valFromObj "FunctionCallValues" obj >>= mapM nullable)
-        fresult = FunctionResult <$> valFromObj "FunctionResult" obj
+          FunctionCallValues <$> (v .: "FunctionCallValues" >>= mapM nullable)
+        fresult = FunctionResult <$> v .: "FunctionResult"
     quit <|> event <|> values <|> fcallvalues <|> fresult
+  parseJSON _        = mzero
 
--- | Read a JSValue that may be null.
-nullable :: JSON a => JSValue -> Result (Maybe a)
-nullable JSNull = return Nothing
-nullable v      = Just <$> readJSON v
+-- | Read a JSON Value that may be null.
+nullable :: FromJSON a => JSON.Value -> JSON.Parser (Maybe a)
+nullable Null = return Nothing
+nullable v    = Just <$> parseJSON v
 

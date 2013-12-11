@@ -2,14 +2,17 @@
 module Graphics.UI.Threepenny.JQuery where
 
 import Control.Arrow
+import           Data.Aeson                 as JSON
+import Data.String
 import Data.Char
 import Data.Default
 import Data.Maybe
 import Graphics.UI.Threepenny.Core
+import Graphics.UI.Threepenny.Internal.FFI    (showJSON, readJSON)
 import qualified Graphics.UI.Threepenny.Internal.Driver as Core
-import qualified Graphics.UI.Threepenny.Internal.Types as Core
-import Text.JSON
+import qualified Graphics.UI.Threepenny.Internal.Types  as Core
 import Reactive.Threepenny
+
 
 data Easing = Swing | Linear
   deriving (Eq,Enum,Show)
@@ -23,8 +26,10 @@ animate el props duration easing complete =
     Core.withElement (toElement el) $ \elid window ->
         callDeferredFunction window
             "jquery_animate"
-            [encode elid,encode (makeObj (map (second showJSON) props)),show duration,map toLower (show easing)]
+            [showJSON elid,showJSON propsJSON,show duration,map toLower (show easing)]
             (const complete)
+    where
+    propsJSON = JSON.object [fromString name .= val | (name,val) <- props]
 
 -- | Fade in an element.
 fadeIn :: Element -> Int -> Easing -> IO () -> IO ()

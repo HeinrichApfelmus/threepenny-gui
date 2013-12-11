@@ -72,7 +72,7 @@ import qualified Data.Map                      as M
 import           Data.Maybe
 import           Data.Text                     (Text,pack,unpack)
 import qualified Data.Text                     as Text
-import           Data.Text.Encoding
+import           Data.Text.Encoding            as Text
 import           Data.Time
 import           Network.URI
 import qualified Network.WebSockets            as WS
@@ -84,9 +84,12 @@ import           Snap.Core
 import qualified Snap.Http.Server              as Snap
 import           Snap.Util.FileServe
 import           System.FilePath
-import qualified Text.JSON as JSON
-import           Text.JSON.Generic
 
+import qualified Data.Aeson                    as JSON
+import           Data.Aeson                    (Result(..))
+import           Data.Aeson.Generic
+import qualified Data.ByteString.Lazy.Char8    as LBS
+import           Data.Data
 
 import           Graphics.UI.Threepenny.Internal.Types     as Threepenny
 import           Graphics.UI.Threepenny.Internal.Resources
@@ -239,14 +242,11 @@ poll Session{..} = do
 -- | Handle signals sent from the client.
 signal :: Session -> Snap ()
 signal Session{..} = do
-    input <- getInput "signal"
-    case input of
-      Just signalJson -> do
-        let signal = JSON.decode signalJson
-        case signal of
-          Ok signal -> liftIO $ writeChan sSignals signal
-          Error err -> error err
-      Nothing -> error $ "Unable to parse " ++ show input
+    input <- getParam "signal"
+    let err = error $ "Unable to parse " ++ show input
+    case JSON.decode . LBS.fromStrict =<< input of
+        Just    signal -> liftIO $ writeChan sSignals signal
+        Nothing        -> err
 
 {-----------------------------------------------------------------------------
     Implementation of two-way communication
@@ -273,17 +273,19 @@ webSocket Session{..} request = void $ do
     sendData <- forkIO . forever $ do
         x <- readChan sInstructions
         -- see note [Instruction strictness]
-        WS.sendTextData connection . Text.pack . JSON.encode $ x
+        WS.sendTextData connection . JSON.encode $ x
 
     -- read data
     let readData = do
             input <- WS.receiveData connection
             case input of
-                "ping" -> WS.sendTextData connection . Text.pack $ "pong"
+                "ping" -> WS.sendTextData connection . LBS.pack $ "pong"
                 "quit" -> E.throw WS.ConnectionClosed
-                input  -> case JSON.decode . Text.unpack $ input of
-                    Ok signal -> writeChan sSignals signal
-                    Error err -> E.throw $ Atto.ParseError [] err
+                input  -> case JSON.decode input of
+                    Just signal -> writeChan sSignals signal
+                    Nothing     -> E.throw $ Atto.ParseError [] $
+                        "Threepenny.Internal.Core: Couldn't parse 'Signal' "
+                        ++ show input
     
     forever readData `E.finally`
         (do
@@ -370,8 +372,8 @@ callFunction window jsfunction =
     call window (CallJSFunction . toCode $ jsfunction) $ \signal ->
         case signal of
             FunctionResult v -> case marshalResult jsfunction window v of
-                Ok    a -> return $ Just a
-                Error _ -> return Nothing
+                Success a -> return $ Just a
+                Error   _ -> return Nothing
             _ -> return Nothing
 
 
@@ -395,14 +397,14 @@ newClosure window@(Session{..}) fun thunk = do
     Snap utilities
 ------------------------------------------------------------------------------}
 -- Write JSON to output.
-writeJson :: (MonadSnap m, JSON a) => a -> m ()
+writeJson :: (MonadSnap m, JSON.ToJSON a) => a -> m ()
 writeJson json = do
     modifyResponse $ setContentType "application/json"
-    (writeText . pack . (\x -> showJSValue x "") . showJSON) json
+    writeLBS . JSON.encode $ json
 
 -- Get a text input from snap.
 getInput :: (MonadSnap f) => ByteString -> f (Maybe String)
-getInput = fmap (fmap (unpack . decodeUtf8)) . getParam
+getInput = fmap (fmap (unpack . Text.decodeUtf8)) . getParam
 
 -- Read an input from snap.
 readInput :: (MonadSnap f,Read a) => ByteString -> f (Maybe a)
