@@ -9,31 +9,34 @@ module Graphics.UI.Threepenny.Internal.FFI (
     FFI(..), ToJS(..),
     JSFunction,
     
-    showJSON, readJSON,
+    showJSON,
     
     toCode, marshalResult,
     ) where
 
 import           Data.Functor
 import           Data.ByteString       (ByteString)
-import qualified Data.ByteString.Char8       as BS
-import qualified Data.ByteString.Lazy.Char8  as LBS
 
 import           Data.Aeson            as JSON
 import qualified Data.Aeson.Types      as JSON
+import qualified Data.Aeson.Encode
 import           Data.Data
 import           Data.String           (fromString)
+import qualified Data.Text.Lazy
+import qualified Data.Text.Lazy.Builder
 
 import Graphics.UI.Threepenny.Internal.Types
 
 {-----------------------------------------------------------------------------
     Easy, if stupid conversion between String and JSON
+
+    TODO: Use more efficient string types like ByteString, Text, etc.
 ------------------------------------------------------------------------------}
 showJSON :: ToJSON a => a -> String
-showJSON = LBS.unpack . JSON.encode . JSON.toJSON
-
-readJSON :: FromJSON a => String -> Maybe a
-readJSON = JSON.decode . LBS.pack
+showJSON
+    = Data.Text.Lazy.unpack
+    . Data.Text.Lazy.Builder.toLazyText
+    . Data.Aeson.Encode.fromValue . JSON.toJSON
 
 {-----------------------------------------------------------------------------
     JavaScript Code and Foreign Function Interface
@@ -49,7 +52,8 @@ class ToJS a where
 instance ToJS String     where render   = render . JSON.String . fromString
 instance ToJS Int        where render   = JSCode . show
 instance ToJS Bool       where render b = JSCode $ if b then "false" else "true"
-instance ToJS JSON.Value where render   = JSCode . LBS.unpack . JSON.encode
+instance ToJS JSON.Value where render   = JSCode . showJSON
+-- TODO: ByteString instance may be wrong. Only needed for ElementId right now.
 instance ToJS ByteString where render   = JSCode . show
 instance ToJS ElementId  where
     render (ElementId x) = apply "elidToElement(%1)" [render x]
