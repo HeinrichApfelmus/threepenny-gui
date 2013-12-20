@@ -8,7 +8,7 @@ import Data.Char
 import Data.Default
 import Data.Maybe
 import Graphics.UI.Threepenny.Core
-import Graphics.UI.Threepenny.Internal.FFI    (showJSON, readJSON)
+import Graphics.UI.Threepenny.Internal.FFI    (showJSON)
 import qualified Graphics.UI.Threepenny.Internal.Driver as Core
 import qualified Graphics.UI.Threepenny.Internal.Types  as Core
 import Reactive.Threepenny
