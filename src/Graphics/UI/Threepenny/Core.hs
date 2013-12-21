@@ -48,8 +48,10 @@ module Graphics.UI.Threepenny.Core (
     -- * JavaScript FFI
     -- | Direct interface to JavaScript in the browser window.
     debug,
-    ToJS, FFI, ffi, JSFunction, runFunction, callFunction,
-    callDeferredFunction, atomic,
+    ToJS, FFI,
+    JSFunction, ffi, runFunction, callFunction,
+    HsFunction, ffiExport,
+    atomic,
     
     -- * Internal and oddball functions
     fromProp, toElement,
@@ -79,7 +81,7 @@ import qualified Reactive.Threepenny as Reactive
 import qualified Graphics.UI.Threepenny.Internal.Driver  as Core
 import           Graphics.UI.Threepenny.Internal.Driver
     ( getRequestLocation
-    , callDeferredFunction, atomic, )
+    , atomic, )
 import           Graphics.UI.Threepenny.Internal.FFI
 import           Graphics.UI.Threepenny.Internal.Types   as Core
     ( Window, Config, defaultConfig, Events, EventData
@@ -338,6 +340,14 @@ callFunction fun = do
     window <- askWindow
     liftIO $ Core.callFunction window fun
 
+-- | Export the given Haskell function so that it can be called
+-- from JavaScript code.
+--
+-- TODO: At the moment, the function is not garbage collected.
+ffiExport :: IO () -> UI (HsFunction (IO ()))
+ffiExport fun = do
+    window <- askWindow
+    liftIO $ Core.newHsFunction window fun
 
 {-----------------------------------------------------------------------------
     Oddball

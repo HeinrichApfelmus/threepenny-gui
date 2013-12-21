@@ -129,13 +129,10 @@ data ConnectedState
                          -- since when.
   deriving (Show)
 
-
--- | An opaque reference to a closure that the event manager uses to
---   trigger events signalled by the client.
-data Closure = Closure (ElementId,EventId)
-    deriving (Typeable,Data,Show)
-
-instance NFData Closure where rnf (Closure x) = rnf x
+-- | A Haskell value/function of type 'a',
+-- presented in a form that can be called from JavaScript.
+data HsFunction a = HsFunction ElementId EventId
+    deriving (Typeable, Data, Show)
 
 {-----------------------------------------------------------------------------
     Public types
@@ -177,7 +174,6 @@ data Instruction
   | GetValues [ElementId]
   | RunJSFunction String
   | CallJSFunction String
-  | CallDeferredFunction (Closure,String,[String])
   | Delete ElementId
   deriving (Typeable,Data,Show)
 
@@ -191,7 +187,6 @@ instance NFData Instruction where
     rnf (GetValues xs) = rnf xs
     rnf (RunJSFunction  x) = rnf x
     rnf (CallJSFunction x) = rnf x
-    rnf (CallDeferredFunction x) = rnf x
     rnf (Delete x)     = rnf x
 
 -- | A signal (mostly events) that are sent from the client to the server.

@@ -7,7 +7,7 @@ module Graphics.UI.Threepenny.Internal.FFI (
     -- * Documentation
     ffi,
     FFI(..), ToJS(..),
-    JSFunction,
+    JSFunction, HsFunction,
     
     showJSON,
     
@@ -60,6 +60,10 @@ instance ToJS ByteString where render   = JSCode . show
 instance ToJS ElementId  where
     render (ElementId x) = apply "elidToElement(%1)" [render x]
 instance ToJS Element    where render = render . unprotectedGetElementId
+-- Haskell function with no parameters
+instance ToJS (HsFunction (IO ())) where
+    render (HsFunction (ElementId elid) name) =
+        apply "callback(%1,%2)" [render elid, render name]
 
 
 -- | A JavaScript function with a given output type @a@.
