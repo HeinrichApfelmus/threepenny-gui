@@ -14,16 +14,18 @@ module Graphics.UI.Threepenny.Internal.FFI (
     toCode, marshalResult,
     ) where
 
-import           Data.Functor
-import           Data.ByteString       (ByteString)
-
 import           Data.Aeson            as JSON
 import qualified Data.Aeson.Types      as JSON
 import qualified Data.Aeson.Encode
+import           Data.ByteString       (ByteString)
 import           Data.Data
+import           Data.Functor
+import           Data.Maybe
 import           Data.String           (fromString)
 import qualified Data.Text.Lazy
 import qualified Data.Text.Lazy.Builder
+
+import Safe (atMay)
 
 import Graphics.UI.Threepenny.Internal.Types
 
@@ -142,7 +144,9 @@ testFFI = ffi "$(%1).prop('checked',%2)"
 apply :: String -> [JSCode] -> JSCode
 apply code args = JSCode $ go code
     where
-    argument i = unJSCode (args !! i)
+    at xs i = maybe (error err) id $ atMay xs i
+    err     = "Graphics.UI.Threepenny.FFI: Too few arguments in FFI call!"
+    argument i = unJSCode (args `at` i)
     
     go []         = []
     go ('%':c:cs) = argument index ++ go cs
