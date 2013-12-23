@@ -5,7 +5,7 @@ module Graphics.UI.Threepenny.Canvas (
     -- * Documentation
     Canvas,
     Vector, drawImage, clearCanvas
-    , fillRect, setFillStyle, setStrokeStyle
+    , fillRect, setFillStyle, setStrokeStyle, setLineWidth
     , beginPath, moveTo, lineTo, closePath, arc, arcAC
     , fill, stroke
     ) where
@@ -44,7 +44,10 @@ setStrokeStyle :: String -> Canvas -> UI()
 setStrokeStyle sty canvas =
   runFunction $ ffi "%1.getContext('2d').strokeStyle = %2" canvas sty
 
-
+-- | Set the width of lines. Default is 1.0
+setLineWidth :: Int -> Canvas -> UI ()
+setLineWidth lw canvas =
+  runFunction $ ffi "%1.getContext('2d').lineWidth = %2" canvas lw
 
 -- | Starts a new path by resetting the list of sub-paths. Call this function when you want to create a new path.
 beginPath :: Canvas -> UI()
