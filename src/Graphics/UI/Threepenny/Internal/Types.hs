@@ -42,7 +42,13 @@ data ElementData = ElementData
 newtype ElementId = ElementId BS.ByteString
     deriving (Data,Typeable,Show,Eq,Ord)
 
-instance NFData ElementId where rnf (ElementId x) = rnf x
+instance NFData ElementId where
+    rnf (ElementId x) =
+#if MIN_VERSION_bytestring(0, 10, 0)
+        rnf x
+#else
+        BS.length x `seq` ()
+#endif
 
 type EventId  = String
 type Handlers = Map EventId (E.Handler EventData)
