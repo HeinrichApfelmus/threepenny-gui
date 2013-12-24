@@ -1,4 +1,3 @@
-{-# LANGAUGE CPP #-}
 {-# OPTIONS -fno-warn-name-shadowing #-}
 
 -- | Forms.

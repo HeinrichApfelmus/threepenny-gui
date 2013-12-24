@@ -3,9 +3,22 @@ module-template: ! 'module MODULE_NAME where
 '
 extensions:
   CPP: true
-environment: default
+environment: ghc-7.4.2-unstable
 cabal-file: project.cabal
+hidden-packages: websockets-0.7.4.1
 version: 1
-ghc-args: []
+extra-packages: ! 'Hackage: network 2.4.0.1
+
+  Hackage: io-streams 1.1.2.2
+
+  Hackage: monads-tf 0.1.0.1
+
+  Hackage: MonadCatchIO-transformers 0.3.1.0
+
+  Hackage: websockets 0.8.1.1
+
+  Hackage: websockets-snap 0.8.2.1'
+ghc-args:
+- -DFPCOMPLETE
 excluded-modules:
 - Setup.hs
