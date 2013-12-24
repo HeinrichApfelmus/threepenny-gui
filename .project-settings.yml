@@ -1,0 +1,11 @@
+module-template: ! 'module MODULE_NAME where
+
+'
+extensions:
+  CPP: true
+environment: default
+cabal-file: project.cabal
+version: 1
+ghc-args: []
+excluded-modules:
+- Setup.hs
