@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -44,10 +45,14 @@ newtype ElementId = ElementId BS.ByteString
 
 instance NFData ElementId where
     rnf (ElementId x) =
+#if defined(CABAL) || defined(FPCOMPLETE)
 #if MIN_VERSION_bytestring(0, 10, 0)
         rnf x
 #else
         BS.length x `seq` ()
+#endif
+#else
+        rnf x
 #endif
 
 type EventId  = String
