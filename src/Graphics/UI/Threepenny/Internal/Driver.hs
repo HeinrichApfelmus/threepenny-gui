@@ -100,6 +100,19 @@ import qualified Foreign.Coupon as Foreign
 import qualified System.Mem
 
 {-----------------------------------------------------------------------------
+    Import #ifdefs
+------------------------------------------------------------------------------}
+#if defined(CABAL) || defined(FPCOMPLETE)
+#if MIN_VERSION_bytestring(0,10,0)
+fromStrictBS = LBS.fromStrict
+#else
+fromStrictBS = LBS.fromChunks . (:[])
+#endif
+#else
+fromStrictBS = LBS.fromStrict
+#endif
+
+{-----------------------------------------------------------------------------
     Server and and session management
 ------------------------------------------------------------------------------}
 newServerState :: IO ServerState

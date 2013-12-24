@@ -1,8 +1,12 @@
+{-# LANGAUGE CPP #-}
 {-# OPTIONS -fno-warn-name-shadowing #-}
 
 -- | Forms.
 
 module Graphics.UI.Threepenny.Forms where
+
+#ifdef FPCOMPLETE
+#else
 
 import Control.Monad
 import Data.List.Extra
@@ -97,3 +101,5 @@ suggestionsBox parent input startMsg suggestFor insertFor = do
             delete btn
             set "style" "" input # unit
             set "style" "" box # unit
+
+#endif
