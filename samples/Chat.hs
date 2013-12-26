@@ -4,12 +4,9 @@ import Control.Exception
 import Control.Monad
 import Data.Functor
 import Data.List.Extra
-import Data.Maybe
 import Data.Time
 import Data.IORef
 import Prelude hiding (catch)
-import Safe (readMay)
-import System.Environment (getEnvironment)
 
 import Paths
 
@@ -24,10 +21,8 @@ main :: IO ()
 main = do
     static   <- getStaticDir
     messages <- Chan.newChan
-    env      <- getEnvironment
     startGUI defaultConfig
-        { tpPort       = fromJust (readMay =<< lookup "PORT" env)
-        , tpCustomHTML = Just "chat.html"
+        { tpCustomHTML = Just "chat.html"
         , tpStatic     = Just static
         } $ setup messages
 
