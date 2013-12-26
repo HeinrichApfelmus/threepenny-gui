@@ -235,9 +235,10 @@ snapRequestCookies = do
 -- | Respond to poll requests.
 poll :: Session -> Snap ()
 poll Session{..} = do
-    let setDisconnected = do
-        now <- getCurrentTime
-        modifyMVar_ sConnectedState (const (return (Disconnected now)))
+    let
+        setDisconnected = do
+            now <- getCurrentTime
+            modifyMVar_ sConnectedState (const (return (Disconnected now)))
     
     instructions <- liftIO $ do
         modifyMVar_ sConnectedState (const (return Connected))
