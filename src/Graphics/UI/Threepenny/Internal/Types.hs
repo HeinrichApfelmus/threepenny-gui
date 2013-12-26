@@ -156,18 +156,29 @@ data EventData = EventData [Maybe String]
 
 -- | Record for configuring the Threepenny GUI server.
 data Config = Config
-  { tpPort       :: Int                 -- ^ Port number.
-  , tpCustomHTML :: Maybe FilePath      -- ^ Custom HTML file to replace the default one.
-  , tpStatic     :: Maybe FilePath      -- ^ Directory that is served under @/static@.
-  , tpLog        :: ByteString -> IO () -- ^ Print a single log message.
-  }
+    { tpPort       :: Maybe Int           
+        -- ^ Port number.
+        -- @Nothing@ means that the port number is
+        -- read from the environment variable @PORT@.
+        -- Alternatively, port @8023@ is used if this variable is not set.
+    , tpCustomHTML :: Maybe FilePath
+        -- ^ Custom HTML file to replace the default one.
+    , tpStatic     :: Maybe FilePath
+        -- ^ Directory that is served under @/static@.
+    , tpLog        :: ByteString -> IO ()
+        -- ^ Print a single log message.
+    }
+
+defaultPort :: Int
+defaultPort = 8023
 
 -- | Default configuration.
 --
--- Port 10000, no custom HTML, no static directory, logging to stderr.
+-- Port from environment variable or @8023@,
+-- no custom HTML, no static directory, logging to stderr.
 defaultConfig :: Config
 defaultConfig = Config
-    { tpPort       = 10000
+    { tpPort       = Nothing
     , tpCustomHTML = Nothing
     , tpStatic     = Nothing
     , tpLog        = \s -> BS.hPut stderr s >> BS.hPut stderr "\n"

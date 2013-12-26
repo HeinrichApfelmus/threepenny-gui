@@ -24,7 +24,7 @@ import Graphics.UI.Threepenny.Core hiding (delete)
     Main
 ------------------------------------------------------------------------------}
 main :: IO ()
-main = startGUI defaultConfig { tpPort = 10000 } setup
+main = startGUI defaultConfig setup
 
 setup :: Window -> UI ()
 setup window = void $ mdo

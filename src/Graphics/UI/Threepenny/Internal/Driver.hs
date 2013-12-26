@@ -83,6 +83,7 @@ import           Safe
 import           Snap.Core
 import qualified Snap.Http.Server              as Snap
 import           Snap.Util.FileServe
+import           System.Environment            (getEnvironment)
 import           System.FilePath
 
 import qualified Data.Aeson                    as JSON
@@ -112,10 +113,13 @@ newServerState = ServerState
 --   worker action.
 serve :: Config -> (Session -> IO ()) -> IO ()
 serve Config{..} worker = do
+    env    <- getEnvironment
+    let portEnv = Safe.readMay =<< Prelude.lookup "PORT" env
+    
     server <- newServerState
     _      <- forkIO $ custodian 30 (sSessions server)
-    let config = Snap.setPort tpPort
-               $ Snap.setErrorLog (Snap.ConfigIoLog tpLog)
+    let config = Snap.setPort      (maybe defaultPort id (tpPort `mplus` portEnv))
+               $ Snap.setErrorLog  (Snap.ConfigIoLog tpLog)
                $ Snap.setAccessLog (Snap.ConfigIoLog tpLog)
                $ Snap.defaultConfig
     Snap.httpServe config . route $
