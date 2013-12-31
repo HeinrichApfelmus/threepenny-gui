@@ -6,7 +6,7 @@ import System.IO
 import qualified Language.Haskell.TH as TH
 import Language.Haskell.TH.Quote
 
-#ifdef CABAL
+#if defined(CABAL) || defined(FPCOMPLETE)
 root = "src/"
 #else
 root = "../src/" -- running examples from ghci

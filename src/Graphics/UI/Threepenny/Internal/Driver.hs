@@ -101,6 +101,19 @@ import qualified Foreign.Coupon as Foreign
 import qualified System.Mem
 
 {-----------------------------------------------------------------------------
+    Import #ifdefs
+------------------------------------------------------------------------------}
+#if defined(CABAL) || defined(FPCOMPLETE)
+#if MIN_VERSION_bytestring(0,10,0)
+fromStrictBS = LBS.fromStrict
+#else
+fromStrictBS = LBS.fromChunks . (:[])
+#endif
+#else
+fromStrictBS = LBS.fromStrict
+#endif
+
+{-----------------------------------------------------------------------------
     Server and and session management
 ------------------------------------------------------------------------------}
 newServerState :: IO ServerState
@@ -226,9 +239,10 @@ snapRequestCookies = do
 -- | Respond to poll requests.
 poll :: Session -> Snap ()
 poll Session{..} = do
-    let setDisconnected = do
-        now <- getCurrentTime
-        modifyMVar_ sConnectedState (const (return (Disconnected now)))
+    let
+        setDisconnected = do
+            now <- getCurrentTime
+            modifyMVar_ sConnectedState (const (return (Disconnected now)))
     
     instructions <- liftIO $ do
         modifyMVar_ sConnectedState (const (return Connected))
@@ -248,7 +262,7 @@ signal :: Session -> Snap ()
 signal Session{..} = do
     input <- getParam "signal"
     let err = error $ "Unable to parse " ++ show input
-    case JSON.decode . LBS.fromStrict =<< input of
+    case JSON.decode . fromStrictBS =<< input of
         Just    signal -> liftIO $ writeChan sSignals signal
         Nothing        -> err
 
