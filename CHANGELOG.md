@@ -1,6 +1,6 @@
 ## Changelog for the `threepenny-gui` package
 
-**0.4.0.1** -- Bugfix release.
+**0.4.0.2** -- Bugfix release.
 
 * Fix CSS bug for `grid` function.
 
