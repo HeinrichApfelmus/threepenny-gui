@@ -5,7 +5,13 @@
 * FFI now supports callbacks into Haskell. Remove `callDeferredFunction` function.
 * Remove dependency on `json` library.
 
-**0.4.0.1** -- Maintenance release. Adjust package dependencies.
+**0.4.0.2** -- Bugfix release.
+
+* Fix CSS bug for `grid` function.
+
+**0.4.0.1** -- Maintenance release.
+
+* Adjust package dependencies.
 
 **0.4.0.0** -- Snapshot release.
 
