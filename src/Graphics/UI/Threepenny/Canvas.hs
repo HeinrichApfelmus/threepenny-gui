@@ -11,6 +11,7 @@ module Graphics.UI.Threepenny.Canvas (
     ) where
 
 import Graphics.UI.Threepenny.Core
+import qualified Text.JSON.Generic as JSON
 
 {-----------------------------------------------------------------------------
     Canvas
@@ -70,14 +71,16 @@ closePath = runFunction . ffi "%1.getContext('2d').closePath()"
 -- | Adds an arc to the path which is centered at (x, y) position with
 -- radius r starting at startAngle and ending at endAngle going in
 -- clockwise direction.
-arc :: Vector -> Int -> Int -> Int -> Canvas -> UI () -- TODO should really be using floats here
+arc :: Vector -> Int -> Double -> Double -> Canvas -> UI ()
 arc (x,y) radius startAngle endAngle canvas =
-  runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6)" canvas x y radius startAngle endAngle
+  runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6)" canvas x y radius
+                                       (JSON.toJSON startAngle) (JSON.toJSON endAngle)
 
 -- | Like 'arc' but in anticlockwise direction
-arcAC :: Vector -> Int -> Int -> Int -> Canvas -> UI () -- TODO should really be using floats here
+arcAC :: Vector -> Int -> Double -> Double -> Canvas -> UI ()
 arcAC (x,y) radius startAngle endAngle canvas =
-  runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6, true)" canvas x y radius startAngle endAngle
+  runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6, true)" canvas x y
+                               radius (JSON.toJSON startAngle) (JSON.toJSON endAngle)
 
 
 -- | Fills the subpaths with the current fill style.
