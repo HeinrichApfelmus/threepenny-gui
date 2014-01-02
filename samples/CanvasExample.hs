@@ -42,7 +42,7 @@ setup window = do
     let drawCircle (x,y,r,col) = do
           UI.setFillStyle col canvas
           UI.beginPath canvas
-          UI.arc (x,y) r 0 (ceiling $ 2*pi) canvas
+          UI.arc (x,y) r 0 (2*pi) canvas
           UI.fill canvas
 
     let slices = [ (325, 115, 25, 1, 2, "lightblue"), (325, 145, 25, 1, 2, "lightblue") ]
