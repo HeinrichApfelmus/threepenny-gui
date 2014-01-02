@@ -29,7 +29,6 @@ setup window = do
         ]
 
     let rects = [(75,100, 10, 10, "blue"), (325, 100, 15, 15, "blue"),
-                 (200, 200, 25, 40, "orange"),
                  (250, 300, 75, 15, "plum")]
     let drawRect (x,y,w,h,col) = do
           UI.setFillStyle col canvas
@@ -38,15 +37,15 @@ setup window = do
     on UI.click addRects $ const $ forM_ rects drawRect
 
     let circles = [ (200, 200, 25, "orange")
-                  , (275, 200, 25, "plum")
-                  , (55, 200, 25, "plum") ]
+                  , (300, 180, 15, "plum")
+                  , (100, 180, 15, "plum") ]
     let drawCircle (x,y,r,col) = do
           UI.setFillStyle col canvas
           UI.beginPath canvas
           UI.arc (x,y) r 0 (ceiling $ 2*pi) canvas
           UI.fill canvas
 
-    let slices = [ (325, 115, 25, -1, 0, "lightblue") ]
+    let slices = [ (325, 115, 25, 1, 2, "lightblue"), (325, 145, 25, 1, 2, "lightblue") ]
     let drawSlice (x,y,r,start,end,col) = do
           UI.setFillStyle col canvas
           UI.beginPath canvas
