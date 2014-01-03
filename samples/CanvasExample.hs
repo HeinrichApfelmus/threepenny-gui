@@ -8,7 +8,7 @@ import Graphics.UI.Threepenny.Core
     Main
 ------------------------------------------------------------------------------}
 main :: IO ()
-main = startGUI defaultConfig { tpPort = 10000 } setup
+main = startGUI defaultConfig { tpPort = Just 10000 } setup
 
 setup :: Window -> UI ()
 setup window = do
