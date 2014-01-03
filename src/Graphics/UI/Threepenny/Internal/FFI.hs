@@ -7,17 +7,38 @@ module Graphics.UI.Threepenny.Internal.FFI (
     -- * Documentation
     ffi,
     FFI(..), ToJS(..),
-    JSFunction,
+    JSFunction, HsFunction,
+    
+    showJSON,
     
     toCode, marshalResult,
     ) where
 
-import           Data.Functor
+import           Data.Aeson            as JSON
+import qualified Data.Aeson.Types      as JSON
+import qualified Data.Aeson.Encode
 import           Data.ByteString       (ByteString)
-import qualified Data.ByteString.Char8 as BS
-import           Text.JSON.Generic
+import           Data.Data
+import           Data.Functor
+import           Data.Maybe
+import           Data.String           (fromString)
+import qualified Data.Text.Lazy
+import qualified Data.Text.Lazy.Builder
+
+import Safe (atMay)
 
 import Graphics.UI.Threepenny.Internal.Types
+
+{-----------------------------------------------------------------------------
+    Easy, if stupid conversion between String and JSON
+
+    TODO: Use more efficient string types like ByteString, Text, etc.
+------------------------------------------------------------------------------}
+showJSON :: ToJSON a => a -> String
+showJSON
+    = Data.Text.Lazy.unpack
+    . Data.Text.Lazy.Builder.toLazyText
+    . Data.Aeson.Encode.fromValue . JSON.toJSON
 
 {-----------------------------------------------------------------------------
     JavaScript Code and Foreign Function Interface
@@ -30,20 +51,26 @@ newtype JSCode = JSCode { unJSCode :: String }
 class ToJS a where
     render :: a -> JSCode
 
-instance ToJS String     where render   = JSCode . show
+instance ToJS String     where render   = render . JSON.String . fromString
 instance ToJS Int        where render   = JSCode . show
 instance ToJS Bool       where render b = JSCode $ if b then "false" else "true"
-instance ToJS JSValue    where render x = JSCode $ showJSValue x ""
+instance ToJS JSON.Value where render   = JSCode . showJSON
+-- TODO: ByteString instance may be wrong. Only needed for ElementId right now.
 instance ToJS ByteString where render   = JSCode . show
 instance ToJS ElementId  where
     render (ElementId x) = apply "elidToElement(%1)" [render x]
 instance ToJS Element    where render = render . unprotectedGetElementId
+-- Haskell function with no parameters
+instance ToJS (HsFunction (IO ())) where
+    render (HsFunction (ElementId elid) name) =
+        apply "callback(%1,%2)" [render elid, render name]
 
 
 -- | A JavaScript function with a given output type @a@.
 data JSFunction a = JSFunction
-    { code    :: JSCode                          -- code snippet
-    , marshal :: Window -> JSValue -> Result a   -- convert to Haskell value
+    { code    :: JSCode                                  -- ^ code snippet
+    , marshal :: Window -> JSON.Value -> JSON.Parser a
+      -- ^ conversion to Haskell value
     }
 
 -- | Render function to a textual representation using JavaScript syntax.
@@ -52,11 +79,11 @@ toCode = unJSCode . code
 
 -- | Convert function result to a Haskell value.
 marshalResult
-    :: JSFunction a -- ^ Function that has been executed
-    -> Window       -- ^ Browser context
-    -> JSValue      -- ^ JSON representation of the return value 
-    -> Result a     -- ^ 
-marshalResult = marshal
+    :: JSFunction a   -- ^ Function that has been executed
+    -> Window         -- ^ Browser context
+    -> JSON.Value     -- ^ JSON representation of the return value 
+    -> JSON.Result a  -- ^ Function result as parsed Haskell value
+marshalResult fun w = JSON.parse (marshal fun w)
 
 instance Functor JSFunction where
     fmap f = fmapWindow (const f)
@@ -65,7 +92,7 @@ fmapWindow :: (Window -> a -> b) -> JSFunction a -> JSFunction b
 fmapWindow f (JSFunction c m) = JSFunction c (\w v -> f w <$> m w v)
 
 fromJSCode :: JSCode -> JSFunction ()
-fromJSCode c = JSFunction { code = c, marshal = \_ _ -> Ok () }
+fromJSCode c = JSFunction { code = c, marshal = \_ _ -> return () }
 
 -- | Helper class for making 'ffi' a variable argument function.
 class FFI a where
@@ -74,10 +101,10 @@ class FFI a where
 instance (ToJS a, FFI b) => FFI (a -> b) where
     fancy f a = fancy $ f . (render a:)
 
-instance FFI (JSFunction ())         where fancy f = fromJSCode $ f []
-instance FFI (JSFunction String)     where fancy   = mkResult "%1.toString()"
-instance FFI (JSFunction JSValue)    where fancy   = mkResult "%1"
-instance FFI (JSFunction [ElementId]) where fancy  = mkResult "elementsToElids(%1)"
+instance FFI (JSFunction ())          where fancy f = fromJSCode $ f []
+instance FFI (JSFunction String)      where fancy   = mkResult "%1.toString()"
+instance FFI (JSFunction JSON.Value)  where fancy   = mkResult "%1"
+instance FFI (JSFunction [ElementId]) where fancy   = mkResult "elementsToElids(%1)"
 
 -- FIXME: We need access to IO in order to turn a Coupon into an Element.
 {- 
@@ -85,10 +112,10 @@ instance FFI (JSFunction Element)   where
     fancy   = fmapWindow (\w elid -> Element elid w) . fancy
 -}
 
-mkResult :: JSON a => String -> ([JSCode] -> JSCode) -> JSFunction a
+mkResult :: FromJSON a => String -> ([JSCode] -> JSCode) -> JSFunction a
 mkResult client f = JSFunction
     { code    = apply client [f []]
-    , marshal = \w -> readJSON
+    , marshal = \w -> parseJSON
     }
 
 -- | Simple JavaScript FFI with string substitution.
@@ -121,7 +148,9 @@ testFFI = ffi "$(%1).prop('checked',%2)"
 apply :: String -> [JSCode] -> JSCode
 apply code args = JSCode $ go code
     where
-    argument i = unJSCode (args !! i)
+    at xs i = maybe (error err) id $ atMay xs i
+    err     = "Graphics.UI.Threepenny.FFI: Too few arguments in FFI call!"
+    argument i = unJSCode (args `at` i)
     
     go []         = []
     go ('%':c:cs) = argument index ++ go cs

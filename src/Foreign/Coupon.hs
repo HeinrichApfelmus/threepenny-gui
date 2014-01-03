@@ -36,7 +36,7 @@ mkWeakIORefValue :: IORef a -> value -> IO () -> IO (Weak value)
 mkWeakIORefValue r@(GHC.IORef (GHC.STRef r#)) v f = GHC.IO $ \s ->
   case GHC.mkWeak# r# v f s of (# s1, w #) -> (# s1, GHC.Weak w #)
 
-#if CABAL
+#if defined(CABAL) || defined(FPCOMPLETE)
 #if MIN_VERSION_base(4,6,0)
 #else
 atomicModifyIORef' = atomicModifyIORef

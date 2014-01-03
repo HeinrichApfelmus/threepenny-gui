@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -9,6 +10,7 @@ import Prelude              hiding (init)
 import Control.Applicative
 import Control.Concurrent
 import Control.DeepSeq
+import Control.Monad
 import qualified Reactive.Threepenny    as E
 import           Data.ByteString.Char8  (ByteString)
 import qualified Data.ByteString.Char8  as BS
@@ -17,7 +19,11 @@ import Data.String                      (fromString)
 import Data.Time
 
 import Network.URI
-import Text.JSON.Generic
+import Data.Data
+import           Data.Aeson             as JSON
+import qualified Data.Aeson.Types       as JSON
+import qualified Data.Aeson.Generic
+
 import System.IO (stderr)
 import System.IO.Unsafe
 
@@ -39,10 +45,14 @@ newtype ElementId = ElementId BS.ByteString
 
 instance NFData ElementId where
     rnf (ElementId x) =
+#if defined(CABAL) || defined(FPCOMPLETE)
 #if MIN_VERSION_bytestring(0, 10, 0)
         rnf x
 #else
         BS.length x `seq` ()
+#endif
+#else
+        rnf x
 #endif
 
 type EventId  = String
@@ -51,11 +61,11 @@ type Events   = EventId -> E.Event EventData
 
 
 -- Marshalling ElementId
-instance JSON ElementId where
-  showJSON (ElementId o) = showJSON o
-  readJSON obj = do
-    obj <- readJSON obj
-    ElementId <$> valFromObj "Element" obj
+instance ToJSON ElementId where
+    toJSON (ElementId o)  = toJSON o
+instance FromJSON ElementId where
+    parseJSON (Object v)  = ElementId <$> v .: "Element"
+    parseJSON _           = mzero
 
 
 -- | Perform an action on the element.
@@ -130,13 +140,10 @@ data ConnectedState
                          -- since when.
   deriving (Show)
 
-
--- | An opaque reference to a closure that the event manager uses to
---   trigger events signalled by the client.
-data Closure = Closure (ElementId,EventId)
-    deriving (Typeable,Data,Show)
-
-instance NFData Closure where rnf (Closure x) = rnf x
+-- | A Haskell value/function of type 'a',
+-- presented in a form that can be called from JavaScript.
+data HsFunction a = HsFunction ElementId EventId
+    deriving (Typeable, Data, Show)
 
 {-----------------------------------------------------------------------------
     Public types
@@ -149,18 +156,29 @@ data EventData = EventData [Maybe String]
 
 -- | Record for configuring the Threepenny GUI server.
 data Config = Config
-  { tpPort       :: Int                 -- ^ Port number.
-  , tpCustomHTML :: Maybe FilePath      -- ^ Custom HTML file to replace the default one.
-  , tpStatic     :: Maybe FilePath      -- ^ Directory that is served under @/static@.
-  , tpLog        :: ByteString -> IO () -- ^ Print a single log message.
-  }
+    { tpPort       :: Maybe Int           
+        -- ^ Port number.
+        -- @Nothing@ means that the port number is
+        -- read from the environment variable @PORT@.
+        -- Alternatively, port @8023@ is used if this variable is not set.
+    , tpCustomHTML :: Maybe FilePath
+        -- ^ Custom HTML file to replace the default one.
+    , tpStatic     :: Maybe FilePath
+        -- ^ Directory that is served under @/static@.
+    , tpLog        :: ByteString -> IO ()
+        -- ^ Print a single log message.
+    }
+
+defaultPort :: Int
+defaultPort = 8023
 
 -- | Default configuration.
 --
--- Port 10000, no custom HTML, no static directory, logging to stderr.
+-- Port from environment variable or @8023@,
+-- no custom HTML, no static directory, logging to stderr.
 defaultConfig :: Config
 defaultConfig = Config
-    { tpPort       = 10000
+    { tpPort       = Nothing
     , tpCustomHTML = Nothing
     , tpStatic     = Nothing
     , tpLog        = \s -> BS.hPut stderr s >> BS.hPut stderr "\n"
@@ -178,13 +196,11 @@ data Instruction
   | GetValues [ElementId]
   | RunJSFunction String
   | CallJSFunction String
-  | CallDeferredFunction (Closure,String,[String])
   | Delete ElementId
   deriving (Typeable,Data,Show)
 
-instance JSON Instruction where
-    readJSON _ = error "JSON.Instruction.readJSON: No method implemented."
-    showJSON x = toJSON x 
+instance ToJSON Instruction where
+    toJSON x = Data.Aeson.Generic.toJSON x 
 
 instance NFData Instruction where
     rnf (Debug    x  ) = rnf x
@@ -193,7 +209,6 @@ instance NFData Instruction where
     rnf (GetValues xs) = rnf xs
     rnf (RunJSFunction  x) = rnf x
     rnf (CallJSFunction x) = rnf x
-    rnf (CallDeferredFunction x) = rnf x
     rnf (Delete x)     = rnf x
 
 -- | A signal (mostly events) that are sent from the client to the server.
@@ -202,29 +217,28 @@ data Signal
   | Event ElementId EventId [Maybe String]
   | Values [String]
   | FunctionCallValues [Maybe String]
-  | FunctionResult JSValue
+  | FunctionResult JSON.Value
   deriving (Typeable,Show)
 
-instance JSON Signal where
-  showJSON _ = error "JSON.Signal.showJSON: No method implemented."
-  readJSON obj = do
-    obj <- readJSON obj
-    let quit     = Quit <$> valFromObj "Quit" obj
+instance FromJSON Signal where
+  parseJSON (Object v) = do
+    let quit  = Quit <$> v .: "Quit"
         event = do
-          e         <- valFromObj "Event" obj
-          elid      <- valFromObj "Element" e
-          eventId   <- valFromObj "EventId" e
-          arguments <- valFromObj "Params"  e
+          e         <- v .: "Event"
+          elid      <- e .: "Element"
+          eventId   <- e .: "EventId"
+          arguments <- e .: "Params"
           args      <- mapM nullable arguments
           return $ Event elid eventId args
-        values = Values <$> valFromObj "Values" obj
+        values = Values <$> v .: "Values"
         fcallvalues = do
-          FunctionCallValues <$> (valFromObj "FunctionCallValues" obj >>= mapM nullable)
-        fresult = FunctionResult <$> valFromObj "FunctionResult" obj
+          FunctionCallValues <$> (v .: "FunctionCallValues" >>= mapM nullable)
+        fresult = FunctionResult <$> v .: "FunctionResult"
     quit <|> event <|> values <|> fcallvalues <|> fresult
+  parseJSON _        = mzero
 
--- | Read a JSValue that may be null.
-nullable :: JSON a => JSValue -> Result (Maybe a)
-nullable JSNull = return Nothing
-nullable v      = Just <$> readJSON v
+-- | Read a JSON Value that may be null.
+nullable :: FromJSON a => JSON.Value -> JSON.Parser (Maybe a)
+nullable Null = return Nothing
+nullable v    = Just <$> parseJSON v
 

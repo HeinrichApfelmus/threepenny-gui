@@ -203,25 +203,16 @@ $.fn.livechange = function(ms,trigger){
     // reply();      -- Continue without replying to the server.
     // reply(value); -- Send  value  back to the server.
     // sendEvent     -- Function that sends a message { Event : value } to the server.
-  
+    
+    // FIXME: allow non-zero parameters for the callback function.
+    function callback(elid,name) {
+      return function() { sendEvent(elid,name,[]); };
+    }
+    
     console_log("Event: %s",JSON.stringify(event));
     for(var key in event){
       switch(key){
 
-      case "CallDeferredFunction": {
-        // FIXME: CallDeferredFunction probably doesn't work right now.
-        var call        = event.CallDeferredFunction;
-        var closure     = call[0];
-        var theFunction = eval(call[1]);
-        var params      = call[2];
-        theFunction.apply(window, params.concat(function(){
-          console_log(this);
-          var args = Array.prototype.slice.call(arguments,0);
-          sendEvent(closure[0],closure[1],args);
-        }));
-        reply();
-        break;
-      }
       case "RunJSFunction": {
         eval(event.RunJSFunction);
         reply();
@@ -372,14 +363,6 @@ $.fn.livechange = function(ms,trigger){
   ////////////////////////////////////////////////////////////////////////////////
   // FFI - additional primitive functions
   
-  window.jquery_animate = function(el_id,props,duration,easing,complete){
-    var el = elidToElement(JSON.parse(el_id));
-    $(el).animate(JSON.parse(props),
-                  duration * 1,
-                  easing * 1,
-                  complete);
-  }
-
   window.jquery_scrollToBottom = function(el){
     $(el).scrollTop(el.scrollHeight);
   };

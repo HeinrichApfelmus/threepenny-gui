@@ -40,12 +40,12 @@ module Graphics.UI.Threepenny.Internal.Driver
   
   -- * Utilities
   ,debug
-  ,callDeferredFunction
   ,atomic
 
   -- * JavaScript FFI
   ,ToJS, FFI, ffi, JSFunction
   ,runFunction, callFunction
+  ,newHsFunction
   
   -- * Types
   ,Window
@@ -72,7 +72,7 @@ import qualified Data.Map                      as M
 import           Data.Maybe
 import           Data.Text                     (Text,pack,unpack)
 import qualified Data.Text                     as Text
-import           Data.Text.Encoding
+import           Data.Text.Encoding            as Text
 import           Data.Time
 import           Network.URI
 import qualified Network.WebSockets            as WS
@@ -83,10 +83,14 @@ import           Safe
 import           Snap.Core
 import qualified Snap.Http.Server              as Snap
 import           Snap.Util.FileServe
+import           System.Environment            (getEnvironment)
 import           System.FilePath
-import qualified Text.JSON as JSON
-import           Text.JSON.Generic
 
+import qualified Data.Aeson                    as JSON
+import           Data.Aeson                    (Result(..))
+import           Data.Aeson.Generic
+import qualified Data.ByteString.Lazy.Char8    as LBS
+import           Data.Data
 
 import           Graphics.UI.Threepenny.Internal.Types     as Threepenny
 import           Graphics.UI.Threepenny.Internal.Resources
@@ -95,6 +99,19 @@ import           Reactive.Threepenny
 
 import qualified Foreign.Coupon as Foreign
 import qualified System.Mem
+
+{-----------------------------------------------------------------------------
+    Import #ifdefs
+------------------------------------------------------------------------------}
+#if defined(CABAL) || defined(FPCOMPLETE)
+#if MIN_VERSION_bytestring(0,10,0)
+fromStrictBS = LBS.fromStrict
+#else
+fromStrictBS = LBS.fromChunks . (:[])
+#endif
+#else
+fromStrictBS = LBS.fromStrict
+#endif
 
 {-----------------------------------------------------------------------------
     Server and and session management
@@ -109,10 +126,13 @@ newServerState = ServerState
 --   worker action.
 serve :: Config -> (Session -> IO ()) -> IO ()
 serve Config{..} worker = do
+    env    <- getEnvironment
+    let portEnv = Safe.readMay =<< Prelude.lookup "PORT" env
+    
     server <- newServerState
     _      <- forkIO $ custodian 30 (sSessions server)
-    let config = Snap.setPort tpPort
-               $ Snap.setErrorLog (Snap.ConfigIoLog tpLog)
+    let config = Snap.setPort      (maybe defaultPort id (tpPort `mplus` portEnv))
+               $ Snap.setErrorLog  (Snap.ConfigIoLog tpLog)
                $ Snap.setAccessLog (Snap.ConfigIoLog tpLog)
                $ Snap.defaultConfig
     Snap.httpServe config . route $
@@ -219,9 +239,10 @@ snapRequestCookies = do
 -- | Respond to poll requests.
 poll :: Session -> Snap ()
 poll Session{..} = do
-    let setDisconnected = do
-        now <- getCurrentTime
-        modifyMVar_ sConnectedState (const (return (Disconnected now)))
+    let
+        setDisconnected = do
+            now <- getCurrentTime
+            modifyMVar_ sConnectedState (const (return (Disconnected now)))
     
     instructions <- liftIO $ do
         modifyMVar_ sConnectedState (const (return Connected))
@@ -239,14 +260,11 @@ poll Session{..} = do
 -- | Handle signals sent from the client.
 signal :: Session -> Snap ()
 signal Session{..} = do
-    input <- getInput "signal"
-    case input of
-      Just signalJson -> do
-        let signal = JSON.decode signalJson
-        case signal of
-          Ok signal -> liftIO $ writeChan sSignals signal
-          Error err -> error err
-      Nothing -> error $ "Unable to parse " ++ show input
+    input <- getParam "signal"
+    let err = error $ "Unable to parse " ++ show input
+    case JSON.decode . fromStrictBS =<< input of
+        Just    signal -> liftIO $ writeChan sSignals signal
+        Nothing        -> err
 
 {-----------------------------------------------------------------------------
     Implementation of two-way communication
@@ -273,17 +291,19 @@ webSocket Session{..} request = void $ do
     sendData <- forkIO . forever $ do
         x <- readChan sInstructions
         -- see note [Instruction strictness]
-        WS.sendTextData connection . Text.pack . JSON.encode $ x
+        WS.sendTextData connection . JSON.encode $ x
 
     -- read data
     let readData = do
             input <- WS.receiveData connection
             case input of
-                "ping" -> WS.sendTextData connection . Text.pack $ "pong"
+                "ping" -> WS.sendTextData connection . LBS.pack $ "pong"
                 "quit" -> E.throw WS.ConnectionClosed
-                input  -> case JSON.decode . Text.unpack $ input of
-                    Ok signal -> writeChan sSignals signal
-                    Error err -> E.throw $ Atto.ParseError [] err
+                input  -> case JSON.decode input of
+                    Just signal -> writeChan sSignals signal
+                    Nothing     -> E.throw $ Atto.ParseError [] $
+                        "Threepenny.Internal.Core: Couldn't parse 'Signal' "
+                        ++ show input
     
     forever readData `E.finally`
         (do
@@ -345,17 +365,6 @@ run :: Session -> Instruction -> IO ()
 run (Session{..}) instruction =
     writeChan sInstructions $!! instruction  -- see note [Instruction strictness]
 
--- | Call the given function with the given continuation. Doesn't block.
-callDeferredFunction
-  :: Window                    -- ^ Browser window
-  -> String                    -- ^ The function name.
-  -> [String]                  -- ^ Parameters.
-  -> ([Maybe String] -> IO ()) -- ^ The continuation to call if/when the function completes.
-  -> IO ()
-callDeferredFunction window fun params thunk = do
-    closure <- newClosure window fun $ \(EventData xs) -> thunk xs
-    run window $ CallDeferredFunction (closure,fun,params)
-
 -- | Run the given JavaScript function and carry on. Doesn't block.
 --
 -- The client window uses JavaScript's @eval()@ function to run the code.
@@ -370,39 +379,38 @@ callFunction window jsfunction =
     call window (CallJSFunction . toCode $ jsfunction) $ \signal ->
         case signal of
             FunctionResult v -> case marshalResult jsfunction window v of
-                Ok    a -> return $ Just a
-                Error _ -> return Nothing
+                Success a -> return $ Just a
+                Error   _ -> return Nothing
             _ -> return Nothing
 
-
 -- | Package a Haskell function such that it can be called from JavaScript.
--- 
+--
 -- At the moment, we implement this as an event handler that is
--- attached to the @head@ element.
-newClosure
-    :: Window               -- ^ Browser window context
-    -> String               -- ^ Function name (for debugging).
-    -> (EventData -> IO ()) -- ^ Function to call
-    -> IO Closure
-newClosure window@(Session{..}) fun thunk = do
+-- attached to the @head@ element. In particular, it is not garbage
+-- collected as long as the head element is alive.
+newHsFunction
+    :: Window       -- ^ Browser window context
+    -> IO ()        -- ^ Haskell function
+    -> IO (HsFunction (IO ()))
+newHsFunction window@(Session{..}) fun = do
     cid <- modifyMVar sClosures $ \(x:xs) -> return (xs,x)
-    let eventId = fun ++ "-" ++ show cid
-    attachClosure sHeadElement eventId thunk
-    return $ Closure (unprotectedGetElementId sHeadElement, eventId)
+    let eventId = "callback-" ++ show cid
+    attachClosure sHeadElement eventId (const $ fun)
+    return $ HsFunction (unprotectedGetElementId sHeadElement) eventId
 
 
 {-----------------------------------------------------------------------------
     Snap utilities
 ------------------------------------------------------------------------------}
 -- Write JSON to output.
-writeJson :: (MonadSnap m, JSON a) => a -> m ()
+writeJson :: (MonadSnap m, JSON.ToJSON a) => a -> m ()
 writeJson json = do
     modifyResponse $ setContentType "application/json"
-    (writeText . pack . (\x -> showJSValue x "") . showJSON) json
+    writeLBS . JSON.encode $ json
 
 -- Get a text input from snap.
 getInput :: (MonadSnap f) => ByteString -> f (Maybe String)
-getInput = fmap (fmap (unpack . decodeUtf8)) . getParam
+getInput = fmap (fmap (unpack . Text.decodeUtf8)) . getParam
 
 -- Read an input from snap.
 readInput :: (MonadSnap f,Read a) => ByteString -> f (Maybe a)

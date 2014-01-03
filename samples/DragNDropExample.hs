@@ -14,10 +14,7 @@ import Graphics.UI.Threepenny.Core
 main :: IO ()
 main = do
     static <- getStaticDir
-    startGUI defaultConfig
-        { tpPort       = 10000
-        , tpStatic     = Just static
-        } setup
+    startGUI defaultConfig { tpStatic = Just static } setup
 
 setup :: Window -> UI ()
 setup w = void $ do

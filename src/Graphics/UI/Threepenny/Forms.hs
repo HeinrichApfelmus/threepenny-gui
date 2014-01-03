@@ -4,6 +4,9 @@
 
 module Graphics.UI.Threepenny.Forms where
 
+#ifdef FPCOMPLETE
+#else
+
 import Control.Monad
 import Data.List.Extra
 import Graphics.UI.Threepenny
@@ -97,3 +100,5 @@ suggestionsBox parent input startMsg suggestFor insertFor = do
             delete btn
             set "style" "" input # unit
             set "style" "" box # unit
+
+#endif
