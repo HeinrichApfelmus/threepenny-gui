@@ -11,7 +11,7 @@ module Graphics.UI.Threepenny.Canvas (
     ) where
 
 import Graphics.UI.Threepenny.Core
-import qualified Text.JSON.Generic as JSON
+import qualified Data.Aeson as JSON
 
 {-----------------------------------------------------------------------------
     Canvas
@@ -64,7 +64,7 @@ lineTo :: Vector -> Canvas -> UI()
 lineTo (x,y) canvas =
   runFunction $ ffi "%1.getContext('2d').lineTo(%2, %3)" canvas x y
 
--- | Draw a straight line from the current point to the start. If the shape has already been closed or has only one point, this function does nothing.
+-- | Draw a straight line from the current point to the start of the path. If the shape has already been closed or has only one point, this function does nothing.
 closePath :: Canvas -> UI()
 closePath = runFunction . ffi "%1.getContext('2d').closePath()"
 
