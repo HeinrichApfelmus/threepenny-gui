@@ -1,5 +1,9 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.4.0.2** -- Bugfix release.
+
+* Fix CSS bug for `grid` function.
+
 **0.4.0.0** -- Snapshot release.
 
 * New `UI` monad for easier JavaScript FFI and recursion in FRP.
