@@ -25,7 +25,7 @@ module Reactive.Threepenny (
     -- ** Application
     (<@>), (<@),
     -- ** Filtering
-    filterE, filterApply, whenE, split,
+    filterE, filterApply, scanE, whenE, split,
     -- ** Union
     unions, concatenate,
     -- ** Accumulation
@@ -166,6 +166,7 @@ never = E $ fromPure Prim.neverP
 -- Think of it as
 -- 
 -- > filterJust es = [(time,a) | (time,Just a) <- es]
+filterJust :: Event (Maybe a) -> Event a
 filterJust e = E $ liftMemo1 Prim.filterJustP (unE e)
 
 -- | Merge two event streams of the same type.
@@ -291,6 +292,10 @@ Bad:
 -- | Return all event occurrences that fulfill the predicate, discard the rest.
 filterE :: (a -> Bool) -> Event a -> Event a
 filterE p = filterJust . fmap (\a -> if p a then Just a else Nothing)
+
+-- | 'scanl' like accumulation function.
+scanE :: MonadIO m => (a -> b -> a) -> a -> Event b -> m (Event a)
+scanE fold x0 = accumE x0 . fmap (flip fold)
 
 -- | Return all event occurrences that fulfill the time-varying predicate,
 -- discard the rest. Generalization of 'filterE'.
