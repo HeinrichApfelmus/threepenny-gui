@@ -8,7 +8,7 @@ import Graphics.UI.Threepenny.Core
     Main
 ------------------------------------------------------------------------------}
 main :: IO ()
-main = startGUI defaultConfig { tpPort = Just 10000 } setup
+main = startGUI defaultConfig setup
 
 setup :: Window -> UI ()
 setup window = do
@@ -58,6 +58,9 @@ setup window = do
     on UI.click addArcs $ const $ do
       forM_ circles drawCircle
       forM_ slices drawSlice
+      UI.setFont "42pt sans-serif" canvas
+      UI.fillText "Canvas" (100,100) canvas
+      UI.strokeText "Canvas" (100,100) canvas
 
     on UI.click clear  $ const $ do
         UI.clearCanvas canvas
