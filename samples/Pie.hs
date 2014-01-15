@@ -17,7 +17,7 @@ dataset = [(100, "#1f77b4"), (45, "#ff7f0e"), (80, "#2ca02c"), (10, "#d62728")
 
 
 canvasSide = 416
-center = (canvasSide `div` 2, canvasSide `div` 2)
+center = (fromIntegral canvasSide / 2, fromIntegral canvasSide / 2)
 radius = 100
 
 radian angle = angle * pi / 180

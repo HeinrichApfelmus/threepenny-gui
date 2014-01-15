@@ -4,8 +4,9 @@ module Graphics.UI.Threepenny.Canvas (
 
     -- * Documentation
     Canvas,
-    Vector, drawImage, clearCanvas
+    Vector, Point, drawImage, clearCanvas
     , fillRect, fillStyle, strokeStyle, lineWidth, textFont
+    , TextAlign(..), textAlign
     , beginPath, moveTo, lineTo, closePath, arc, arc'
     , fill, stroke, fillText, strokeText
     ) where
@@ -19,6 +20,7 @@ import qualified Data.Aeson as JSON
 type Canvas = Element
 
 type Vector = (Int,Int)
+type Point = (Double, Double)
 
 -- | Draw the image of an image element onto the canvas at a specified position.
 drawImage :: Element -> Vector -> Canvas -> UI ()
@@ -70,12 +72,15 @@ strokeStyle = mkReadWriteAttr getter setter
     getter =
       callFunction . ffi "%1.getContext('2d').strokeStyle"
 
+toD :: Double -> JSON.Value
+toD = JSON.toJSON
+
 -- | The width of lines. Default is @1@
 lineWidth :: ReadWriteAttr Canvas Double Double
 lineWidth = mkReadWriteAttr getter setter
   where
     setter value canvas =
-      runFunction $ ffi "%1.getContext('2d').lineWidth = %2" canvas (JSON.toJSON value)
+      runFunction $ ffi "%1.getContext('2d').lineWidth = %2" canvas (toD value)
     getter =
       fmap read . callFunction . ffi "%1.getContext('2d').lineWidth"
 
@@ -89,20 +94,52 @@ textFont = mkReadWriteAttr getter setter
       callFunction . ffi "%1.getContext('2d').font"
 
 
+data TextAlign = Start | End | LeftAligned | RightAligned | Center
+               deriving (Eq, Show, Read)
+
+aToS :: TextAlign -> String
+aToS algn =
+  case algn of
+    Start -> "start"
+    End -> "end"
+    LeftAligned -> "left"
+    RightAligned -> "right"
+    Center -> "center"
+
+sToA :: String -> TextAlign
+sToA algn =
+  case algn of
+    "start" -> Start
+    "end" -> End
+    "left" -> LeftAligned
+    "right" -> RightAligned
+    "center" -> Center
+    _ -> Start
+
+-- | The alignment for 'fillText' and 'strokeText'. Default is @Start@.
+textAlign :: ReadWriteAttr Canvas TextAlign TextAlign
+textAlign = mkReadWriteAttr getter setter
+  where
+    setter value canvas =
+      runFunction $ ffi "%1.getContext('2d').textAlign = %2" canvas (aToS value)
+    getter =
+      fmap sToA . callFunction . ffi "%1.getContext('2d').textAlign"
+
+
 -- | Starts a new path by resetting the list of sub-paths. Call this function when you want to create a new path.
 beginPath :: Canvas -> UI()
 beginPath = runFunction . ffi "%1.getContext('2d').beginPath()"
 
 -- | Moves the starting point of a new subpath to the (x, y) coordinate.
-moveTo :: Vector -> Canvas -> UI()
+moveTo :: Point -> Canvas -> UI()
 moveTo (x,y) canvas =
-  runFunction $ ffi "%1.getContext('2d').moveTo(%2, %3)" canvas x y
+  runFunction $ ffi "%1.getContext('2d').moveTo(%2, %3)" canvas (toD x) (toD y)
 
 -- | Connects the last point in the subpath to the (x, y) coordinates
 -- with a straight line.
-lineTo :: Vector -> Canvas -> UI()
+lineTo :: Point -> Canvas -> UI()
 lineTo (x,y) canvas =
-  runFunction $ ffi "%1.getContext('2d').lineTo(%2, %3)" canvas x y
+  runFunction $ ffi "%1.getContext('2d').lineTo(%2, %3)" canvas (toD x) (toD y)
 
 -- | Draw a straight line from the current point to the start of the
 -- path. If the shape has already been closed or has only one point,
@@ -114,16 +151,16 @@ closePath = runFunction . ffi "%1.getContext('2d').closePath()"
 -- path which is centered at @(x, y)@ coordinates with radius @r@
 -- starting at @startAngle@ and ending at @endAngle@ going in
 -- clockwise direction. Angles are given as radians.
-arc :: Vector -> Int -> Double -> Double -> Canvas -> UI ()
+arc :: Point -> Double -> Double -> Double -> Canvas -> UI ()
 arc (x,y) radius startAngle endAngle canvas =
-  runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6)" canvas x y radius
-                                      (JSON.toJSON startAngle) (JSON.toJSON endAngle)
+  runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6)" canvas (toD x) (toD y) (toD radius)
+                                      (toD startAngle) (toD endAngle)
 
 -- | Like 'arc', but with an extra argument for going in anticlockwise direction
-arc' :: Vector -> Int -> Double -> Double -> Bool -> Canvas -> UI ()
+arc' :: Point -> Double -> Double -> Double -> Bool -> Canvas -> UI ()
 arc' (x,y) radius startAngle endAngle anti canvas =
-  runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6, %7)" canvas x y
-                               radius (JSON.toJSON startAngle) (JSON.toJSON endAngle)
+  runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6, %7)" canvas (toD x) (toD y)
+                               (toD radius) (toD startAngle) (toD endAngle)
                                anti
 
 -- | Fills the subpaths with the current fill style.
@@ -137,13 +174,13 @@ stroke = runFunction . ffi "%1.getContext('2d').stroke()"
 -- | @fillText t (x, y) c@ renders the text @t@ with in solid color to the
 -- canvas @c@ at @(x, y)@ coordinates. The color used is the one set
 -- by 'setFillStyle' and the font use is the one set by 'setFont'.
-fillText :: String -> Vector -> Canvas -> UI ()
+fillText :: String -> Point -> Canvas -> UI ()
 fillText text (x,y) canvas =
-  runFunction $ ffi "%1.getContext('2d').fillText(%2, %3, %4)" canvas text x y
+  runFunction $ ffi "%1.getContext('2d').fillText(%2, %3, %4)" canvas text (toD x) (toD y)
 
 -- | @strokeText t (x, y) c@ renders the outline of text @t@ to the
 -- canvas @c@ at @(x, y)@ coordinates. The color used is the one set
 -- by 'setStrokeStyle' and the font used is the one set by 'setFont'.
-strokeText :: String -> Vector -> Canvas -> UI ()
+strokeText :: String -> Point -> Canvas -> UI ()
 strokeText text (x,y) canvas =
-  runFunction $ ffi "%1.getContext('2d').strokeText(%2, %3, %4)" canvas text x y
+  runFunction $ ffi "%1.getContext('2d').strokeText(%2, %3, %4)" canvas text (toD x) (toD y)
