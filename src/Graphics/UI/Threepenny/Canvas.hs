@@ -5,7 +5,7 @@ module Graphics.UI.Threepenny.Canvas (
     -- * Documentation
     Canvas,
     Vector, drawImage, clearCanvas
-    , fillRect, setFillStyle, setStrokeStyle, setLineWidth, setFont
+    , fillRect, fillStyle, strokeStyle, lineWidth, textFont
     , beginPath, moveTo, lineTo, closePath, arc, arc'
     , fill, stroke, fillText, strokeText
     ) where
@@ -37,26 +37,57 @@ fillRect :: Int -> Int -> Int -> Int -> Canvas -> UI()
 fillRect x y w h canvas =
   runFunction $ ffi "%1.getContext('2d').fillRect(%2, %3, %4, %5)" canvas x y w h
 
--- | Set the color or style to use inside shapes. Default is @#000@ (black).
-setFillStyle :: String -> Canvas -> UI()
-setFillStyle sty canvas =
-  runFunction $ ffi "%1.getContext('2d').fillStyle = %2" canvas sty
 
--- | Set the color or style to use for the lines around
--- shapes. Default is @#000@ (black).
-setStrokeStyle :: String -> Canvas -> UI()
-setStrokeStyle sty canvas =
-  runFunction $ ffi "%1.getContext('2d').strokeStyle = %2" canvas sty
+{-
+-- Would have liked to make this function for all the attributes,
+-- alas I cannot convince Haskell's type system that it is OK
 
--- | Set the width of lines. Default is @1@
-setLineWidth :: Int -> Canvas -> UI ()
-setLineWidth lw canvas =
-  runFunction $ ffi "%1.getContext('2d').lineWidth = %2" canvas lw
+mkContextAttr :: String -> ReadWriteAttr Canvas a a
+mkContextAttr attr = mkReadWriteAttr getter setter
+  where
+    setter value canvas =
+      runFunction $ ffi ("%1.getContext('2d')."++ attr ++ "= %2") canvas value
+    getter =
+      callFunction . ffi $ "%1.getContext('2d')." ++ attr
+-}
 
--- | Set the font used for 'fillText'. Default is @10px sans-serif@.
-setFont :: String -> Canvas -> UI ()
-setFont fontspec canvas =
-  runFunction $ ffi "%1.getContext('2d').font = %2" canvas fontspec
+-- | The color or style to use inside shapes. Default is @#000@ (black).
+fillStyle :: ReadWriteAttr Canvas String String
+fillStyle = mkReadWriteAttr getter setter
+  where
+    setter value canvas =
+      runFunction $ ffi "%1.getContext('2d').fillStyle = %2" canvas value
+    getter =
+      callFunction . ffi "%1.getContext('2d').fillStyle"
+
+-- | The color or style to use for the lines around shapes.
+-- Default is @#000@ (black).
+strokeStyle :: ReadWriteAttr Canvas String String
+strokeStyle = mkReadWriteAttr getter setter
+  where
+    setter value canvas =
+      runFunction $ ffi "%1.getContext('2d').strokeStyle = %2" canvas value
+    getter =
+      callFunction . ffi "%1.getContext('2d').strokeStyle"
+
+-- | The width of lines. Default is @1@
+lineWidth :: ReadWriteAttr Canvas Double Double
+lineWidth = mkReadWriteAttr getter setter
+  where
+    setter value canvas =
+      runFunction $ ffi "%1.getContext('2d').lineWidth = %2" canvas (JSON.toJSON value)
+    getter =
+      fmap read . callFunction . ffi "%1.getContext('2d').lineWidth"
+
+-- | The font used for 'fillText' and 'strokeText'. Default is @10px sans-serif@.
+textFont :: ReadWriteAttr Canvas String String
+textFont = mkReadWriteAttr getter setter
+  where
+    setter value canvas =
+      runFunction $ ffi "%1.getContext('2d').font = %2" canvas value
+    getter =
+      callFunction . ffi "%1.getContext('2d').font"
+
 
 -- | Starts a new path by resetting the list of sub-paths. Call this function when you want to create a new path.
 beginPath :: Canvas -> UI()

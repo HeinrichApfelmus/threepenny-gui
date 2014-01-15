@@ -30,6 +30,9 @@ setup window = do
         # set UI.height canvasSide
         # set UI.width  canvasSide
         # set style [("border", "solid black 1px"), ("background", "lightgrey")]
+        # set UI.lineWidth 2
+        # set UI.strokeStyle "white"
+
 
     makePie <- UI.button #+ [string "Must have pie!"]
     clear  <- UI.button #+ [string "Clear the canvas."]
@@ -39,11 +42,8 @@ setup window = do
         ,element makePie, element clear
         ]
 
-    UI.setLineWidth 2 canvas
-    UI.setStrokeStyle "white" canvas
-
     let drawSlice start end col = do
-          UI.setFillStyle col canvas
+          element canvas # set UI.fillStyle col
           UI.beginPath canvas
           UI.arc center radius start end canvas
           UI.lineTo center canvas

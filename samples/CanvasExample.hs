@@ -31,7 +31,7 @@ setup window = do
     let rects = [(75,100, 10, 10, "blue"), (325, 100, 15, 15, "blue"),
                  (250, 300, 75, 15, "plum")]
     let drawRect (x,y,w,h,col) = do
-          UI.setFillStyle col canvas
+          element canvas # set UI.fillStyle col
           UI.fillRect x y w h canvas
 
     on UI.click addRects $ const $ forM_ rects drawRect
@@ -40,14 +40,14 @@ setup window = do
                   , (300, 180, 15, "plum")
                   , (100, 180, 15, "plum") ]
     let drawCircle (x,y,r,col) = do
-          UI.setFillStyle col canvas
+          element canvas # set UI.fillStyle col
           UI.beginPath canvas
           UI.arc (x,y) r 0 (2*pi) canvas
           UI.fill canvas
 
     let slices = [ (325, 115, 25, 1, 2, "lightblue"), (325, 145, 25, 1, 2, "lightblue") ]
     let drawSlice (x,y,r,start,end,col) = do
-          UI.setFillStyle col canvas
+          element canvas # set UI.fillStyle col
           UI.beginPath canvas
           UI.arc (x,y) r start end canvas
           UI.lineTo (x,y) canvas
@@ -58,9 +58,8 @@ setup window = do
     on UI.click addArcs $ const $ do
       forM_ circles drawCircle
       forM_ slices drawSlice
-      UI.setFont "42pt sans-serif" canvas
+      element canvas # set UI.textFont "42pt sans-serif"
       UI.fillText "Canvas" (100,100) canvas
       UI.strokeText "Canvas" (100,100) canvas
 
-    on UI.click clear  $ const $ do
-        UI.clearCanvas canvas
+    on UI.click clear  $ const $ UI.clearCanvas canvas
