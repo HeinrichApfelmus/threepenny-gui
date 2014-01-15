@@ -6,7 +6,7 @@ module Graphics.UI.Threepenny.Canvas (
     Canvas,
     Vector, drawImage, clearCanvas
     , fillRect, setFillStyle, setStrokeStyle, setLineWidth, setFont
-    , beginPath, moveTo, lineTo, closePath, arc, arcAC
+    , beginPath, moveTo, lineTo, closePath, arc, arc'
     , fill, stroke, fillText, strokeText
     ) where
 
@@ -88,12 +88,12 @@ arc (x,y) radius startAngle endAngle canvas =
   runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6)" canvas x y radius
                                       (JSON.toJSON startAngle) (JSON.toJSON endAngle)
 
--- | Like 'arc' but in anticlockwise direction
-arcAC :: Vector -> Int -> Double -> Double -> Canvas -> UI ()
-arcAC (x,y) radius startAngle endAngle canvas =
-  runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6, true)" canvas x y
+-- | Like 'arc', but with an extra argument for going in anticlockwise direction
+arc' :: Vector -> Int -> Double -> Double -> Bool -> Canvas -> UI ()
+arc' (x,y) radius startAngle endAngle anti canvas =
+  runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6, %7)" canvas x y
                                radius (JSON.toJSON startAngle) (JSON.toJSON endAngle)
-
+                               anti
 
 -- | Fills the subpaths with the current fill style.
 fill :: Canvas -> UI ()
