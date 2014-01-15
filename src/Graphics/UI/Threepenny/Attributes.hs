@@ -26,18 +26,18 @@ import Graphics.UI.Threepenny.Core
 ------------------------------------------------------------------------------}
 -- | The @checked@ status of an input element of type checkbox.
 checked :: Attr Element Bool
-checked = fromProp "checked" (== JSON.Bool True) JSON.Bool
+checked = fromJQueryProp "checked" (== JSON.Bool True) JSON.Bool
 
 -- | The @enabled@ status of an input element
 enabled :: Attr Element Bool
-enabled = fromProp "disabled" (== JSON.Bool False) (JSON.Bool . not)
+enabled = fromJQueryProp "disabled" (== JSON.Bool False) (JSON.Bool . not)
 
 -- | Index of the currently selected option of a @<select>@ element.
 --
 -- The index starts at @0@.
 -- If no option is selected, then the selection is 'Nothing'.
 selection :: Attr Element (Maybe Int)
-selection = fromProp "selectedIndex" from (JSON.toJSON . maybe (-1) id)
+selection = fromJQueryProp "selectedIndex" from (JSON.toJSON . maybe (-1) id)
     where
     from s = let JSON.Success x = JSON.fromJSON s in 
         if x == -1 then Nothing else Just x

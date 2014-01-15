@@ -54,7 +54,7 @@ module Graphics.UI.Threepenny.Core (
     atomic,
     
     -- * Internal and oddball functions
-    fromProp, toElement,
+    fromJQueryProp, toElement,
     audioPlay, audioStop,
     
     ) where
@@ -369,13 +369,6 @@ audioPlay el = runFunction $ ffi "%1.play()" el
 audioStop :: Element -> UI ()
 audioStop el = runFunction $ ffi "prim_audio_stop(%1)" el
 
--- Turn a jQuery property @.prop()@ into an attribute.
-fromProp :: String -> (JSON.Value -> a) -> (a -> JSON.Value) -> Attr Element a
-fromProp name from to = mkReadWriteAttr get set
-    where
-    set v el = runFunction $ ffi "$(%1).prop(%2,%3)" el name (to v)
-    get   el = fmap from $ callFunction $ ffi "$(%1).prop(%2)" el name
-
 {-----------------------------------------------------------------------------
     Layout
 ------------------------------------------------------------------------------}
@@ -542,6 +535,13 @@ mkReadAttr get = mkReadWriteAttr get (\_ _ -> return ())
 -- | Build attribute from a setter.
 mkWriteAttr :: (i -> x -> UI ()) -> WriteAttr x i
 mkWriteAttr set = mkReadWriteAttr (\_ -> return ()) set
+
+-- | Turn a jQuery property @.prop()@ into an attribute.
+fromJQueryProp :: String -> (JSON.Value -> a) -> (a -> JSON.Value) -> Attr Element a
+fromJQueryProp name from to = mkReadWriteAttr get set
+    where
+    set v el = runFunction $ ffi "$(%1).prop(%2,%3)" el name (to v)
+    get   el = fmap from $ callFunction $ ffi "$(%1).prop(%2)" el name
 
 
 {-----------------------------------------------------------------------------
