@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
 {-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Graphics.UI.Threepenny.Core (
     -- * Synopsis
     -- | Core functionality of the Threepenny GUI library.
@@ -41,6 +42,7 @@ module Graphics.UI.Threepenny.Core (
     (#), (#.),
     Attr, WriteAttr, ReadAttr, ReadWriteAttr(..),
     set, sink, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
+    bimapAttr, fromObjectProperty,
     
     -- * Widgets
     Widget(..), element, widget,
@@ -498,6 +500,17 @@ data ReadWriteAttr x i o = ReadWriteAttr
     , set' :: i -> x -> UI ()
     }
 
+instance Functor (ReadWriteAttr x i) where
+    fmap f = bimapAttr id f
+
+-- | Map input and output type of an attribute.
+bimapAttr :: (i' -> i) -> (o -> o')
+          -> ReadWriteAttr x i o -> ReadWriteAttr x i' o'
+bimapAttr from to attr = attr
+    { get' = fmap to . get' attr
+    , set' = \i' -> set' attr (from i')
+    }
+
 -- | Set value of an attribute in the 'UI' monad.
 -- Best used in conjunction with '#'.
 set :: ReadWriteAttr x i o -> i -> UI x -> UI x
@@ -543,6 +556,12 @@ fromJQueryProp name from to = mkReadWriteAttr get set
     set v el = runFunction $ ffi "$(%1).prop(%2,%3)" el name (to v)
     get   el = fmap from $ callFunction $ ffi "$(%1).prop(%2)" el name
 
+-- | Turn a JavaScript object property @.prop = ...@ into an attribute.
+fromObjectProperty :: (ToJS a, FFI (JSFunction a)) => String -> Attr Element a
+fromObjectProperty name = mkReadWriteAttr get set
+    where
+    set v el = runFunction  $ ffi ("%1." ++ name ++ " = %2") el v    
+    get   el = callFunction $ ffi ("%1." ++ name) el
 
 {-----------------------------------------------------------------------------
     Widget class

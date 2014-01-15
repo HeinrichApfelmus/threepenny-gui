@@ -52,6 +52,8 @@ class ToJS a where
     render :: a -> JSCode
 
 instance ToJS String     where render   = render . JSON.String . fromString
+instance ToJS Float      where render   = JSCode . showJSON
+instance ToJS Double     where render   = JSCode . showJSON
 instance ToJS Int        where render   = JSCode . show
 instance ToJS Bool       where render b = JSCode $ if b then "false" else "true"
 instance ToJS JSON.Value where render   = JSCode . showJSON
@@ -104,6 +106,9 @@ instance (ToJS a, FFI b) => FFI (a -> b) where
 instance FFI (JSFunction ())          where fancy f = fromJSCode $ f []
 instance FFI (JSFunction String)      where fancy   = mkResult "%1.toString()"
 instance FFI (JSFunction JSON.Value)  where fancy   = mkResult "%1"
+instance FFI (JSFunction Int)         where fancy   = mkResult "%1"
+instance FFI (JSFunction Double)      where fancy   = mkResult "%1"
+instance FFI (JSFunction Float)       where fancy   = mkResult "%1"
 instance FFI (JSFunction [ElementId]) where fancy   = mkResult "elementsToElids(%1)"
 
 -- FIXME: We need access to IO in order to turn a Coupon into an Element.
