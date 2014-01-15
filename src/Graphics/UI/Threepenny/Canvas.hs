@@ -31,11 +31,15 @@ drawImage image (x,y) canvas =
 clearCanvas :: Canvas -> UI ()
 clearCanvas = runFunction . ffi "%1.getContext('2d').clear()"
 
--- | @fillRect x y w h canvas@ draw a filled rectangle (using the
--- current fillStyle) at position @(x, y)@ with width @w@ and height
--- @h@.
-fillRect :: Int -> Int -> Int -> Int -> Canvas -> UI()
-fillRect x y w h canvas =
+-- | Draw a filled rectangle.
+--
+-- The 'fillStyle' attribute determines the color.
+fillRect
+    :: Point    -- ^ upper left corner
+    -> Int      -- ^ width in pixels
+    -> Int      -- ^ height in pixels
+    -> Canvas -> UI ()
+fillRect (x,y) w h canvas =
   runFunction $ ffi "%1.getContext('2d').fillRect(%2, %3, %4, %5)" canvas x y w h
 
 -- | The color or style to use inside shapes.
@@ -79,23 +83,24 @@ sToA algn =
     "center" -> Center
     _ -> Start
 
--- | The alignment for 'fillText' and 'strokeText'. Default is @Start@.
-textAlign :: ReadWriteAttr Canvas TextAlign TextAlign
+-- | The alignment for 'fillText' and 'strokeText'. Default is 'Start'.
+textAlign :: Attr Canvas TextAlign
 textAlign = bimapAttr aToS sToA $ textAlignStr
     where
     textAlignStr :: Attr Canvas String
     textAlignStr = fromObjectProperty "getContext('2d').textAlign"
 
--- | Starts a new path by resetting the list of sub-paths. Call this function when you want to create a new path.
+-- | Starts a new path by resetting the list of sub-paths.
+-- Call this function when you want to create a new path.
 beginPath :: Canvas -> UI()
 beginPath = runFunction . ffi "%1.getContext('2d').beginPath()"
 
--- | Moves the starting point of a new subpath to the (x, y) coordinate.
+-- | Moves the starting point of a new subpath to the @(x,y)@ coordinate.
 moveTo :: Point -> Canvas -> UI()
 moveTo (x,y) canvas =
   runFunction $ ffi "%1.getContext('2d').moveTo(%2, %3)" canvas x y
 
--- | Connects the last point in the subpath to the (x, y) coordinates
+-- | Connects the last point in the subpath to the @(x,y)@ coordinates
 -- with a straight line.
 lineTo :: Point -> Canvas -> UI()
 lineTo (x,y) canvas =
@@ -111,7 +116,7 @@ closePath = runFunction . ffi "%1.getContext('2d').closePath()"
 arc
     :: Point    -- ^ Center of the circle of which the arc is a part.
     -> Double   -- ^ Radius of the circle of which the arc is a part.
-    -> Double   -- ^ Starting angle, in radians).
+    -> Double   -- ^ Starting angle, in radians.
     -> Double   -- ^ Ending angle, in radians.
     -> Canvas -> UI ()
 arc (x,y) radius startAngle endAngle canvas =
@@ -133,16 +138,22 @@ fill = runFunction . ffi "%1.getContext('2d').fill()"
 stroke :: Canvas -> UI ()
 stroke = runFunction . ffi "%1.getContext('2d').stroke()"
 
--- | @fillText t (x, y) c@ renders the text @t@ with in solid color to the
--- canvas @c@ at @(x, y)@ coordinates. The color used is the one set
--- by 'setFillStyle' and the font use is the one set by 'setFont'.
+-- | Render a text in solid color at a certain point on the canvas.
+-- 
+-- The 'fillStyle' attribute determines the color.
+-- The 'textFont' attribute determines the font used.
+-- The 'textAlign' attributes determines the position of the text
+-- relative to the point.
 fillText :: String -> Point -> Canvas -> UI ()
 fillText text (x,y) canvas =
   runFunction $ ffi "%1.getContext('2d').fillText(%2, %3, %4)" canvas text x y
 
--- | @strokeText t (x, y) c@ renders the outline of text @t@ to the
--- canvas @c@ at @(x, y)@ coordinates. The color used is the one set
--- by 'setStrokeStyle' and the font used is the one set by 'setFont'.
+-- | Render the outline of a text at a certain point on the canvas.
+-- 
+-- The 'strokeStyle' attribute determines the color of the outline.
+-- The 'textFont' attribute determines the font used.
+-- The 'textAlign' attributes determines the position of the text
+-- relative to the point.
 strokeText :: String -> Point -> Canvas -> UI ()
 strokeText text (x,y) canvas =
   runFunction $ ffi "%1.getContext('2d').strokeText(%2, %3, %4)" canvas text x y

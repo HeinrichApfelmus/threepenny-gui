@@ -42,6 +42,7 @@ These scripts set up the correct paths.
 * [DragNDropExample.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/DragNDropExample.hs) - Simple drag'N'drop demo.
 * [DrumMachine.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/DrumMachine.hs) - Specify rhythm by activating and deactivating checkboxes.
 * [MissingDollars.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/MissingDollars.hs) - Text with configurable values.
+* [Pie.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/Pie.hs) - Draws a pie chart using the HTML 5 canvas element.
 * [UseWords.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/UseWords.hs)  - Text with configurable words. (Apologies for the male-centric story.)
 
 
@@ -106,6 +107,7 @@ Many thanks to everyone who contributed, provided feedback or simply wrote an ap
 * *Heinrich Apfelmus*
 * *Daniel Austin*
 * Daniel Díaz
+* *Ken Friis Larsen*
 * *Daniel Mlot*
 * Luke Palmer
 * Jens Petersen

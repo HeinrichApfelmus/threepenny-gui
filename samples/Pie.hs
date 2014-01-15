@@ -35,7 +35,7 @@ setup window = do
 
 
     makePie <- UI.button #+ [string "Must have pie!"]
-    clear  <- UI.button #+ [string "Clear the canvas."]
+    clear   <- UI.button #+ [string "Clear the canvas."]
 
     getBody window #+ [column
         [element canvas]
@@ -43,13 +43,13 @@ setup window = do
         ]
 
     let drawSlice start end col = do
-          element canvas # set UI.fillStyle col
-          UI.beginPath canvas
-          UI.arc center radius start end canvas
-          UI.lineTo center canvas
-          UI.closePath canvas
-          UI.fill canvas
-          UI.stroke canvas
+          canvas # set' UI.fillStyle col
+          canvas # UI.beginPath
+          canvas # UI.arc center radius start end
+          canvas # UI.lineTo center
+          canvas # UI.closePath
+          canvas # UI.fill
+          canvas # UI.stroke
 
     on UI.click makePie $ const $
       foldM (\start (delta, col) -> do
@@ -57,5 +57,5 @@ setup window = do
                 drawSlice (radian start) (radian end) col
                 return end) 0 dataset
 
-    on UI.click clear  $ const $
+    on UI.click clear $ const $
         UI.clearCanvas canvas
