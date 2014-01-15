@@ -163,7 +163,6 @@ Executable threepenny-examples-crud
     else
         buildable: False
     main-is:           CRUD.hs
-    other-modules:     Tidings
     hs-source-dirs:    samples
 
 Executable threepenny-examples-currencyconverter
