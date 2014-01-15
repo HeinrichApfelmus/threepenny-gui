@@ -88,7 +88,6 @@ import           System.FilePath
 
 import qualified Data.Aeson                    as JSON
 import           Data.Aeson                    (Result(..))
-import           Data.Aeson.Generic
 import qualified Data.ByteString.Lazy.Char8    as LBS
 import           Data.Data
 
