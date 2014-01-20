@@ -5,6 +5,7 @@ import Control.Monad
 import Paths
 
 import qualified Graphics.UI.Threepenny as UI
+import qualified Graphics.UI.Threepenny.Events as E
 import qualified Graphics.UI.Threepenny.Attributes as A
 import qualified Graphics.UI.Threepenny.Canvas as C
 import Graphics.UI.Threepenny.Core
@@ -25,32 +26,63 @@ setup :: Window -> UI ()
 setup w = void $ do
     return w # set title "threepenny-breaktout..."
 
-    c     <- mkCanvas
-    getBody w #+ [element c]
+    world <- mkWorld (Size 800 600)
+    getBody w #+ [element (screenCanvas world)]
+
+    onEvent (mouseX world) (updateCanvas world)
 
 {-----------------------------------------------------------------------------
     Model
 ------------------------------------------------------------------------------}
+type PaddlePos = Int
+
+data Size  = Size  { szWidth :: Int
+                   , szHeight :: Int }
+
+data World = World { screenSize   :: Size
+                   , mouseX       :: Event Int
+                   , drawCanvas   :: C.Canvas
+                   , screenCanvas :: C.Canvas
+                   , toScreen     :: UI ()
+                   }
+
+mkWorld :: Size -> UI World
+mkWorld screenSize = do
+    dc <- mkCanvas screenSize
+    sc <- mkCanvas screenSize
+
+    -- paddlePos <- stepper (szWidth sz `div` 2) $ (fst <$> Ev.mousemove canvas)
+    let mouseX = fst <$> E.mousemove sc
+    let sw = C.drawImage dc (0,0) sc
+    return $ World screenSize mouseX dc sc sw
+
+updateCanvas :: World -> PaddlePos -> UI ()
+updateCanvas world p = do
+    let c  = drawCanvas world
+        sz = screenSize world
+    C.fillRect (C.Rect 0 0 (szWidth sz) (szHeight sz)) white c
+    C.fillRect paddle fill c
+    toScreen world
+    where paddle = C.Rect (p-w2) y0 w h
+          fill   = C.solidColor (C.RGB 255 10 10)
+          white  = C.solidColor (C.RGB 255 255 255)
+          y0     = szHeight (screenSize world) - 2*h
+          w      = 2 * w2
+          w2     = 25
+          h      = 10
+
+
 {-----------------------------------------------------------------------------
     View
 ------------------------------------------------------------------------------}
 
 -- | Create a canvas
-mkCanvas :: UI Element
-mkCanvas = do
+mkCanvas :: Size -> UI C.Canvas
+mkCanvas sz = do
     canvas <- UI.canvas
-        # set UI.height 640
-        # set UI.width  800
+        # set UI.height (szHeight sz)
+        # set UI.width  (szWidth sz)
         # set A.id_ "myCanvas"
         # set style [("border", "solid black 1px")]
-
-    let horFill = C.createHorizontalLinearGradient (C.RGB 255 0 0) (C.RGB 0 255 0)
-    let diagFill = C.createLinearGradient 1 1 [(0, C.RGB 255 0 0), (0.5, C.RGB 0 255 0), (1, C.RGB 0 0 255)]
-    let solidFill = C.solidColor $ C.RGB 0 0 255
-
-    C.fillRect (C.Rect 30 40 100 10) solidFill canvas
-
-    C.fillRect (C.Rect 100 110 100 20) horFill canvas
-    C.fillCircle (100, 150) 50 diagFill canvas
 
     return canvas    
