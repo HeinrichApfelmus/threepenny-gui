@@ -51,6 +51,6 @@ mkCanvas = do
     C.fillRect (C.Rect 30 40 100 10) solidFill canvas
 
     C.fillRect (C.Rect 100 110 100 20) horFill canvas
-    C.fillRect (C.Rect 100 150 100 100) diagFill canvas
+    C.fillCircle (100, 150) 50 diagFill canvas
 
     return canvas    

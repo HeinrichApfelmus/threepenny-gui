@@ -4,11 +4,12 @@ module Graphics.UI.Threepenny.Canvas (
     
     -- * Documentation
     Canvas,
-    Vector, drawImage, clearCanvas,
+    Vector, Rect (..), 
     RGB(..), ColorStop, Gradient, FillStyle, 
+    drawImage, clearCanvas,
     solidColor, 
     createLinearGradient, createHorizontalLinearGradient, createVerticalLinearGradient,
-    Rect (..), fillRect
+    fillRect, fillCircle
     ) where
 
 import Data.Char (toUpper)
@@ -103,6 +104,12 @@ fillRect :: Rect -> FillStyle -> Canvas -> UI ()
 fillRect rect fs canvas = do
     assignFillStyle rect fs canvas
     runFunction $ ffi "%1.getContext('2d').fillRect(%2,%3,%4,%5)" canvas (rectLeft rect) (rectTop rect) (rectWidth rect) (rectHeight rect)
+
+-- | fills a circle
+fillCircle :: Vector -> Int -> FillStyle -> Canvas -> UI ()
+fillCircle (cx, cy) r fs canvas = do
+    assignFillStyle (Rect (cx-r) (cy-r) (2*r) (2*r)) fs canvas
+    runFunction $ ffi "var ctx=%1.getContext('2d'); ctx.beginPath(); ctx.arc(%2,%3,%4,0,2*Math.PI); ctx.fill();" canvas cx cy r
 
 {-----------------------------------------------------------------------------
     general
