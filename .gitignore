@@ -9,3 +9,4 @@ log
 /haddocks.html
 .cabal-sandbox/
 cabal.sandbox.config
+*.sublime-workspace
