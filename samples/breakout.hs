@@ -42,4 +42,13 @@ mkCanvas = do
         # set UI.width  800
         # set style [("border", "solid black 1px")]
 
+    let horFill = C.createHorizontalLinearGradient 100 (C.RGB 255 0 255) (C.RGB 255 0 0)
+    let solidFill = C.solidColor $ C.RGB 0 0 255
+    C.fillRectWith solidFill (C.Rect 30 40 100 10) canvas
+
+    C.setFillStyle horFill canvas
+    C.fillRect (C.Rect 100 110 100 20) canvas
+
+    C.fillRectWith horFill (C.Rect 100 150 100 20) canvas
+
     return canvas    
