@@ -226,3 +226,16 @@ Executable threepenny-examples-use-words
     main-is:           UseWords.hs
     other-modules:     Paths_threepenny_gui, Paths
     hs-source-dirs:    samples
+
+Executable threepenny-examples-breakout
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base
+                          ,time
+                          ,filepath
+                          ,threepenny-gui
+    else
+        buildable: False
+    main-is:           breakout.hs
+    other-modules:     Paths_threepenny_gui, Paths
+    hs-source-dirs:    samples
