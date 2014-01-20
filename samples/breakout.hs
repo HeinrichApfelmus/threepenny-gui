@@ -34,7 +34,17 @@ setup w = void $ do
 {-----------------------------------------------------------------------------
     Model
 ------------------------------------------------------------------------------}
-type PaddlePos = Int
+type PosX      = Int
+type PosY      = Int
+type DPosX     = Double
+type DPosY     = Double
+type Speed     = Double
+
+type PaddlePos = PosX
+data Ball      = Ball { ballPos   :: (PosX, PosY)
+                      , ballVel   :: (DPosX, DPosY)
+                      , ballSpeed :: Speed 
+                      }
 
 data Size  = Size  { szWidth :: Int
                    , szHeight :: Int }
