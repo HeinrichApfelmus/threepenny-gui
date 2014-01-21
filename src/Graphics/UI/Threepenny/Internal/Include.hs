@@ -7,11 +7,14 @@ import qualified Language.Haskell.TH as TH
 import Language.Haskell.TH.Quote
 
 #ifdef CABAL
+root :: FilePath
 root = "src/"
 #else
+root :: FilePath
 root = "../src/" -- running examples from ghci
 #endif
 
+include :: QuasiQuoter
 include = QuasiQuoter
         { quoteExp  = f             -- only used as an expression,
         , quotePat  = undefined     -- hence all other use cases undefined
@@ -21,6 +24,7 @@ include = QuasiQuoter
     where
     f s = TH.LitE . TH.StringL <$> TH.runIO (readFileUTF8 $ root ++ s)
 
+readFileUTF8 :: FilePath -> IO String
 readFileUTF8 path = do
     h <- openFile path ReadMode
     hSetEncoding h utf8

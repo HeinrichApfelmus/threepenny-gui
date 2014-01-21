@@ -1,7 +1,7 @@
 module Reactive.Threepenny.Types where
 
 import Control.Monad.Trans.RWS.Lazy
-import Data.Functor.Identity
+import Data.Functor.Identity ()
 
 import           Data.Hashable
 import qualified Data.Vault.Strict   as Vault.Strict
