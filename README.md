@@ -43,6 +43,7 @@ These scripts set up the correct paths.
 * [DrumMachine.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/DrumMachine.hs) - Specify rhythm by activating and deactivating checkboxes.
 * [MissingDollars.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/MissingDollars.hs) - Text with configurable values.
 * [UseWords.hs](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/UseWords.hs)  - Text with configurable words. (Apologies for the male-centric story.)
+* Mandelbrot - simple mandelbrot-fractal viewer demonstrating widgets and concurrent background-processing (will most likely not work using runhaskell - but fully functional if you build using -fbuildExamples - see `/samples/mandelbrot/main.h` for instructions)
 
 
 
