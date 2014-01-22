@@ -4,12 +4,19 @@ module Graphics.UI.Threepenny.Canvas (
 
     -- * Documentation
     Canvas
-    , Vector, Point, drawImage, clearCanvas
+    , Vector, Point
+    , RGB(..), ColorStop, Gradient, FillStyle
+    , drawImage, clearCanvas
+    , solidColor, createLinearGradient, createHorizontalLinearGradient, createVerticalLinearGradient
     , fillRect, fillStyle, strokeStyle, lineWidth, textFont
     , TextAlign(..), textAlign
     , beginPath, moveTo, lineTo, closePath, arc, arc'
     , fill, stroke, fillText, strokeText
     ) where
+
+import Data.Char (toUpper)
+import Data.List(intercalate)
+import Numeric (showHex)
 
 import Graphics.UI.Threepenny.Core
 import qualified Data.Aeson as JSON
@@ -21,31 +28,107 @@ type Canvas = Element
 
 type Vector = Point
 type Point  = (Double, Double)
+data RGB    = RGB  {red :: Int, green :: Int,  blue :: Int } deriving (Eq, Show)
+
+type ColorStop = (Double,  RGB)
+
+data Gradient  
+    -- | defines a linear gradient 
+    --   params are the left-upper point width, height and the gradient's color-stops
+    --   the region as defined in <http://www.w3schools.com/tags/canvas_createlineargradient.asp> is calculated based on the
+    --   output Rectangle
+    = LinearGradient Vector Double Double [ColorStop]
+    deriving (Show, Eq)
+
+data FillStyle 
+    = SolidColor RGB
+    | Gradient Gradient
+    deriving (Show, Eq) 
+
+
+{-----------------------------------------------------------------------------
+    Image drawing
+------------------------------------------------------------------------------}
 
 -- | Draw the image of an image element onto the canvas at a specified position.
 drawImage :: Element -> Vector -> Canvas -> UI ()
 drawImage image (x,y) canvas =
     runFunction $ ffi "%1.getContext('2d').drawImage(%2,%3,%4)" canvas image x y
 
+{-----------------------------------------------------------------------------
+    Fill Styles
+------------------------------------------------------------------------------}
+
+-- | creates a solid-color fillstyle
+solidColor :: RGB -> FillStyle
+solidColor rgb = SolidColor rgb
+
+-- | creates a linear gradient fill style
+createLinearGradient :: Point       -- ^ The upper-left coordinate of the gradient
+                     -> Double      -- ^ The width of the gradient
+                     -> Double      -- ^ The height of the gradient
+                     -> [ColorStop] -- ^ the color-stops for the gradient
+                     -> FillStyle
+createLinearGradient (x0, y0) w h sts = Gradient $ LinearGradient (x0,y0) w h sts
+
+-- | creates a simple horizontal gradient
+createHorizontalLinearGradient:: Point  -- ^ The upper-left coordinate of the gradient
+                              -> Double -- ^ The width of the gradient
+                              -> RGB    -- ^ The starting color of the gradient
+                              -> RGB    -- ^ The ending color of the gradient
+                              -> FillStyle
+createHorizontalLinearGradient pt w c0 c1 = createLinearGradient pt w 0 [(0, c0), (1, c1)]
+
+-- | creates a simple vertical gradient
+createVerticalLinearGradient:: Point  -- ^ The upper-left coordinate of the gradient
+                            -> Double -- ^ The height of the gradient
+                            -> RGB    -- ^ The starting color of the gradient
+                            -> RGB    -- ^ The ending color of the gradient
+                            -> FillStyle
+createVerticalLinearGradient pt h c0 c1 = createLinearGradient pt 0 h [(0, c0), (1, c1)]
+
+{-----------------------------------------------------------------------------
+    general
+------------------------------------------------------------------------------}
+
 -- | Clear the canvas
 clearCanvas :: Canvas -> UI ()
 clearCanvas = runFunction . ffi "%1.getContext('2d').clear()"
+
+
+{-----------------------------------------------------------------------------
+    fill primitives
+------------------------------------------------------------------------------}
+
 
 -- | Draw a filled rectangle.
 --
 -- The 'fillStyle' attribute determines the color.
 fillRect
     :: Point    -- ^ upper left corner
-    -> Int      -- ^ width in pixels
-    -> Int      -- ^ height in pixels
+    -> Double   -- ^ width in pixels
+    -> Double   -- ^ height in pixels
     -> Canvas -> UI ()
 fillRect (x,y) w h canvas =
   runFunction $ ffi "%1.getContext('2d').fillRect(%2, %3, %4, %5)" canvas x y w h
 
--- | The color or style to use inside shapes.
--- Default is @#000@ (black).
-fillStyle :: Attr Canvas String
-fillStyle = fromObjectProperty "getContext('2d').fillStyle"
+-- | The Fillstyle to use inside shapes.
+-- write-only as I could not find how to consistently read the fillstyle
+fillStyle :: WriteAttr Canvas FillStyle
+fillStyle = mkWriteAttr assignFillStyle
+
+-- | sets the current fill style of the canvas context
+assignFillStyle :: FillStyle -> Canvas -> UI ()
+assignFillStyle (Gradient fs) canvas =
+    runFunction $ ffi cmd canvas
+        where cmd = "var ctx=%1.getContext('2d'); var grd=" ++ fsStr fs ++ cStops fs ++ "ctx.fillStyle=grd;"
+              fsStr (LinearGradient (x0, y0) w h _) 
+                                                = "ctx.createLinearGradient(" ++ pStr [x0, y0, x0+w, y0+h] ++ ");"
+              cStops (LinearGradient _ _ _ sts) = concatMap addStop sts
+              addStop (p,c)                     = "grd.addColorStop(" ++ show p ++ ",'" ++ rgbString c ++ "');"
+              pStr                              = intercalate "," . map show
+assignFillStyle (SolidColor color) canvas =
+    runFunction $ ffi "%1.getContext('2d').fillStyle=%2" canvas (rgbString color)
 
 -- | The color or style to use for the lines around shapes.
 -- Default is @#000@ (black).
@@ -157,3 +240,16 @@ fillText text (x,y) canvas =
 strokeText :: String -> Point -> Canvas -> UI ()
 strokeText text (x,y) canvas =
   runFunction $ ffi "%1.getContext('2d').strokeText(%2, %3, %4)" canvas text x y
+
+{-----------------------------------------------------------------------------
+    helper functions
+------------------------------------------------------------------------------}
+
+rgbString :: RGB -> String
+rgbString (RGB r g b) = "#" ++ sh r ++ sh g ++ sh b
+    where sh i  = pad . map toUpper $ showHex i ""
+          pad s
+            | length s  == 0 = "00"
+            | length s  == 1 = '0' : s
+            | length s  == 2 = s
+            | otherwise      =  take 2 s
