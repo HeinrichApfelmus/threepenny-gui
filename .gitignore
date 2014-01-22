@@ -7,3 +7,6 @@ log
 *.DS_Store
 /Material/
 /haddocks.html
+.cabal-sandbox/
+cabal.sandbox.config
+*.sublime-workspace
