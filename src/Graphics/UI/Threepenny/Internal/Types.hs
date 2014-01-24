@@ -201,7 +201,10 @@ data Instruction
   | Delete ElementId
   deriving (Typeable,Data,Show,Generic)
 
-instance ToJSON Instruction
+instance ToJSON Instruction where
+  toJSON = JSON.genericToJSON JSON.defaultOptions{
+    JSON.sumEncoding = JSON.TaggedObject "tag" "contents" }
+
 
 instance NFData Instruction where
     rnf (Debug    x  ) = rnf x
