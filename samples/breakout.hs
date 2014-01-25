@@ -70,10 +70,17 @@ updateCanvas :: World -> PaddlePos -> UI ()
 updateCanvas world p = do
     let c  = drawCanvas world
         sz = screenSize world
+        setFill fs = 
+           return c # set C.fillStyle fs
+
+    setFill white
     C.fillRect (0, 0) (fromIntegral . szWidth $ sz) (fromIntegral . szHeight $ sz) c
+
+    setFill fill
     C.fillRect (p-w2, y0) w h c
     toScreen world
-    where fill   = C.solidColor (C.RGB 255 10 10)
+
+    where fill   = C.createHorizontalLinearGradient (p-w2, y0) w  (C.RGB 255 10 10) (C.RGB 10 10 255)
           white  = C.solidColor (C.RGB 255 255 255)
           y0     = fromIntegral (szHeight . screenSize $ world) - 2*h
           w      = 2 * w2
