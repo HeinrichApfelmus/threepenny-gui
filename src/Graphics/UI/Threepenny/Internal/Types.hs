@@ -1,7 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Graphics.UI.Threepenny.Internal.Types where
@@ -23,8 +22,7 @@ import Network.URI
 import Data.Data
 import           Data.Aeson             as JSON
 import qualified Data.Aeson.Types       as JSON
-
-import GHC.Generics
+import qualified Data.Aeson.Generic
 
 import System.IO (stderr)
 import System.IO.Unsafe
@@ -199,9 +197,10 @@ data Instruction
   | RunJSFunction String
   | CallJSFunction String
   | Delete ElementId
-  deriving (Typeable,Data,Show,Generic)
+  deriving (Typeable,Data,Show)
 
-instance ToJSON Instruction
+instance ToJSON Instruction where
+    toJSON x = Data.Aeson.Generic.toJSON x 
 
 instance NFData Instruction where
     rnf (Debug    x  ) = rnf x
