@@ -210,32 +210,31 @@ $.fn.livechange = function(ms,trigger){
     }
     
     console_log("Event: %s",JSON.stringify(event));
-    for(var key in event){
-      switch(key){
+    switch(event.tag){
 
-      case "RunJSFunction": {
-        eval(event.RunJSFunction);
+    case "RunJSFunction": {
+        eval(event.contents);
         reply();
         break;
-      }
-      case "CallJSFunction": {
-        var result = eval(event.CallJSFunction);
+    }
+    case "CallJSFunction": {
+        var result = eval(event.contents);
         reply({FunctionResult : result});
         break;
-      }
-      case "Delete": {
-        deleteElid(event.Delete);
+    }
+    case "Delete": {
+        deleteElid(event.contents);
         reply();
         break;
-      }
-      case "Debug": {
+    }
+    case "Debug": {
         if(window.console)
-          console.log("Server debug: %o",event.Debug);
+          console.log("Server debug: %o",event.contents);
         reply();
         break;
-      }
-      case "GetValues": {
-        var ids = event.GetValues;
+    }
+    case "GetValues": {
+        var ids = event.contents;
         var len = ids.length;
         var values = [];
         for(var i = 0; i < len; i++) {
@@ -243,9 +242,9 @@ $.fn.livechange = function(ms,trigger){
         }
         reply({ Values: values });
         break;
-      }
-      case "Bind": {
-        var bind        = event.Bind;
+    }
+    case "Bind": {
+        var bind        = event.contents;
         var eventType   = bind[0];
         var elid        = bind[1];
         var el          = elidToElement(elid);
@@ -289,9 +288,8 @@ $.fn.livechange = function(ms,trigger){
         }
         reply();
         break;
-      }
-      default: reply();
-      }
+    }
+    default: reply();
     }
   }
 
