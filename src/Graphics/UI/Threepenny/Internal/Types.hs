@@ -199,13 +199,20 @@ data Instruction
   deriving (Typeable,Data,Show)
 
 instance ToJSON Instruction where
-    toJSON (Debug x)          = object ["Debug" .= x]
-    toJSON (SetToken x)       = object ["SetToken" .= x]
-    toJSON (Bind x y)         = object ["Bind" .= [toJSON x, toJSON y]]
-    toJSON (GetValues xs)     = object ["GetValues" .= xs]
-    toJSON (RunJSFunction  x) = object ["RunJSFunction" .= x]
-    toJSON (CallJSFunction x) = object ["CallJSFunction" .= x]
-    toJSON (Delete x)         = object ["Delete" .= x]
+    toJSON (Debug x)          = object [ "tag" .= ("Debug" :: ByteString)
+                                       , "contents" .= x]
+    toJSON (SetToken x)       = object [ "tag" .= ("SetToken" :: ByteString)
+                                       , "contents" .= x]
+    toJSON (Bind x y)         = object [ "tag" .= ("Bind" :: ByteString)
+                                       , "contents" .= [toJSON x, toJSON y]]
+    toJSON (GetValues xs)     = object [ "tag" .= ("GetValues" :: ByteString)
+                                       , "contents" .= xs]
+    toJSON (RunJSFunction  x) = object [ "tag" .= ("RunJSFunction" :: ByteString)
+                                       , "contents" .= x]
+    toJSON (CallJSFunction x) = object [ "tag" .= ("CallJSFunction" :: ByteString)
+                                       , "contents" .= x]
+    toJSON (Delete x)         = object [ "tag" .= ("Delete" :: ByteString)
+                                       , "contents" .= x]
 
 instance NFData Instruction where
     rnf (Debug    x  ) = rnf x
