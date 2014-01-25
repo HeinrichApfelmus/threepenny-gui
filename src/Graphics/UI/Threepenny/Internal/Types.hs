@@ -1,7 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Graphics.UI.Threepenny.Internal.Types where
@@ -23,8 +22,6 @@ import Network.URI
 import Data.Data
 import           Data.Aeson             as JSON
 import qualified Data.Aeson.Types       as JSON
-
-import GHC.Generics
 
 import System.IO (stderr)
 import System.IO.Unsafe
@@ -199,12 +196,16 @@ data Instruction
   | RunJSFunction String
   | CallJSFunction String
   | Delete ElementId
-  deriving (Typeable,Data,Show,Generic)
+  deriving (Typeable,Data,Show)
 
 instance ToJSON Instruction where
-  toJSON = JSON.genericToJSON JSON.defaultOptions{
-    JSON.sumEncoding = JSON.TaggedObject "tag" "contents" }
-
+    toJSON (Debug x)          = object ["Debug" .= x]
+    toJSON (SetToken x)       = object ["SetToken" .= x]
+    toJSON (Bind x y)         = object ["Bind" .= [toJSON x, toJSON y]]
+    toJSON (GetValues xs)     = object ["GetValues" .= xs]
+    toJSON (RunJSFunction  x) = object ["RunJSFunction" .= x]
+    toJSON (CallJSFunction x) = object ["CallJSFunction" .= x]
+    toJSON (Delete x)         = object ["Delete" .= x]
 
 instance NFData Instruction where
     rnf (Debug    x  ) = rnf x
