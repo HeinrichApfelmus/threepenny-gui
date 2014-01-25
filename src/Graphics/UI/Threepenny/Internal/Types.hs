@@ -22,7 +22,6 @@ import Network.URI
 import Data.Data
 import           Data.Aeson             as JSON
 import qualified Data.Aeson.Types       as JSON
-import qualified Data.Aeson.Generic
 
 import System.IO (stderr)
 import System.IO.Unsafe
@@ -200,7 +199,13 @@ data Instruction
   deriving (Typeable,Data,Show)
 
 instance ToJSON Instruction where
-    toJSON x = Data.Aeson.Generic.toJSON x 
+    toJSON (Debug x)          = object ["Debug" .= x]
+    toJSON (SetToken x)       = object ["SetToken" .= x]
+    toJSON (Bind x y)         = object ["Bind" .= [toJSON x, toJSON y]]
+    toJSON (GetValues xs)     = object ["GetValues" .= xs]
+    toJSON (RunJSFunction  x) = object ["RunJSFunction" .= x]
+    toJSON (CallJSFunction x) = object ["CallJSFunction" .= x]
+    toJSON (Delete x)         = object ["Delete" .= x]
 
 instance NFData Instruction where
     rnf (Debug    x  ) = rnf x
