@@ -1,4 +1,7 @@
 import Data.Time
+import Data.Time.Clock (UTCTime, getCurrentTime)
+import Data.Time.LocalTime (getCurrentTimeZone)
+
 import Control.Monad
 -- import Prelude hiding (catch,div,span)
 
@@ -9,6 +12,7 @@ import qualified Graphics.UI.Threepenny.Events as E
 import qualified Graphics.UI.Threepenny.Attributes as A
 import qualified Graphics.UI.Threepenny.Canvas as C
 import Graphics.UI.Threepenny.Core
+import qualified Graphics.UI.Threepenny.Timer as T
 
 {-----------------------------------------------------------------------------
     simple breakout clone using canvas
@@ -27,9 +31,56 @@ setup w = void $ do
     return w # set title "threepenny-breaktout..."
 
     world <- mkWorld (Size 800 600)
-    getBody w #+ [element (screenCanvas world)]
+    localTime <- string "---"
+    let intoDiv els = UI.div #+ map element els
+    getBody w #+ [intoDiv [localTime], intoDiv [screenCanvas world]]
 
     onEvent (mouseX world) (updateCanvas world)
+
+    (eFC, bFC) <- frameClock (Hz 60) 
+    onEvent eFC $ showFPS localTime 
+
+data Interval  = Ms Int
+data FrameRate = Hz Int
+
+fromFrameRate :: FrameRate -> Interval
+fromFrameRate (Hz fr) = Ms $ 1000 `div` fr
+
+fromInterval :: Interval -> FrameRate
+fromInterval (Ms ms)
+  | ms > 10   = Hz $ 1000 `div` ms
+  | otherwise = Hz 1
+
+frameClock :: FrameRate -> UI (Event Interval, Behavior UTCTime)
+frameClock fr = do
+    startTime <- liftIO getCurrentTime
+    let (Ms ms) = fromFrameRate fr
+        mapFrameTime :: () -> IO (UTCTime -> (Interval, UTCTime))
+        mapFrameTime () = do
+          cT <- getCurrentTime
+          return $ \lT -> (Ms . ceiling $ (diffUTCTime cT lT) * 1000, cT)
+    t <- T.timer
+    return t # set T.interval ms
+    T.start t
+    mapAccum startTime (unsafeMapIO mapFrameTime $ T.tick t)
+    
+showTime :: Element -> UTCTime -> UI ()
+showTime intoEl time = do
+    tZone       <- liftIO getCurrentTimeZone 
+    let timeVal = time
+        locTime = utcToLocalTime tZone timeVal
+        tod     = localTimeOfDay locTime
+        (h,m,s) = (todHour tod, todMin tod, todSec tod)
+        fT      = show h ++ ":" ++ show m ++ ":" ++ show (floor s)
+    element intoEl # set UI.text fT
+    return ()
+
+showFPS :: Element -> Interval -> UI ()
+showFPS intoEl interv = do
+    let (Hz fps) = fromInterval interv
+        fFps     = "FPS: " ++ show fps
+    element intoEl # set UI.text fFps
+    return ()
 
 {-----------------------------------------------------------------------------
     Model
