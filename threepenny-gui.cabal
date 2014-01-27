@@ -238,3 +238,4 @@ Executable threepenny-examples-breakout
     main-is:           breakout.hs
     other-modules:     Paths_threepenny_gui, Paths
     hs-source-dirs:    samples
+    ghc-options:       -threaded

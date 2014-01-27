@@ -35,13 +35,43 @@ setup w = void $ do
     let intoDiv els = UI.div #+ map element els
     getBody w #+ [intoDiv [localTime], intoDiv [screenCanvas world]]
 
-    onEvent (mouseX world) (updateCanvas world)
-
     (eFC, bFC) <- frameClock (Hz 60) 
     onEvent eFC $ showFPS localTime 
 
+    let movePaddle  = (\x -> \(_, ball) -> (x, ball)) <$> mouseX world
+        moveBall    = (\dt -> \(x, ball) -> (x, animateBall world dt ball)) <$> eFC
+        changeSzene = unionWith (.) movePaddle moveBall
+        startBall   = Ball (Pos 40 40) (Vel 400 150)
+    bSzene <- accumB (0, startBall) changeSzene
+
+    onChanges bSzene (updateCanvas world)
+
+
+{-----------------------------------------------------------------------------
+    Animation engine
+------------------------------------------------------------------------------}
+
 data Interval  = Ms Int
 data FrameRate = Hz Int
+
+type PosX      = Double
+type PosY      = Double
+data Position  = Pos { posX :: PosX, posY :: PosY }
+data Velocity  = Vel { velX :: Double, velY :: Double }
+
+data Moving    = Mov { movPos :: Position, movV :: Velocity }
+
+animate :: MonadIO m => state -> (state -> Interval -> state) -> Event Interval -> m (Behavior state)
+animate start anim frames = 
+  accumB start (flip anim <$> frames)
+
+animateMoving :: MonadIO m => Position -> Velocity -> (Velocity -> Position -> Velocity) -> Event Interval -> m (Behavior Moving)
+animateMoving startPos startV changeV frames =
+  animate (Mov startPos startV) animMove frames
+  where animMove (Mov (Pos px py) v@(Vel vx vy)) i@(Ms dt) = Mov p' v'
+          where p'  = Pos (px + dt' * vx) (py + dt' * vy)
+                v'  = changeV v p'
+                dt' = fromIntegral dt
 
 fromFrameRate :: FrameRate -> Interval
 fromFrameRate (Hz fr) = Ms $ 1000 `div` fr
@@ -85,16 +115,10 @@ showFPS intoEl interv = do
 {-----------------------------------------------------------------------------
     Model
 ------------------------------------------------------------------------------}
-type PosX      = Double
-type PosY      = Double
-type DPosX     = Double
-type DPosY     = Double
-type Speed     = Double
 
 type PaddlePos = PosX
-data Ball      = Ball { ballPos   :: (PosX, PosY)
-                      , ballVel   :: (DPosX, DPosY)
-                      , ballSpeed :: Speed 
+data Ball      = Ball { ballPos   :: Position
+                      , ballVel   :: Velocity
                       }
 
 data Size  = Size  { szWidth :: Int
@@ -117,8 +141,18 @@ mkWorld screenSize = do
     let sw = C.drawImage dc (0,0) sc
     return $ World screenSize mouseX dc sc sw
 
-updateCanvas :: World -> PaddlePos -> UI ()
-updateCanvas world p = do
+animateBall :: World -> Interval -> Ball -> Ball
+animateBall w (Ms ms) (Ball (Pos px py) v@(Vel vx vy)) = Ball p'' v'
+  where p'        = Pos (px + dt * vx) (py + dt * vy)
+        (p'', v') = bounce p'
+        dt        = if ms /= 0 then fromIntegral ms / 1000 else 0
+        bounce (Pos x y) = (Pos px' py', Vel vx' vy')
+            where (px', vx') = if x < 0 then (0, negate vx) else if x > width then (width, negate vx) else (x , vx)
+                  (py', vy') = if y < 0 then (0, negate vy) else if y > height then (height, negate vy) else (y , vy)
+        (width, height) = ((fromIntegral . szWidth . screenSize $ w), (fromIntegral . szHeight . screenSize $ w))
+
+updateCanvas :: World -> (PaddlePos, Ball) -> UI ()
+updateCanvas world (p, ball) = do
     let c  = drawCanvas world
         sz = screenSize world
         setFill fs = 
@@ -129,10 +163,15 @@ updateCanvas world p = do
 
     setFill fill
     C.fillRect (p-w2, y0) w h c
+
+    setFill red
+    C.fillRect (posX (ballPos ball) - 4, posY (ballPos ball) - 4) 8 8 c
+
     toScreen world
 
     where fill   = C.createHorizontalLinearGradient (p-w2, y0) w  (C.RGB 255 10 10) (C.RGB 10 10 255)
           white  = C.solidColor (C.RGB 255 255 255)
+          red    = C.solidColor (C.RGB 255 0 0)
           y0     = fromIntegral (szHeight . screenSize $ world) - 2*h
           w      = 2 * w2
           w2     = 25
