@@ -170,7 +170,7 @@ updateCanvas world (p, ball) = do
     toScreen world
 
     where fill   = C.createHorizontalLinearGradient (p-w2, y0) w  (C.RGB 255 10 10) (C.RGB 10 10 255)
-          white  = C.solidColor (C.RGB 255 255 255)
+          white  = C.solidColor (C.RGBA 255 255 255 0.55)
           red    = C.solidColor (C.RGB 255 0 0)
           y0     = fromIntegral (szHeight . screenSize $ world) - 2*h
           w      = 2 * w2

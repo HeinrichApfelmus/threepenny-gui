@@ -5,7 +5,7 @@ module Graphics.UI.Threepenny.Canvas (
     -- * Documentation
     Canvas
     , Vector, Point
-    , RGB(..), ColorStop, Gradient, FillStyle
+    , Color(..), ColorStop, Gradient, FillStyle
     , drawImage, clearCanvas
     , solidColor, createLinearGradient, createHorizontalLinearGradient, createVerticalLinearGradient
     , fillRect, fillStyle, strokeStyle, lineWidth, textFont
@@ -28,9 +28,11 @@ type Canvas = Element
 
 type Vector = Point
 type Point  = (Double, Double)
-data RGB    = RGB  {red :: Int, green :: Int,  blue :: Int } deriving (Eq, Show)
+data Color  = RGB  { red :: Int, green :: Int, blue :: Int }
+            | RGBA { red :: Int, green :: Int, blue :: Int, alpha :: Double }
+            deriving (Eq, Show)
 
-type ColorStop = (Double,  RGB)
+type ColorStop = (Double,  Color)
 
 data Gradient  
     -- | defines a linear gradient 
@@ -41,7 +43,7 @@ data Gradient
     deriving (Show, Eq)
 
 data FillStyle 
-    = SolidColor RGB
+    = SolidColor Color
     | Gradient Gradient
     deriving (Show, Eq) 
 
@@ -60,7 +62,7 @@ drawImage image (x,y) canvas =
 ------------------------------------------------------------------------------}
 
 -- | creates a solid-color fillstyle
-solidColor :: RGB -> FillStyle
+solidColor :: Color -> FillStyle
 solidColor rgb = SolidColor rgb
 
 -- | creates a linear gradient fill style
@@ -74,16 +76,16 @@ createLinearGradient (x0, y0) w h sts = Gradient $ LinearGradient (x0,y0) w h st
 -- | creates a simple horizontal gradient
 createHorizontalLinearGradient:: Point  -- ^ The upper-left coordinate of the gradient
                               -> Double -- ^ The width of the gradient
-                              -> RGB    -- ^ The starting color of the gradient
-                              -> RGB    -- ^ The ending color of the gradient
+                              -> Color  -- ^ The starting color of the gradient
+                              -> Color  -- ^ The ending color of the gradient
                               -> FillStyle
 createHorizontalLinearGradient pt w c0 c1 = createLinearGradient pt w 0 [(0, c0), (1, c1)]
 
 -- | creates a simple vertical gradient
 createVerticalLinearGradient:: Point  -- ^ The upper-left coordinate of the gradient
                             -> Double -- ^ The height of the gradient
-                            -> RGB    -- ^ The starting color of the gradient
-                            -> RGB    -- ^ The ending color of the gradient
+                            -> Color  -- ^ The starting color of the gradient
+                            -> Color  -- ^ The ending color of the gradient
                             -> FillStyle
 createVerticalLinearGradient pt h c0 c1 = createLinearGradient pt 0 h [(0, c0), (1, c1)]
 
@@ -245,8 +247,11 @@ strokeText text (x,y) canvas =
     helper functions
 ------------------------------------------------------------------------------}
 
-rgbString :: RGB -> String
-rgbString (RGB r g b) = "#" ++ sh r ++ sh g ++ sh b
+rgbString :: Color -> String
+rgbString color =
+  case color of
+    (RGB r g b) -> "#" ++ sh r ++ sh g ++ sh b
+    (RGBA r g b a) -> "rgba(" ++ show r ++ "," ++ show g ++ "," ++ show b ++ "," ++ show a ++ ")"
     where sh i  = pad . map toUpper $ showHex i ""
           pad s
             | length s  == 0 = "00"
