@@ -35,7 +35,7 @@ setup w = void $ do
     let intoDiv els = UI.div #+ map element els
     getBody w #+ [intoDiv [localTime], intoDiv [screenCanvas world]]
 
-    (eFC, bFC) <- frameClock (Hz 60) 
+    (eFC, bFC) <- frameClock (Hz 120) 
     onEvent eFC $ showFPS localTime 
 
     let movePaddle  = (\x -> \(_, ball) -> (x, ball)) <$> mouseX world
@@ -78,7 +78,7 @@ fromFrameRate (Hz fr) = Ms $ 1000 `div` fr
 
 fromInterval :: Interval -> FrameRate
 fromInterval (Ms ms)
-  | ms > 10   = Hz $ 1000 `div` ms
+  | ms >= 1   = Hz $ 1000 `div` ms
   | otherwise = Hz 1
 
 frameClock :: FrameRate -> UI (Event Interval, Behavior UTCTime)
