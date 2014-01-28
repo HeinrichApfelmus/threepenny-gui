@@ -38,10 +38,16 @@ setup w = void $ do
     (eFC, bFC) <- frameClock (Hz 120) 
     onEvent eFC $ showFPS localTime 
 
-    let movePaddle  = (\x -> \(GS _ ball) -> (GS x ball)) <$> mouseX world
-        moveBall    = (\dt -> \gs -> (animateBall world dt gs)) <$> eFC
+    let updatePaddlePos _ gs@(GS _ _ Lost)    = gs
+        updatePaddlePos x (GS _ ball Running) = (GS x ball Running)
+        updateBallPos _ gs@(GS _ _ Lost)      = gs
+        updateBallPos t gs@(GS _ _ Running)   = animateBall world t gs
+
+    let movePaddle  = updatePaddlePos <$> mouseX world
+        moveBall    = updateBallPos <$> eFC
         changeSzene = unionWith (.) movePaddle moveBall
-        start       = GS 0 (Ball (Pos 40 40) (Vel 400 150))
+        start       = GS 0 (Ball (Pos 40 40) (Vel 300 120)) Running
+
     bSzene <- accumB start changeSzene
 
     onChanges bSzene (updateCanvas world)
@@ -121,8 +127,12 @@ data Ball      = Ball { ballPos   :: Position
                       , ballVel   :: Velocity
                       }
 
+data GameStatus = Running | Lost
+  deriving (Eq)
+
 data GameState = GS { paddleX :: PosX
                     , ball    :: Ball 
+                    , status  :: GameStatus
                     }
 
 data Size  = Size  { szWidth :: Int
@@ -146,8 +156,9 @@ mkWorld screenSize = do
     return $ World screenSize mouseX dc sc sw
 
 animateBall :: World -> Interval -> GameState -> GameState
-animateBall w i (GS pdlX ball) = GS pdlX ball'
+animateBall w i (GS pdlX ball Running) = GS pdlX ball' (checkStatus w ball')
   where ball' = reflectAtPaddle w pdlX . reflectAtWalls w . moveBall i $ ball
+animateBall _ _ gs@(GS _ _ Lost)       = gs
 
 moveBall :: Interval -> Ball -> Ball
 moveBall (Ms ms) (Ball (Pos px py) v@(Vel vx vy)) = Ball (Pos (px + dt * vx) (py + dt * vy)) v
@@ -164,14 +175,18 @@ reflectAtWalls w (Ball (Pos px py) (Vel vx vy)) = Ball (Pos px' py') (Vel vx' vy
         (py', vy') = if py < 0 then (0, negate vy) else if py > height then (height, negate vy) else (py , vy)
         (width, height) = ((fromIntegral . szWidth . screenSize $ w), (fromIntegral . szHeight . screenSize $ w))
 
+checkStatus :: World -> Ball -> GameStatus
+checkStatus world (Ball (Pos px py) _) =
+  if py > paddleBottom world then Lost else Running
+
 updateCanvas :: World -> GameState -> UI ()
-updateCanvas world (GS p ball) = do
+updateCanvas world (GS p ball status) = do
     let c  = drawCanvas world
         sz = screenSize world
         setFill fs = 
            return c # set C.fillStyle fs
 
-    setFill white
+    setFill (if status == Lost then lost else white)
     C.fillRect (0, 0) (fromIntegral . szWidth $ sz) (fromIntegral . szHeight $ sz) c
 
     setFill fill
@@ -185,6 +200,7 @@ updateCanvas world (GS p ball) = do
     where fill   = C.createHorizontalLinearGradient (x0, y0) w  (C.RGB 255 10 10) (C.RGB 10 10 255)
           white  = C.solidColor (C.RGBA 255 255 255 0.55)
           red    = C.solidColor (C.RGB 255 0 0)
+          lost   = C.solidColor (C.RGB 250 50 50)
           y0     = paddleTop world
           x0     = paddleLeft p
           w      = paddleWidth
