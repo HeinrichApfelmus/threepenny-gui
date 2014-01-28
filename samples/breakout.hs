@@ -37,18 +37,18 @@ setup w = void $ do
     let intoDiv els = UI.div #+ map element els
     getBody w #+ [intoDiv [localTime], intoDiv [screenCanvas world]]
 
-    (eFC, bFC) <- frameClock (Hz 120) 
+    (eFC, bFC) <- frameClock (Hz 60) 
     onEvent eFC $ showFPS localTime 
 
-    let updatePaddlePos _ gs@(GS _ _ _ Lost)         = gs
-        updatePaddlePos x (GS _ ball bricks Running) = (GS x ball bricks Running)
-        updateBallPos _ gs@(GS _ _ _ Lost)           = gs
-        updateBallPos t gs@(GS _ _ _ Running)        = animateBall world t gs
+    let updatePaddlePos _ gs@(GS _ _ _ _ Lost)          = gs
+        updatePaddlePos x (GS x' _ ball bricks Running) = (GS x (signum (x-x')) ball bricks Running)
+        updateBallPos _ gs@(GS _ _ _ _ Lost)            = gs
+        updateBallPos t gs@(GS _ _ _ _ Running)         = animateBall world t gs
 
     let movePaddle  = updatePaddlePos <$> mouseX world
         moveBall    = updateBallPos <$> eFC
         changeSzene = unionWith (.) movePaddle moveBall
-        start       = GS 0 (Ball (Pos 40 300) (Vel 300 120)) (initBricks world) Running
+        start       = GS 0 0 (Ball (Pos 40 300) (normalize $ Vel 300 120)) (initBricks world) Running
 
     bSzene <- accumB start changeSzene
 
@@ -127,6 +127,7 @@ data GameStatus = Running | Lost | Won
   deriving (Eq)
 
 data GameState = GS { paddleX :: PosX
+                    , paddleV :: Double
                     , ball    :: Ball 
                     , bricks  :: [Brick]
                     , status  :: GameStatus
@@ -154,10 +155,10 @@ initBricks world = [ brickAt x y | x <- xs, y <- ys]
 
 
 animateBall :: World -> Interval -> GameState -> GameState
-animateBall w i (GS pdlX ball bricks Running) = checkWon . hitBricks $ GS pdlX ball' bricks (checkStatus w ball')
-  where ball' = reflectAtPaddle w pdlX . reflectAtWalls w . moveBall i $ ball
-animateBall _ _ gs@(GS _ _ _ Lost)       = gs
-animateBall _ _ gs@(GS _ _ _ Won)        = gs
+animateBall w i (GS pdlX pdlV ball bricks Running) = checkWon . hitBricks $ GS pdlX pdlV ball' bricks (checkStatus w ball')
+  where ball' = reflectAtPaddle w pdlX pdlV . reflectAtWalls w . moveBall i $ ball
+animateBall _ _ gs@(GS _ _ _ _ Lost)       = gs
+animateBall _ _ gs@(GS _ _ _ _ Won)        = gs
 
 moveBall :: Interval -> Ball -> Ball
 moveBall (Ms ms) (Ball (Pos px py) v@(Vel vx vy)) = Ball (Pos (px + dt * vx) (py + dt * vy)) v
@@ -169,10 +170,10 @@ hitBricks gs = gs { bricks = notHit, ball = ball' }
         ball'    = if null hits then (ball gs) else (snd . head $ hits)
         hits     = catMaybes . map (collideWithBrick $ ball gs) $ (bricks gs)
 
-reflectAtPaddle :: World -> PosX -> Ball -> Ball
-reflectAtPaddle w x b@(Ball pos vel@(Vel vx vy)) = 
+reflectAtPaddle :: World -> PosX -> Double -> Ball -> Ball
+reflectAtPaddle w x pdlV b@(Ball pos vel@(Vel vx vy)) = 
   if posInPaddle w x pos then (Ball pos' vel') else b
-  where vel' = Vel vx (negate vy)
+  where vel' = normalize $ Vel (vx + pdlV * 30) (negate vy)
         pos' = Pos (posX pos) (paddleTop w)
 
 reflectAtWalls :: World -> Ball -> Ball
@@ -189,7 +190,7 @@ checkStatus world (Ball (Pos px py) _) =
   if py > paddleBottom world then Lost else Running
 
 paddleWidth :: Double
-paddleWidth = 50
+paddleWidth = 80
 
 paddleHeight :: Double
 paddleHeight = 10
@@ -244,6 +245,15 @@ posInRect :: Rect -> Position -> Bool
 posInRect ((Pos left top), width, height) (Pos px py) = 
   (left <= px && px <= left+width) && (top <= py && py <= top+height)
 
+ballSpeed :: Double
+ballSpeed = 350
+
+normalize :: Velocity -> Velocity
+normalize (Vel vx vy) = Vel (ballSpeed * nx) (ballSpeed * ny)
+  where nx = vx / n
+        ny = vy / n
+        n  = sqrt (vx*vx + vy*vy)
+
 {-----------------------------------------------------------------------------
     View
 ------------------------------------------------------------------------------}
@@ -259,7 +269,7 @@ mkWorld screenSize = do
     return $ World screenSize mouseX dc sc sw
 
 updateCanvas :: World -> GameState -> UI ()
-updateCanvas world (GS p ball bricks status) = do
+updateCanvas world (GS p _ ball bricks status) = do
     let c  = drawCanvas world
         sz = screenSize world
         setFill fs = 
