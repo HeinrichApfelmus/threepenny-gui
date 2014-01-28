@@ -38,15 +38,15 @@ setup w = void $ do
     (eFC, bFC) <- frameClock (Hz 120) 
     onEvent eFC $ showFPS localTime 
 
-    let updatePaddlePos _ gs@(GS _ _ Lost)    = gs
-        updatePaddlePos x (GS _ ball Running) = (GS x ball Running)
-        updateBallPos _ gs@(GS _ _ Lost)      = gs
-        updateBallPos t gs@(GS _ _ Running)   = animateBall world t gs
+    let updatePaddlePos _ gs@(GS _ _ _ Lost)         = gs
+        updatePaddlePos x (GS _ ball bricks Running) = (GS x ball bricks Running)
+        updateBallPos _ gs@(GS _ _ _ Lost)           = gs
+        updateBallPos t gs@(GS _ _ _ Running)        = animateBall world t gs
 
     let movePaddle  = updatePaddlePos <$> mouseX world
         moveBall    = updateBallPos <$> eFC
         changeSzene = unionWith (.) movePaddle moveBall
-        start       = GS 0 (Ball (Pos 40 40) (Vel 300 120)) Running
+        start       = GS 0 (Ball (Pos 40 300) (Vel 300 120)) (initBricks world) Running
 
     bSzene <- accumB start changeSzene
 
@@ -65,19 +65,9 @@ type PosY      = Double
 data Position  = Pos { posX :: PosX, posY :: PosY }
 data Velocity  = Vel { velX :: Double, velY :: Double }
 
-data Moving    = Mov { movPos :: Position, movV :: Velocity }
-
 animate :: MonadIO m => state -> (state -> Interval -> state) -> Event Interval -> m (Behavior state)
 animate start anim frames = 
   accumB start (flip anim <$> frames)
-
-animateMoving :: MonadIO m => Position -> Velocity -> (Velocity -> Position -> Velocity) -> Event Interval -> m (Behavior Moving)
-animateMoving startPos startV changeV frames =
-  animate (Mov startPos startV) animMove frames
-  where animMove (Mov (Pos px py) v@(Vel vx vy)) i@(Ms dt) = Mov p' v'
-          where p'  = Pos (px + dt' * vx) (py + dt' * vy)
-                v'  = changeV v p'
-                dt' = fromIntegral dt
 
 fromFrameRate :: FrameRate -> Interval
 fromFrameRate (Hz fr) = Ms $ 1000 `div` fr
@@ -123,15 +113,20 @@ showFPS intoEl interv = do
 ------------------------------------------------------------------------------}
 
 type PaddlePos = PosX
+type Rect      = (Position, Double, Double)
+
 data Ball      = Ball { ballPos   :: Position
                       , ballVel   :: Velocity
                       }
+
+data Brick     = Brick { brickPos :: Position }
 
 data GameStatus = Running | Lost
   deriving (Eq)
 
 data GameState = GS { paddleX :: PosX
                     , ball    :: Ball 
+                    , bricks  :: [Brick]
                     , status  :: GameStatus
                     }
 
@@ -145,20 +140,21 @@ data World = World { screenSize   :: Size
                    , toScreen     :: UI ()
                    }
 
-mkWorld :: Size -> UI World
-mkWorld screenSize = do
-    dc <- mkCanvas screenSize
-    sc <- mkCanvas screenSize
+initBricks :: World -> [Brick]
+initBricks world = [ brickAt x y | x <- xs, y <- ys]
+  where brickAt px py = createBrickAt (Pos px py)
+        xs            = [ 100 + fromIntegral i * (brickWidth + sep) | i <- [0 .. bricksInRow-1] ]
+        ys            = [ 100 + fromIntegral i * (brickHeight + sep) | i <- [0..rows-1] ]
+        bricksInRow   = floor $ (screenWidth- 190) / (brickWidth + sep)
+        screenWidth   = fromIntegral . szWidth . screenSize $ world 
+        rows          = 4
+        sep           = 10
 
-    -- paddlePos <- stepper (szWidth sz `div` 2) $ (fst <$> Ev.mousemove canvas)
-    let mouseX = fromIntegral . fst <$> E.mousemove sc
-    let sw = C.drawImage dc (0,0) sc
-    return $ World screenSize mouseX dc sc sw
 
 animateBall :: World -> Interval -> GameState -> GameState
-animateBall w i (GS pdlX ball Running) = GS pdlX ball' (checkStatus w ball')
+animateBall w i (GS pdlX ball bricks Running) = GS pdlX ball' bricks (checkStatus w ball')
   where ball' = reflectAtPaddle w pdlX . reflectAtWalls w . moveBall i $ ball
-animateBall _ _ gs@(GS _ _ Lost)       = gs
+animateBall _ _ gs@(GS _ _ _ Lost)       = gs
 
 moveBall :: Interval -> Ball -> Ball
 moveBall (Ms ms) (Ball (Pos px py) v@(Vel vx vy)) = Ball (Pos (px + dt * vx) (py + dt * vy)) v
@@ -179,33 +175,6 @@ checkStatus :: World -> Ball -> GameStatus
 checkStatus world (Ball (Pos px py) _) =
   if py > paddleBottom world then Lost else Running
 
-updateCanvas :: World -> GameState -> UI ()
-updateCanvas world (GS p ball status) = do
-    let c  = drawCanvas world
-        sz = screenSize world
-        setFill fs = 
-           return c # set C.fillStyle fs
-
-    setFill (if status == Lost then lost else white)
-    C.fillRect (0, 0) (fromIntegral . szWidth $ sz) (fromIntegral . szHeight $ sz) c
-
-    setFill fill
-    C.fillRect (x0, y0) w h c
-
-    setFill red
-    C.fillRect (posX (ballPos ball) - 4, posY (ballPos ball) - 4) 8 8 c
-
-    toScreen world
-
-    where fill   = C.createHorizontalLinearGradient (x0, y0) w  (C.RGB 255 10 10) (C.RGB 10 10 255)
-          white  = C.solidColor (C.RGBA 255 255 255 0.55)
-          red    = C.solidColor (C.RGB 255 0 0)
-          lost   = C.solidColor (C.RGB 250 50 50)
-          y0     = paddleTop world
-          x0     = paddleLeft p
-          w      = paddleWidth
-          h      = paddleHeight
-
 paddleWidth :: Double
 paddleWidth = 50
 
@@ -224,17 +193,77 @@ paddleLeft x = x - (paddleWidth / 2)
 paddleRight :: PosX -> Double
 paddleRight x = paddleLeft x + paddleWidth
 
-posInPaddle :: World -> PosX ->  Position -> Bool
-posInPaddle world x (Pos px py) = (left <= px && px <= right) && (top <= py && py <= bot)
-  where left  = paddleLeft x
-        right = paddleRight x
-        top   = paddleTop world
-        bot   = paddleBottom world
+paddleRect :: World -> PosX -> Rect
+paddleRect w x = (Pos (paddleLeft x) (paddleTop w), paddleWidth, paddleHeight)
 
+posInPaddle :: World -> PosX ->  Position -> Bool
+posInPaddle world x = posInRect (paddleRect world x)
+
+createBrickAt :: Position -> Brick
+createBrickAt pos = Brick pos
+
+brickWidth :: Double
+brickWidth = 30
+
+brickHeight :: Double
+brickHeight = 10
+
+brickRect :: Brick -> Rect
+brickRect b = (brickPos b, brickWidth, brickHeight)
+
+hitBrick :: Brick -> Position -> Bool
+hitBrick b = posInRect (brickRect b)
+
+posInRect :: Rect -> Position -> Bool
+posInRect ((Pos left top), width, height) (Pos px py) = 
+  (left <= px && px <= left+width) && (top <= py && py <= top+height)
 
 {-----------------------------------------------------------------------------
     View
 ------------------------------------------------------------------------------}
+
+mkWorld :: Size -> UI World
+mkWorld screenSize = do
+    dc <- mkCanvas screenSize
+    sc <- mkCanvas screenSize
+
+    -- paddlePos <- stepper (szWidth sz `div` 2) $ (fst <$> Ev.mousemove canvas)
+    let mouseX = fromIntegral . fst <$> E.mousemove sc
+    let sw = C.drawImage dc (0,0) sc
+    return $ World screenSize mouseX dc sc sw
+
+updateCanvas :: World -> GameState -> UI ()
+updateCanvas world (GS p ball bricks status) = do
+    let c  = drawCanvas world
+        sz = screenSize world
+        setFill fs = 
+          return c # set C.fillStyle fs
+        drawBrick (Brick (Pos x y)) = do
+          setFill brick
+          C.fillRect (x, y) brickWidth brickHeight c           
+
+    setFill (if status == Lost then lost else white)
+    C.fillRect (0, 0) (fromIntegral . szWidth $ sz) (fromIntegral . szHeight $ sz) c
+
+    forM_ bricks drawBrick
+
+    setFill fill
+    C.fillRect (x0, y0) w h c
+
+    setFill red
+    C.fillRect (posX (ballPos ball) - 4, posY (ballPos ball) - 4) 8 8 c
+
+    toScreen world
+
+    where brick  = C.solidColor (C.RGB 0 0 255)
+          fill   = C.createHorizontalLinearGradient (x0, y0) w  (C.RGB 255 10 10) (C.RGB 10 10 255)
+          white  = C.solidColor (C.RGBA 255 255 255 0.55)
+          red    = C.solidColor (C.RGB 255 0 0)
+          lost   = C.solidColor (C.RGB 250 50 50)
+          y0     = paddleTop world
+          x0     = paddleLeft p
+          w      = paddleWidth
+          h      = paddleHeight
 
 -- | Create a canvas
 mkCanvas :: Size -> UI C.Canvas
