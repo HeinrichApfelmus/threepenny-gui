@@ -8,7 +8,7 @@ module Graphics.UI.Threepenny.Canvas (
     , Color(..), ColorStop, Gradient, FillStyle
     , drawImage, clearCanvas
     , solidColor, createLinearGradient, createHorizontalLinearGradient, createVerticalLinearGradient
-    , fillRect, fillStyle, strokeStyle, lineWidth, textFont
+    , fillRect, fillRects, fillStyle, strokeStyle, lineWidth, textFont
     , TextAlign(..), textAlign
     , beginPath, moveTo, lineTo, closePath, arc, arc'
     , fill, stroke, fillText, strokeText
@@ -113,6 +113,17 @@ fillRect
     -> Canvas -> UI ()
 fillRect (x,y) w h canvas =
   runFunction $ ffi "%1.getContext('2d').fillRect(%2, %3, %4, %5)" canvas x y w h
+
+-- | Draws multiple filled rectangles
+-- all at once - should be refactored in a seperate DSL IMHO
+fillRects
+    :: [(Point, Double, Double)]
+    -> Canvas -> UI ()
+fillRects rs canvas =
+  runFunction $ ffi command canvas
+    where command           = "var ctx = %1.getContext('2d');" ++ (concat . map cmd $ rs) 
+          cmd ((x,y), w, h) = "ctx.fillRect(" ++ show x ++ "," ++ show y ++ "," ++ show w ++ "," ++ show h ++ ");"
+
 
 -- | The Fillstyle to use inside shapes.
 -- write-only as I could not find how to consistently read the fillstyle

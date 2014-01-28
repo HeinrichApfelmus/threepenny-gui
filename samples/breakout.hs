@@ -238,14 +238,13 @@ updateCanvas world (GS p ball bricks status) = do
         sz = screenSize world
         setFill fs = 
           return c # set C.fillStyle fs
-        drawBrick (Brick (Pos x y)) = do
-          setFill brick
-          C.fillRect (x, y) brickWidth brickHeight c           
+        getPos (Brick (Pos x y)) = ((x,y), brickWidth, brickHeight)
 
     setFill (if status == Lost then lost else white)
     C.fillRect (0, 0) (fromIntegral . szWidth $ sz) (fromIntegral . szHeight $ sz) c
 
-    forM_ bricks drawBrick
+    setFill brick
+    C.fillRects (map getPos bricks) c
 
     setFill fill
     C.fillRect (x0, y0) w h c
