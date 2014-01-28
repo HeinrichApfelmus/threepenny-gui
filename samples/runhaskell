@@ -1,2 +1,2 @@
 #!/bin/sh
-runhaskell -i../src -DREBUG "$@"
+runhaskell -i../src "$@"
