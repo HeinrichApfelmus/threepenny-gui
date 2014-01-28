@@ -123,7 +123,7 @@ data Ball      = Ball { ballPos   :: Position
 
 data Brick     = Brick { brickPos :: Position } deriving (Eq)
 
-data GameStatus = Running | Lost
+data GameStatus = Running | Lost | Won
   deriving (Eq)
 
 data GameState = GS { paddleX :: PosX
@@ -154,9 +154,10 @@ initBricks world = [ brickAt x y | x <- xs, y <- ys]
 
 
 animateBall :: World -> Interval -> GameState -> GameState
-animateBall w i (GS pdlX ball bricks Running) = hitBricks $ GS pdlX ball' bricks (checkStatus w ball')
+animateBall w i (GS pdlX ball bricks Running) = checkWon . hitBricks $ GS pdlX ball' bricks (checkStatus w ball')
   where ball' = reflectAtPaddle w pdlX . reflectAtWalls w . moveBall i $ ball
 animateBall _ _ gs@(GS _ _ _ Lost)       = gs
+animateBall _ _ gs@(GS _ _ _ Won)        = gs
 
 moveBall :: Interval -> Ball -> Ball
 moveBall (Ms ms) (Ball (Pos px py) v@(Vel vx vy)) = Ball (Pos (px + dt * vx) (py + dt * vy)) v
@@ -179,6 +180,9 @@ reflectAtWalls w (Ball (Pos px py) (Vel vx vy)) = Ball (Pos px' py') (Vel vx' vy
   where (px', vx') = if px < 0 then (0, negate vx) else if px > width then (width, negate vx) else (px , vx)
         (py', vy') = if py < 0 then (0, negate vy) else if py > height then (height, negate vy) else (py , vy)
         (width, height) = ((fromIntegral . szWidth . screenSize $ w), (fromIntegral . szHeight . screenSize $ w))
+
+checkWon :: GameState -> GameState
+checkWon gs = if null (bricks gs) then gs { status = Won } else gs
 
 checkStatus :: World -> Ball -> GameStatus
 checkStatus world (Ball (Pos px py) _) =
@@ -262,7 +266,10 @@ updateCanvas world (GS p ball bricks status) = do
           return c # set C.fillStyle fs
         getPos (Brick (Pos x y)) = ((x,y), brickWidth, brickHeight)
 
-    setFill (if status == Lost then lost else white)
+    setFill (case status of 
+              Lost    -> lost
+              Won     -> won
+              Running -> white)
     C.fillRect (0, 0) (fromIntegral . szWidth $ sz) (fromIntegral . szHeight $ sz) c
 
     setFill brick
@@ -281,6 +288,7 @@ updateCanvas world (GS p ball bricks status) = do
           white  = C.solidColor (C.RGBA 255 255 255 0.55)
           red    = C.solidColor (C.RGB 255 0 0)
           lost   = C.solidColor (C.RGB 250 50 50)
+          won    = C.solidColor (C.RGB 50 250 50)
           y0     = paddleTop world
           x0     = paddleLeft p
           w      = paddleWidth
