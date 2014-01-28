@@ -1,6 +1,8 @@
 import Data.Time
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Data.Time.LocalTime (getCurrentTimeZone)
+import Data.Maybe (catMaybes)
+import Data.List ((\\))
 
 import Control.Monad
 -- import Prelude hiding (catch,div,span)
@@ -62,8 +64,8 @@ data FrameRate = Hz Int
 
 type PosX      = Double
 type PosY      = Double
-data Position  = Pos { posX :: PosX, posY :: PosY }
-data Velocity  = Vel { velX :: Double, velY :: Double }
+data Position  = Pos { posX :: PosX, posY :: PosY } deriving (Eq, Show)
+data Velocity  = Vel { velX :: Double, velY :: Double } deriving (Eq, Show)
 
 animate :: MonadIO m => state -> (state -> Interval -> state) -> Event Interval -> m (Behavior state)
 animate start anim frames = 
@@ -119,7 +121,7 @@ data Ball      = Ball { ballPos   :: Position
                       , ballVel   :: Velocity
                       }
 
-data Brick     = Brick { brickPos :: Position }
+data Brick     = Brick { brickPos :: Position } deriving (Eq)
 
 data GameStatus = Running | Lost
   deriving (Eq)
@@ -152,13 +154,19 @@ initBricks world = [ brickAt x y | x <- xs, y <- ys]
 
 
 animateBall :: World -> Interval -> GameState -> GameState
-animateBall w i (GS pdlX ball bricks Running) = GS pdlX ball' bricks (checkStatus w ball')
+animateBall w i (GS pdlX ball bricks Running) = hitBricks $ GS pdlX ball' bricks (checkStatus w ball')
   where ball' = reflectAtPaddle w pdlX . reflectAtWalls w . moveBall i $ ball
 animateBall _ _ gs@(GS _ _ _ Lost)       = gs
 
 moveBall :: Interval -> Ball -> Ball
 moveBall (Ms ms) (Ball (Pos px py) v@(Vel vx vy)) = Ball (Pos (px + dt * vx) (py + dt * vy)) v
   where dt = if ms /= 0 then fromIntegral ms / 1000 else 0
+
+hitBricks :: GameState -> GameState
+hitBricks gs = gs { bricks = notHit, ball = ball' }
+  where notHit   = bricks gs \\ (if null hits then [] else map fst hits)
+        ball'    = if null hits then (ball gs) else (snd . head $ hits)
+        hits     = catMaybes . map (collideWithBrick $ ball gs) $ (bricks gs)
 
 reflectAtPaddle :: World -> PosX -> Ball -> Ball
 reflectAtPaddle w x b@(Ball pos vel@(Vel vx vy)) = 
@@ -212,8 +220,21 @@ brickHeight = 10
 brickRect :: Brick -> Rect
 brickRect b = (brickPos b, brickWidth, brickHeight)
 
-hitBrick :: Brick -> Position -> Bool
-hitBrick b = posInRect (brickRect b)
+collideWithBrick :: Ball -> Brick -> Maybe (Brick, Ball)
+collideWithBrick ball brick =
+    case (nearHor, nearVer) of
+      (False, False) -> Nothing
+      (True,  False) -> Just (brick, reflHor ball)
+      (False,  True) -> Just (brick, reflVer ball)
+      (True,   True) -> Just (brick, (reflVer . reflHor $ ball))
+    where nearHor         = (left <= px && px <= left+width) && (py-4 <= top && top <= py+4 || py-4 <= top+height && top+height <= py+4)
+          nearVer         = (top <= py && py <= top+height) && (px-4 <= left && left <= px+4 || px-4 <= left+width && left+width <= px+4)
+          reflHor (Ball b (Vel vx vy)) = Ball b (Vel vx (negate vy))
+          reflVer (Ball b (Vel vx vy)) = Ball b (Vel (negate vx) vy)
+          (Pos px py)     = ballPos ball
+          (Pos left top)  = brickPos brick
+          (width, height) = (brickWidth, brickHeight)
+
 
 posInRect :: Rect -> Position -> Bool
 posInRect ((Pos left top), width, height) (Pos px py) = 
