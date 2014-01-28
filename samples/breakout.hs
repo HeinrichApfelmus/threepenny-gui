@@ -162,8 +162,9 @@ moveBall (Ms ms) (Ball (Pos px py) v@(Vel vx vy)) = Ball (Pos (px + dt * vx) (py
 
 reflectAtPaddle :: World -> PosX -> Ball -> Ball
 reflectAtPaddle w x b@(Ball pos vel@(Vel vx vy)) = 
-  if posInPaddle w x pos then (Ball pos vel') else b
+  if posInPaddle w x pos then (Ball pos' vel') else b
   where vel' = Vel vx (negate vy)
+        pos' = Pos (posX pos) (paddleTop w)
 
 reflectAtWalls :: World -> Ball -> Ball
 reflectAtWalls w (Ball (Pos px py) (Vel vx vy)) = Ball (Pos px' py') (Vel vx' vy')
