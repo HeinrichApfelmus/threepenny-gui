@@ -39,7 +39,7 @@ setup w = void $ do
     onEvent eFC $ showFPS localTime 
 
     let movePaddle  = (\x -> \(_, ball) -> (x, ball)) <$> mouseX world
-        moveBall    = (\dt -> \(x, ball) -> (x, animateBall world dt ball)) <$> eFC
+        moveBall    = (\dt -> \(x, ball) -> (x, animateBall world x dt ball)) <$> eFC
         changeSzene = unionWith (.) movePaddle moveBall
         startBall   = Ball (Pos 40 40) (Vel 400 150)
     bSzene <- accumB (0, startBall) changeSzene
@@ -141,14 +141,20 @@ mkWorld screenSize = do
     let sw = C.drawImage dc (0,0) sc
     return $ World screenSize mouseX dc sc sw
 
-animateBall :: World -> Interval -> Ball -> Ball
-animateBall w (Ms ms) (Ball (Pos px py) v@(Vel vx vy)) = Ball p'' v'
+animateBall :: World -> PosX -> Interval -> Ball -> Ball
+animateBall w pdlX (Ms ms) (Ball (Pos px py) v@(Vel vx vy)) = reflectAtPaddle w pdlX . reflectAtWalls w $ Ball p' v
   where p'        = Pos (px + dt * vx) (py + dt * vy)
-        (p'', v') = bounce p'
         dt        = if ms /= 0 then fromIntegral ms / 1000 else 0
-        bounce (Pos x y) = (Pos px' py', Vel vx' vy')
-            where (px', vx') = if x < 0 then (0, negate vx) else if x > width then (width, negate vx) else (x , vx)
-                  (py', vy') = if y < 0 then (0, negate vy) else if y > height then (height, negate vy) else (y , vy)
+
+reflectAtPaddle :: World -> PosX -> Ball -> Ball
+reflectAtPaddle w x b@(Ball pos vel@(Vel vx vy)) = 
+  if posInPaddle w x pos then (Ball pos vel') else b
+  where vel' = Vel vx (negate vy)
+
+reflectAtWalls :: World -> Ball -> Ball
+reflectAtWalls w (Ball (Pos px py) (Vel vx vy)) = Ball (Pos px' py') (Vel vx' vy')
+  where (px', vx') = if px < 0 then (0, negate vx) else if px > width then (width, negate vx) else (px , vx)
+        (py', vy') = if py < 0 then (0, negate vy) else if py > height then (height, negate vy) else (py , vy)
         (width, height) = ((fromIntegral . szWidth . screenSize $ w), (fromIntegral . szHeight . screenSize $ w))
 
 updateCanvas :: World -> (PaddlePos, Ball) -> UI ()
@@ -162,20 +168,45 @@ updateCanvas world (p, ball) = do
     C.fillRect (0, 0) (fromIntegral . szWidth $ sz) (fromIntegral . szHeight $ sz) c
 
     setFill fill
-    C.fillRect (p-w2, y0) w h c
+    C.fillRect (x0, y0) w h c
 
     setFill red
     C.fillRect (posX (ballPos ball) - 4, posY (ballPos ball) - 4) 8 8 c
 
     toScreen world
 
-    where fill   = C.createHorizontalLinearGradient (p-w2, y0) w  (C.RGB 255 10 10) (C.RGB 10 10 255)
+    where fill   = C.createHorizontalLinearGradient (x0, y0) w  (C.RGB 255 10 10) (C.RGB 10 10 255)
           white  = C.solidColor (C.RGBA 255 255 255 0.55)
           red    = C.solidColor (C.RGB 255 0 0)
-          y0     = fromIntegral (szHeight . screenSize $ world) - 2*h
-          w      = 2 * w2
-          w2     = 25
-          h      = 10
+          y0     = paddleTop world
+          x0     = paddleLeft p
+          w      = paddleWidth
+          h      = paddleHeight
+
+paddleWidth :: Double
+paddleWidth = 50
+
+paddleHeight :: Double
+paddleHeight = 10
+
+paddleTop :: World -> Double
+paddleTop world = fromIntegral (szHeight . screenSize $ world) - 2*paddleHeight
+
+paddleBottom :: World -> Double
+paddleBottom world = paddleTop world + paddleHeight
+
+paddleLeft :: PosX -> Double
+paddleLeft x = x - (paddleWidth / 2)
+
+paddleRight :: PosX -> Double
+paddleRight x = paddleLeft x + paddleWidth
+
+posInPaddle :: World -> PosX ->  Position -> Bool
+posInPaddle world x (Pos px py) = (left <= px && px <= right) && (top <= py && py <= bot)
+  where left  = paddleLeft x
+        right = paddleRight x
+        top   = paddleTop world
+        bot   = paddleBottom world
 
 
 {-----------------------------------------------------------------------------
