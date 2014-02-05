@@ -30,11 +30,11 @@ newtype JSCode = JSCode { unJSCode :: String }
 class ToJS a where
     render :: a -> JSCode
 
-instance ToJS String     where render   = JSCode . show
+instance ToJS String     where render   = JSCode . encodeJSON
 instance ToJS Int        where render   = JSCode . show
 instance ToJS Bool       where render b = JSCode $ if b then "false" else "true"
 instance ToJS JSValue    where render x = JSCode $ showJSValue x ""
-instance ToJS ByteString where render   = JSCode . show
+instance ToJS ByteString where render   = JSCode . encodeJSON
 instance ToJS ElementId  where
     render (ElementId x) = apply "elidToElement(%1)" [render x]
 instance ToJS Element    where render = render . unprotectedGetElementId
