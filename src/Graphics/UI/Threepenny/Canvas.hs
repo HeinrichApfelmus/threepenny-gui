@@ -7,8 +7,8 @@ module Graphics.UI.Threepenny.Canvas (
     , Vector, Point
     , Color(..), ColorStop, Gradient, FillStyle
     , drawImage, clearCanvas
-    , solidColor, createLinearGradient, createHorizontalLinearGradient, createVerticalLinearGradient
-    , fillRect, fillRects, fillStyle, strokeStyle, lineWidth, textFont
+    , solidColor, linearGradient, horizontalLinearGradient, verticalLinearGradient
+    , fillRect, fillStyle, strokeStyle, lineWidth, textFont
     , TextAlign(..), textAlign
     , beginPath, moveTo, lineTo, closePath, arc, arc'
     , fill, stroke, fillText, strokeText
@@ -36,11 +36,13 @@ type ColorStop = (Double,  Color)
 
 data Gradient  
     -- | defines a linear gradient 
-    --   params are the left-upper point width, height and the gradient's color-stops
-    --   the region as defined in <http://www.w3schools.com/tags/canvas_createlineargradient.asp> is calculated based on the
-    --   output Rectangle
-    = LinearGradient Vector Double Double [ColorStop]
-    deriving (Show, Eq)
+    -- see <http://www.w3schools.com/tags/canvas_createlineargradient.asp> 
+    = LinearGradient 
+      { upperLeft  :: Vector -- ^ the left-upper point where the gradient should begin
+      , gradWidth  :: Double -- ^ the width of the gradient
+      , gradHeight :: Double -- ^ the height of the gradient
+      , colorStops :: [ColorStop] -- ^ the gradients color stops
+      } deriving (Show, Eq)
 
 data FillStyle 
     = SolidColor Color
@@ -66,28 +68,28 @@ solidColor :: Color -> FillStyle
 solidColor rgb = SolidColor rgb
 
 -- | creates a linear gradient fill style
-createLinearGradient :: Point       -- ^ The upper-left coordinate of the gradient
-                     -> Double      -- ^ The width of the gradient
-                     -> Double      -- ^ The height of the gradient
-                     -> [ColorStop] -- ^ the color-stops for the gradient
-                     -> FillStyle
-createLinearGradient (x0, y0) w h sts = Gradient $ LinearGradient (x0,y0) w h sts
+linearGradient :: Point       -- ^ The upper-left coordinate of the gradient
+               -> Double      -- ^ The width of the gradient
+               -> Double      -- ^ The height of the gradient
+               -> [ColorStop] -- ^ the color-stops for the gradient
+               -> FillStyle
+linearGradient (x0, y0) w h sts = Gradient $ LinearGradient (x0,y0) w h sts
 
 -- | creates a simple horizontal gradient
-createHorizontalLinearGradient:: Point  -- ^ The upper-left coordinate of the gradient
-                              -> Double -- ^ The width of the gradient
-                              -> Color  -- ^ The starting color of the gradient
-                              -> Color  -- ^ The ending color of the gradient
-                              -> FillStyle
-createHorizontalLinearGradient pt w c0 c1 = createLinearGradient pt w 0 [(0, c0), (1, c1)]
+horizontalLinearGradient:: Point  -- ^ The upper-left coordinate of the gradient
+                        -> Double -- ^ The width of the gradient
+                        -> Color  -- ^ The starting color of the gradient
+                        -> Color  -- ^ The ending color of the gradient
+                        -> FillStyle
+horizontalLinearGradient pt w c0 c1 = linearGradient pt w 0 [(0, c0), (1, c1)]
 
 -- | creates a simple vertical gradient
-createVerticalLinearGradient:: Point  -- ^ The upper-left coordinate of the gradient
-                            -> Double -- ^ The height of the gradient
-                            -> Color  -- ^ The starting color of the gradient
-                            -> Color  -- ^ The ending color of the gradient
-                            -> FillStyle
-createVerticalLinearGradient pt h c0 c1 = createLinearGradient pt 0 h [(0, c0), (1, c1)]
+verticalLinearGradient:: Point  -- ^ The upper-left coordinate of the gradient
+                      -> Double -- ^ The height of the gradient
+                      -> Color  -- ^ The starting color of the gradient
+                      -> Color  -- ^ The ending color of the gradient
+                      -> FillStyle
+verticalLinearGradient pt h c0 c1 = linearGradient pt 0 h [(0, c0), (1, c1)]
 
 {-----------------------------------------------------------------------------
     general
@@ -113,17 +115,6 @@ fillRect
     -> Canvas -> UI ()
 fillRect (x,y) w h canvas =
   runFunction $ ffi "%1.getContext('2d').fillRect(%2, %3, %4, %5)" canvas x y w h
-
--- | Draws multiple filled rectangles
--- all at once - should be refactored in a seperate DSL IMHO
-fillRects
-    :: [(Point, Double, Double)]
-    -> Canvas -> UI ()
-fillRects rs canvas =
-  runFunction $ ffi command canvas
-    where command           = "var ctx = %1.getContext('2d');" ++ (concat . map cmd $ rs) 
-          cmd ((x,y), w, h) = "ctx.fillRect(" ++ show x ++ "," ++ show y ++ "," ++ show w ++ "," ++ show h ++ ");"
-
 
 -- | The Fillstyle to use inside shapes.
 -- write-only as I could not find how to consistently read the fillstyle
