@@ -1,12 +1,18 @@
 ## Changelog for the `threepenny-gui` package
 
-**0.4.0.3** -- Bugfix release.
+**0.4.1.0** -- Maintenance release.
 
 * Dependency on `text` package now from version 0.11 to 1.1.*.
+* Dependency on `aeson` package replaces the former dependency on the `json` package.
+* Unicode characters are now transmitted correctly to the browser. #75, #62.
 
 **0.4.0.2** -- Bugfix release.
 
 * Fix CSS bug for `grid` function.
+
+**0.4.0.1** -- Maintenance release.
+
+* Adjust package dependencies.
 
 **0.4.0.0** -- Snapshot release.
 
