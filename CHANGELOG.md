@@ -1,5 +1,9 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.4.0.3** -- Bugfix release.
+
+* Dependency on `text` package now from version 0.11 to 1.1.*.
+
 **0.4.0.2** -- Bugfix release.
 
 * Fix CSS bug for `grid` function.

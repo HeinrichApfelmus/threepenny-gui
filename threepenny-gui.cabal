@@ -107,7 +107,7 @@ Library
                     ,snap-core              == 0.9.*
                     ,stm                    >= 2.3    && < 2.5
                     ,template-haskell       >= 2.7.0  && < 2.9
-                    ,text                   == 0.11.*
+                    ,text                   >= 0.11   && < 1.2
                     ,time                   == 1.4.*
                     ,transformers           == 0.3.*
                     ,unordered-containers   == 0.2.*
