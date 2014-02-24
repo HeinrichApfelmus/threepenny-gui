@@ -23,8 +23,7 @@ main = do
     static   <- getStaticDir
     messages <- Chan.newChan
     startGUI Config
-        { tpPort       = 10000
-        , tpCustomHTML = Nothing
+        { tpCustomHTML = Nothing
         , tpStatic     = static
         } $ setup messages
 

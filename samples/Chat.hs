@@ -22,8 +22,7 @@ main = do
     static   <- getStaticDir
     messages <- Chan.newChan
     startGUI defaultConfig
-        { tpPort       = 10000
-        , tpCustomHTML = Just "chat.html"
+        { tpCustomHTML = Just "chat.html"
         , tpStatic     = Just static
         } $ setup messages
 

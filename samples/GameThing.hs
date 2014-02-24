@@ -17,8 +17,7 @@ main = do
     static     <- getStaticDir
     playground <- mkPlayground
     startGUI defaultConfig
-        { tpPort       = 10000
-        , tpStatic     = Just static
+        { tpStatic     = Just static
         } $ setup playground
 
 setup :: Playground -> Window -> UI ()
