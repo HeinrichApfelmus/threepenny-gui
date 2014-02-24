@@ -71,7 +71,7 @@ import Control.Monad.IO.Class
 import qualified Control.Monad.Trans.RWS.Lazy as Monad
 
 import Network.URI
-import Text.JSON
+import qualified Data.Aeson as JSON
 
 import           Reactive.Threepenny hiding (onChange)
 import qualified Reactive.Threepenny as Reactive
@@ -355,7 +355,7 @@ audioStop :: Element -> UI ()
 audioStop el = runFunction $ ffi "prim_audio_stop(%1)" el
 
 -- Turn a jQuery property @.prop()@ into an attribute.
-fromProp :: String -> (JSValue -> a) -> (a -> JSValue) -> Attr Element a
+fromProp :: String -> (JSON.Value -> a) -> (a -> JSON.Value) -> Attr Element a
 fromProp name from to = mkReadWriteAttr get set
     where
     set v el = runFunction $ ffi "$(%1).prop(%2,%3)" el name (to v)
