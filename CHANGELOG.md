@@ -3,7 +3,13 @@
 **0.5.0.0** -- Snapshot release.
 
 * FFI now supports callbacks into Haskell. Remove `callDeferredFunction` function.
-* Remove dependency on `json` library.
+
+**0.4.1.0** -- Maintenance release.
+
+* Dependency on `text` package now from version 0.11 to 1.1.*.
+* Dependency on `aeson` package replaces the former dependency on the `json` package.
+* Unicode characters are now transmitted correctly to the browser. #75, #62.
+* Change default port number to 8023. #64
 
 **0.4.0.2** -- Bugfix release.
 
