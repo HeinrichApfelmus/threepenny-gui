@@ -101,15 +101,15 @@ Library
                     ,filepath               == 1.3.*
                     ,hashable               >= 1.1.0  && < 1.3
                     ,MonadCatchIO-transformers == 0.3.*
-                    ,network                >= 2.3.0  && < 2.5
+                    ,network                >= 2.3.0  && < 2.6
                     ,safe                   == 0.3.*
                     ,snap-server            == 0.9.*
                     ,snap-core              == 0.9.*
                     ,stm                    >= 2.3    && < 2.5
-                    ,template-haskell       >= 2.7.0  && < 2.9
+                    ,template-haskell       >= 2.7.0  && < 2.10
                     ,text                   >= 0.11   && < 1.2
                     ,time                   == 1.4.*
-                    ,transformers           == 0.3.*
+                    ,transformers           >= 0.3.0  && < 0.5
                     ,unordered-containers   == 0.2.*
                     ,utf8-string            == 0.3.*
                     ,websockets             == 0.8.*
