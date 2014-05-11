@@ -248,7 +248,7 @@ signal :: Session -> Snap ()
 signal Session{..} = do
     input <- getParam "signal"
     let err = error $ "Unable to parse " ++ show input
-    case JSON.decode . LBS.fromStrict =<< input of
+    case JSON.decode . LBS.LBS.fromChunks . return =<< input of
         Just    signal -> liftIO $ writeChan sSignals signal
         Nothing        -> err
 

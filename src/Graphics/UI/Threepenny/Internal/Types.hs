@@ -17,6 +17,7 @@ import qualified Data.ByteString.Char8  as BS
 import Data.Map                         (Map)
 import Data.String                      (fromString)
 import Data.Time
+import Data.Text.Encoding               (encodeUtf8, decodeUtf8)
 
 import Network.URI
 import Data.Data
@@ -62,9 +63,9 @@ type Events   = EventId -> E.Event EventData
 
 -- Marshalling ElementId
 instance ToJSON ElementId where
-    toJSON (ElementId o)  = toJSON o
+    toJSON (ElementId o)  = toJSON $ decodeUtf8 o
 instance FromJSON ElementId where
-    parseJSON (Object v)  = ElementId <$> v .: "Element"
+    parseJSON (Object v)  = (ElementId . encodeUtf8) <$> v .: "Element"
     parseJSON _           = mzero
 
 

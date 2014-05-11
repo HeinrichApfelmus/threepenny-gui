@@ -1,5 +1,10 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.4.1.1** -- Maintenance release.
+
+* Dependency `bytestring >=0.9.2` is now implemented correctly.
+* Allow newer versions of `aeson` dependency.
+
 **0.4.1.0** -- Maintenance release.
 
 * Dependency on `text` package now from version 0.11 to 1.1.*.
