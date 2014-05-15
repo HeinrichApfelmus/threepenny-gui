@@ -1,2 +1,5 @@
 #!/bin/sh
-ghci -i../src -DREBUG "$@"
+ghci -i../src \
+  -no-user-package-db \
+  -package-db ../.cabal-sandbox/*-packages.conf.d \
+  -DREBUG "$@"

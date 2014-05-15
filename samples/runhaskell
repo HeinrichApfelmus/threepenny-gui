@@ -1,2 +1,5 @@
 #!/bin/sh
-runhaskell -i../src -DREBUG "$@"
+ghc -i../src \
+  -no-user-package-db \
+  -package-db ../.cabal-sandbox/*-packages.conf.d \
+  "$@" -e main

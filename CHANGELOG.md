@@ -5,6 +5,7 @@
 * Dependency `bytestring >=0.9.2` is now implemented correctly.
 * Allow newer versions of `aeson` dependency.
 * Allow newer versions of `network`, `transformers` and `template-haskell` dependencies.
+* Helper scripts in the `samples` directory now assume that you use a cabal sandbox for development.
 
 **0.4.1.0** -- Maintenance release.
 
