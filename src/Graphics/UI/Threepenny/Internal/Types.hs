@@ -23,7 +23,7 @@ import Network.URI
 import Data.Data
 import           Data.Aeson             as JSON
 import qualified Data.Aeson.Types       as JSON
-import qualified Data.Aeson.Generic
+import Data.Text
 
 import System.IO (stderr)
 import System.IO.Unsafe
@@ -149,6 +149,10 @@ data Closure = Closure (ElementId,EventId)
 
 instance NFData Closure where rnf (Closure x) = rnf x
 
+instance ToJSON Closure where
+    toJSON (Closure (x,y)) = toJSON [toJSON x, toJSON y]
+
+
 {-----------------------------------------------------------------------------
     Public types
 ------------------------------------------------------------------------------}
@@ -205,7 +209,23 @@ data Instruction
   deriving (Typeable,Data,Show)
 
 instance ToJSON Instruction where
-    toJSON x = Data.Aeson.Generic.toJSON x 
+    toJSON (Debug x)          = object [ "tag" .= ("Debug" :: Text)
+                                       , "contents" .= x]
+    toJSON (SetToken x)       = object [ "tag" .= ("SetToken" :: Text)
+                                       , "contents" .= x]
+    toJSON (Bind x y)         = object [ "tag" .= ("Bind" :: Text)
+                                       , "contents" .= [toJSON x, toJSON y]]
+    toJSON (GetValues xs)     = object [ "tag" .= ("GetValues" :: Text)
+                                       , "contents" .= xs]
+    toJSON (RunJSFunction  x) = object [ "tag" .= ("RunJSFunction" :: Text)
+                                       , "contents" .= x]
+    toJSON (CallJSFunction x) = object [ "tag" .= ("CallJSFunction" :: Text)
+                                       , "contents" .= x]
+    toJSON (CallDeferredFunction (x,y,z))
+                              = object [ "tag" .= ("CallDeferredFunction" :: Text)
+                                       , "contents" .= [toJSON x, toJSON y, toJSON z]]
+    toJSON (Delete x)         = object [ "tag" .= ("Delete" :: Text)
+                                       , "contents" .= x]
 
 instance NFData Instruction where
     rnf (Debug    x  ) = rnf x

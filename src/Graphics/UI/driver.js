@@ -205,46 +205,45 @@ $.fn.livechange = function(ms,trigger){
     // sendEvent     -- Function that sends a message { Event : value } to the server.
   
     console_log("Event: %s",JSON.stringify(event));
-    for(var key in event){
-      switch(key){
+    switch(event.tag){
 
-      case "CallDeferredFunction": {
-        // FIXME: CallDeferredFunction probably doesn't work right now.
-        var call        = event.CallDeferredFunction;
-        var closure     = call[0];
-        var theFunction = eval(call[1]);
-        var params      = call[2];
-        theFunction.apply(window, params.concat(function(){
-          console_log(this);
-          var args = Array.prototype.slice.call(arguments,0);
-          sendEvent(closure[0],closure[1],args);
-        }));
+    case "CallDeferredFunction": {
+      // FIXME: CallDeferredFunction probably doesn't work right now.
+      var call        = event.contents;
+      var closure     = call[0];
+      var theFunction = eval(call[1]);
+      var params      = call[2];
+      theFunction.apply(window, params.concat(function(){
+        console_log(this);
+        var args = Array.prototype.slice.call(arguments,0);
+        sendEvent(closure[0],closure[1],args);
+      }));
+      reply();
+      break;
+    }
+    case "RunJSFunction": {
+        eval(event.contents);
         reply();
         break;
-      }
-      case "RunJSFunction": {
-        eval(event.RunJSFunction);
-        reply();
-        break;
-      }
-      case "CallJSFunction": {
-        var result = eval(event.CallJSFunction);
+    }
+    case "CallJSFunction": {
+        var result = eval(event.contents);
         reply({FunctionResult : result});
         break;
-      }
-      case "Delete": {
-        deleteElid(event.Delete);
+    }
+    case "Delete": {
+        deleteElid(event.contents);
         reply();
         break;
-      }
-      case "Debug": {
+    }
+    case "Debug": {
         if(window.console)
-          console.log("Server debug: %o",event.Debug);
+          console.log("Server debug: %o",event.contents);
         reply();
         break;
-      }
-      case "GetValues": {
-        var ids = event.GetValues;
+    }
+    case "GetValues": {
+        var ids = event.contents;
         var len = ids.length;
         var values = [];
         for(var i = 0; i < len; i++) {
@@ -252,9 +251,9 @@ $.fn.livechange = function(ms,trigger){
         }
         reply({ Values: values });
         break;
-      }
-      case "Bind": {
-        var bind        = event.Bind;
+    }
+    case "Bind": {
+        var bind        = event.contents;
         var eventType   = bind[0];
         var elid        = bind[1];
         var el          = elidToElement(elid);
@@ -298,9 +297,8 @@ $.fn.livechange = function(ms,trigger){
         }
         reply();
         break;
-      }
-      default: reply();
-      }
+    }
+    default: reply();
     }
   }
 
