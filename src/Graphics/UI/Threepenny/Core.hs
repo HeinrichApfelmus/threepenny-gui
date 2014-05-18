@@ -64,6 +64,7 @@ import Data.Maybe (listToMaybe)
 import Data.Functor
 import Data.String (fromString)
 
+import Control.Applicative (Applicative)
 import Control.Concurrent.MVar
 import Control.Monad
 import Control.Monad.Fix
@@ -156,6 +157,10 @@ newtype UI a = UI { unUI :: Monad.RWST Window [IO ()] () IO a }
 
 instance Functor UI where
     fmap f = UI . fmap f . unUI
+
+instance Applicative UI where
+    pure  = return
+    (<*>) = ap
 
 instance Monad UI where
     return  = UI . return
