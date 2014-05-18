@@ -102,4 +102,4 @@ viewSource :: UI Element
 viewSource =
     UI.anchor #. "view-source" # set UI.href url #+ [string "View source code"]
     where
-    url = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Chat.hs"
+    url = samplesURL ++ "Chat.hs"

@@ -44,7 +44,7 @@ attributionSource =
         ]
     ]
   where
-    urlSource      = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/MissingDollars.hs"
+    urlSource      = samplesURL ++ "MissingDollars.hs"
     urlAttribution = "http://www.vex.net/~trebla/humour/missing_dollar.html"
 
 
