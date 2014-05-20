@@ -6,8 +6,7 @@ module Graphics.UI.Threepenny.Widgets (
     -- with functional reactive programming (FRP).
     -- 
     -- For more details and information on how to write your own widgets, see the
-    -- <https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/doc/design-widgets.md
-    -- widget design guide>.
+    -- <https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/doc/design-widgets.md widget design guide>.
     
     -- * Tidings
     Tidings, rumors, facts, tidings,
