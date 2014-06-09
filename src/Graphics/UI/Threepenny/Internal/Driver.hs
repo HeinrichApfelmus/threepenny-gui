@@ -114,6 +114,7 @@ serve :: Config -> (Session -> IO ()) -> IO ()
 serve Config{..} worker = do
     env    <- getEnvironment
     let portEnv = Safe.readMay =<< Prelude.lookup "PORT" env
+    let addrEnv = Safe.readMay =<< Prelude.lookup "ADDR" env
     
     server <- newServerState
     _      <- forkIO $ custodian 30 (sSessions server)

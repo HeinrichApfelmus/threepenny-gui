@@ -169,6 +169,12 @@ data Config = Config
         -- @Nothing@ means that the port number is
         -- read from the environment variable @PORT@.
         -- Alternatively, port @8023@ is used if this variable is not set.
+    , tpAddr       :: Maybe ByteString
+        -- ^ Bind address.
+        -- @Nothing@ means that the bind address is
+        -- read from the environment variable @ADDR@.
+        -- Alternatively, address @127.0.0.1@ is
+        -- used if this variable is not set.
     , tpCustomHTML :: Maybe FilePath
         -- ^ Custom HTML file to replace the default one.
     , tpStatic     :: Maybe FilePath
@@ -180,6 +186,9 @@ data Config = Config
 defaultPort :: Int
 defaultPort = 8023
 
+defaultAddr :: ByteString
+defaultAddr = "127.0.0.1"
+
 -- | Default configuration.
 --
 -- Port from environment variable or @8023@,
@@ -187,6 +196,7 @@ defaultPort = 8023
 defaultConfig :: Config
 defaultConfig = Config
     { tpPort       = Nothing
+    , tpAddr       = Nothing
     , tpCustomHTML = Nothing
     , tpStatic     = Nothing
     , tpLog        = \s -> BS.hPut stderr s >> BS.hPut stderr "\n"
