@@ -118,6 +118,7 @@ serve Config{..} worker = do
     server <- newServerState
     _      <- forkIO $ custodian 30 (sSessions server)
     let config = Snap.setPort      (maybe defaultPort id (tpPort `mplus` portEnv))
+               $ Snap.setBind      (maybe defaultAddr id (tpAddr `mplus` addrEnv))
                $ Snap.setErrorLog  (Snap.ConfigIoLog tpLog)
                $ Snap.setAccessLog (Snap.ConfigIoLog tpLog)
                $ Snap.defaultConfig
