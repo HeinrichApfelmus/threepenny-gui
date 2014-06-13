@@ -12,6 +12,24 @@ main = startGUI defaultConfig setup
 setup :: Window -> UI ()
 setup w = do
     return w # set title "Mouse"
+  -- ^ Let's place brackets around the expressions and see which functions
+  -- are called using what variables [TODO: items objects variables?]:
+  -- (return (w # (set title "Mouse")))
+  -- ^ let's look at the types of the items [TODO: Items? Objects?
+  -- Variables?]:
+  -- # :: a -> (a->b) -> b
+  -- `#` is exactly the same as `$`:
+  -- (a # f) == (f $ a)
+  --
+  -- title :: WriteAttr Window String
+  --
+  -- set :: ReadWriteAttr x i o -- This is used to read (get) and write (set) 
+  --     -> i -> UI x -> UI x
+  -- set takes exactly three expressions. The first one will be
+  -- a `ReadWriteAttr x i o`
+  --
+  -- w :: Window
+  -- As defined in the function's definition.
     
     out  <- UI.span # set text "Coordinates: "
     wrap <- UI.div #. "wrap"
