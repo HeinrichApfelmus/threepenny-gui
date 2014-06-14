@@ -46,11 +46,29 @@ and with the set functionality get back a new button value with its
 `text` attribute set to `"Add"`.
 
 >     elRemove <- UI.button # set UI.text "Remove"
+
+We do the same here but setting the `text` attribute to "Remove"
+and save the result to elRemove
+
 >     elResult <- UI.span
+
+We create a span element in which to save the results.
 
 >     inputs   <- liftIO $ newIORef []
 
+```haskell
+newIORef :: a -> IO (IORef a)
+newIORef [] :: IO (IORef [])
+liftIO :: MonadIO m => IO a -> m a
+liftIO (newIORef []) :: m (IORef [])
+```
 
+in our case:
+
+```haskell
+liftIO :: IO a -> UI a
+liftIO (newIORef []) :: UI (IORef [])
+```
 
 >     -- functionality
 >     let
