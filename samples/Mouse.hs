@@ -17,16 +17,37 @@ setup w = do
   -- (return (w # (set title "Mouse")))
   -- ^ let's look at the types of the items [TODO: Items? Objects?
   -- Variables?]:
+  --
+  -- set :: ReadWriteAttr x i o -- The attribute we want to set. The most
+  -- general attribute is of the `ReadWriteAttr x i o`, where  We
+  --                               `title` in our case.
+  --     -> i                   -- The value we want to set the attribute to.
+  --                               `"Mouse"` in our case.
+  --     -> UI x                -- the object we want to set its attribute.
+  --                               `w` in our case.
+  --     -> UI x                -- We get back an object with its attribute
+  --                               changed.
+  --
   -- # :: a -> (a->b) -> b
   -- `#` is exactly the same as `$`:
   -- (a # f) == (f $ a)
+  -- This function cleans up the code when you change a bunch of
+  -- attributes. Compare this with:
+  -- (set attr5 "value 5" w) .
+  -- (set attr4 "value 4" w) .
+  -- (set attr3 "value 3" w) .
+  -- (set attr2 "value 2" w) .
+  -- (set attr1 "value 1") $ w
+  --
+  -- with this:
+  -- w # set attr5 "value 5"
+  --   # set attr4 "value 4"
+  --   # set attr3 "value 3"
+  --   # set attr2 "value 2"
+  --   # set attr1 "value 1"
+  --
   --
   -- title :: WriteAttr Window String
-  --
-  -- set :: ReadWriteAttr x i o -- This is used to read (get) and write (set) 
-  --     -> i -> UI x -> UI x
-  -- set takes exactly three expressions. The first one will be
-  -- a `ReadWriteAttr x i o`
   --
   -- w :: Window
   -- As defined in the function's definition.
