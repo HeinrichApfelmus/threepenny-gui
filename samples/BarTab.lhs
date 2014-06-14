@@ -1,6 +1,7 @@
 BarTab tutorial
 ===============
 
+> {-# OPTIONS_GHC -Wall #-}
 > {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
 TODO What do these pragmas mean?
@@ -24,7 +25,7 @@ TODO What's in each of these modules?
 > setup :: Window -> UI ()
 > setup w = do
 >     -- active elements
->     return w # set title "BarTab"
+>     _ <- return w # set title "BarTab"
 
 
 
@@ -49,7 +50,7 @@ TODO What's in each of these modules?
 >         redoLayout :: UI ()
 >         redoLayout = void $ do
 >             layout <- mkLayout =<< liftIO (readIORef inputs)
->             getBody w # set children [layout]
+>             _ <- getBody w # set children [layout]
 >             displayTotal
 
 
@@ -103,6 +104,7 @@ TODO What's in each of these modules?
 
 > readNumber :: String -> Number
 > readNumber s = listToMaybe [x | (x,"") <- reads s]
+> showNumber :: Number -> String
 > showNumber   = maybe "--" show
 
 
