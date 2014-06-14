@@ -27,13 +27,26 @@ TODO What's in each of these modules?
 >     -- active elements
 >     _ <- return w # set title "BarTab"
 
+The `#` function is defined as:
 
+```haskell
+(#) :: a -> (a -> b) -> b
+a # f = f $ a
+```
+
+Each `set` operation here will return a new value of the window,
+but we still discard of the final value. Why?
+
+My guess is that the `set` operation isn't really pure? I'm a bit confused by this.
 
 >     elAdd    <- UI.button # set UI.text "Add"
+
+Here we take the default button value provided by threepenny,
+and with the set functionality get back a new button value with its
+`text` attribute set to `"Add"`.
+
 >     elRemove <- UI.button # set UI.text "Remove"
 >     elResult <- UI.span
-
-
 
 >     inputs   <- liftIO $ newIORef []
 
