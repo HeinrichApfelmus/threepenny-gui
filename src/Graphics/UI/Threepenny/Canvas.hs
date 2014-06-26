@@ -4,7 +4,7 @@ module Graphics.UI.Threepenny.Canvas (
     
     -- * Documentation
     Canvas,
-    Vector, fillRect, drawImage, clearCanvas,
+    Vector, fillStyle, fillRect, drawImage, clearCanvas,
     ) where
 
 import Graphics.UI.Threepenny.Core
@@ -15,6 +15,11 @@ import Graphics.UI.Threepenny.Core
 type Canvas = Element
 
 type Vector = (Int,Int)
+
+-- | Set the fill style
+fillStyle :: String -> Canvas -> UI ()
+fillStyle style canvas =
+    runFunction $ ffi "%1.getContext('2d').fillStyle = %2" canvas style
 
 -- | Draw a rectangle filled with the current fill style
 fillRect :: Vector -> Vector -> Canvas -> UI ()
