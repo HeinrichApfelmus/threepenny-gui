@@ -5,6 +5,8 @@ module Graphics.UI.Threepenny.Canvas (
     -- * Documentation
     Canvas,
     Vector, fillStyle, fillRect, strokeStyle, strokeRect, drawImage, clearRect, clearCanvas,
+    -- | Create path
+    beginPath, moveTo, lineTo, stroke,
     ) where
 
 import Graphics.UI.Threepenny.Core
@@ -58,4 +60,27 @@ clearRect (x,y) width height canvas =
 clearCanvas :: Canvas -> UI ()
 clearCanvas = runFunction . ffi "%1.getContext('2d').clear()"
 
+{-----------------------------------------------------------------------------
+    Canvas Path
+    
+    This  function are primitive they should be wrap arround a Monad
+-----------------------------------------------------------------------------}
 
+{- |
+ Drawing path primitive
+ -}
+beginPath :: Canvas -> UI ()
+beginPath canvas =
+    runFunction $ ffi "%1.getContext('2d').beginPath()" canvas
+
+moveTo :: Vector -> Canvas -> UI ()
+moveTo (x,y) canvas =
+    runFunction $ ffi "%1.getContext('2d').moveTo(%2,%3)" canvas x y
+
+lineTo :: Vector -> Canvas -> UI ()
+lineTo (x,y) canvas =
+    runFunction $ ffi "%1.getContext('2d').lineTo(%2,%3)" canvas x y
+
+stroke :: Canvas -> UI ()
+stroke canvas =
+    runFunction $ ffi "%1.getContext('2d').stroke()" canvas
