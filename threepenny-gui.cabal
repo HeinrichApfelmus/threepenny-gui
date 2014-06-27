@@ -63,10 +63,12 @@ Library
   exposed-modules:
                      Graphics.UI.Threepenny
                     ,Graphics.UI.Threepenny.Attributes
+                    ,Graphics.UI.Threepenny.AttributesSVG
                     ,Graphics.UI.Threepenny.Core
                     ,Graphics.UI.Threepenny.Canvas
                     ,Graphics.UI.Threepenny.DragNDrop
                     ,Graphics.UI.Threepenny.Elements
+                    ,Graphics.UI.Threepenny.ElementsSVG
                     ,Graphics.UI.Threepenny.Events
                     ,Graphics.UI.Threepenny.JQuery
                     ,Graphics.UI.Threepenny.Timer
