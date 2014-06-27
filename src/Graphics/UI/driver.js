@@ -304,19 +304,35 @@ $.fn.livechange = function(ms,trigger){
       return document.body;
     else if(elid == 'head')
       return document.head;
-    else if(el_table[elid])
-      return el_table[elid];
-    else {
-      if(elid[0] == '*'){
-        var create = elid.split(':');
-        var element = document.createElement(create[1]);
-        element.elid   = elid;
-        el_table[elid] = element;
-        return element;
-      } else {
-        throw "Unknown element: " + elid;
-      }
+    else if(elid[0] == '*')
+      return newElement(elid);
+    else
+      throw "Unknown element: " + elid;
+  }
+
+  // Function to leverage the DOM2 createElementNS() function that creates DOM
+  // elements based on tags defined in HTML 5 namespaces. Elements/elids are cached
+  // and returned if subsequently requested. Current implementation supports only 
+  // HTML and SVG namespaces.
+  // TODO: Opportunity to support all HTML 5 namespaces, 
+  //         http://www.w3.org/TR/2011/WD-html5-20110113/namespaces.html
+  function newElement(elid) {
+    var create = elid.split(':');
+    if( create[1] == "svg"){
+      ns    = "http://www.w3.org/2000/svg";
+      tag   = create[2];
+      elid_ = create[0] + ":" + create[2];
     }
+    else {
+      ns    = "http://www.w3.org/1999/xhtml";
+      tag   = create[1];
+      elid_ = elid;
+    }
+    if(el_table[elid_]) return el_table[elid_];
+    element         = document.createElementNS(ns, tag);
+    element.elid    = elid_;
+    el_table[elid_] = element;
+    return element;
   }
  
   // Get/generate a elid for an element.  This function is used for cases in which the
