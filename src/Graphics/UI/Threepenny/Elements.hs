@@ -40,10 +40,10 @@ addStyleSheet
     -> FilePath
     -> UI ()
 addStyleSheet w filename = void $ do
-    el <- mkElement "link"
-            # set (attr "rel" ) "stylesheet"
-            # set (attr "type") "text/css"
-            # set (attr "href") ("/static/css/" ++ filename)
+    el <- mkElement "link" # 
+            set (attr "rel" ) "stylesheet" #
+            set (attr "type") "text/css" #
+            set (attr "href") ("/static/css/" ++ filename)
     getHead w #+ [element el]
 
 -- | Make a new @div@ element, synonym for 'div'.
