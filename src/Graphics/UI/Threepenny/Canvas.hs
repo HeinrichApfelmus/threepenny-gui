@@ -4,7 +4,7 @@ module Graphics.UI.Threepenny.Canvas (
     
     -- * Documentation
     Canvas,
-    Vector, fillStyle, fillRect, strokeStyle, strokeRect, drawImage, clearRect, clearCanvas,
+    Vector, fillStyle, fillRect, strokeStyle, strokeRect, drawImage, clearCanvas,
     ) where
 
 import Graphics.UI.Threepenny.Core
@@ -48,11 +48,6 @@ strokeRect (x, y) width height canvas =
 drawImage :: Element -> Vector -> Canvas -> UI ()
 drawImage image (x,y) canvas =
     runFunction $ ffi "%1.getContext('2d').drawImage(%2,%3,%4)" canvas image x y
-
--- | Clear the canvas in the specified rectangle
-clearRect :: Vector -> Int -> Int -> Canvas -> UI ()
-clearRect (x,y) width height canvas =
-    runFunction $ ffi "%1.getContext('2d').clearRect(%2,%3,%4,%5)" canvas x y width height
 
 -- | Clear the canvas
 clearCanvas :: Canvas -> UI ()
