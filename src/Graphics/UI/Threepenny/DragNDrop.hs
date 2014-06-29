@@ -53,9 +53,13 @@ droppable = mkWriteAttr enable
     where
     enable v = void . if v then allowDrop else blockDrop
     allowDrop el =
-        element el # set (attr "ondragover") "event.preventDefault()" # set (attr "ondrop"    ) "event.preventDefault()"
+        element el
+            # set (attr "ondragover") "event.preventDefault()"
+            # set (attr "ondrop"    ) "event.preventDefault()"
     blockDrop el =
-        element el # set (attr "ondragover") "" # set (attr "ondrop"    ) ""
+        element el
+            # set (attr "ondragover") ""
+            # set (attr "ondrop"    ) ""
 
 {-----------------------------------------------------------------------------
     Events
