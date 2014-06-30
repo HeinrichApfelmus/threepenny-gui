@@ -99,7 +99,6 @@ verticalLinearGradient pt h c0 c1 = linearGradient pt 0 h [(0, c0), (1, c1)]
 clearCanvas :: Canvas -> UI ()
 clearCanvas = runFunction . ffi "%1.getContext('2d').clear()"
 
-
 {-----------------------------------------------------------------------------
     fill primitives
 ------------------------------------------------------------------------------}
