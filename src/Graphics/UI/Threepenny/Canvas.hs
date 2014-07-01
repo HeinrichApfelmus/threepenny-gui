@@ -12,10 +12,12 @@ module Graphics.UI.Threepenny.Canvas (
     , TextAlign(..), textAlign
     , beginPath, moveTo, lineTo, closePath, arc, arc'
     , fill, stroke, fillText, strokeText
+    , Drawing, renderDrawing, closedPath, line
     ) where
 
 import Data.Char (toUpper)
 import Data.List(intercalate)
+import Data.Monoid
 import Numeric (showHex)
 
 import Graphics.UI.Threepenny.Core
@@ -24,6 +26,7 @@ import qualified Data.Aeson as JSON
 {-----------------------------------------------------------------------------
     Canvas
 ------------------------------------------------------------------------------}
+newtype Drawing = Drawing { draw :: Canvas -> UI () }
 type Canvas = Element
 
 type Vector = Point
@@ -98,12 +101,61 @@ verticalLinearGradient pt h c0 c1 = linearGradient pt 0 h [(0, c0), (1, c1)]
 -- | Clear the canvas
 clearCanvas :: Canvas -> UI ()
 clearCanvas = runFunction . ffi "%1.getContext('2d').clear()"
+{-----------------------------------------------------------------------------
+    Drawing
+------------------------------------------------------------------------------}
+instance Monoid Drawing where
+    mappend (Drawing first) (Drawing second) = Drawing seq
+        where 
+            seq canvas = do
+                first canvas
+                second canvas
+    mempty = Drawing emptyDraw
+        where 
+            emptyDraw canvas = return ()
+
+-- | Low level pimitive to start a path
+drawBeginPath :: Point -> Drawing
+drawBeginPath start = Drawing startPath'
+    where
+        startPath' canvas = do
+            beginPath canvas
+            moveTo start canvas
+
+-- | Low level primitive to join a line
+drawLineTo :: Point -> Drawing
+drawLineTo start = Drawing $ lineTo start
+
+-- | Draw a line
+line :: Point -> Point -> Drawing
+line start end = Drawing line'
+    where
+        line' canvas = do
+            moveTo start canvas
+            lineTo end canvas
+-- | Draw a path
+-- 
+-- The path is drawn following the list of point
+path :: [Point] -> Drawing
+path [] = mempty
+path (first:points) = drawBeginPath first <> (mconcat $ fmap drawLineTo points)
+
+-- | Draw a closed path
+--
+-- The path is drawn following the list of point and it is closed after the final point.
+closedPath :: [Point] -> Drawing
+closedPath [] = Drawing closePath
+closedPath points = path points <> Drawing closePath
+
+-- | Render a drawing on a canvas
+renderDrawing :: Canvas -> Drawing -> UI ()
+renderDrawing canvas (Drawing draw) = do
+    draw canvas 
+    stroke canvas
 
 {-----------------------------------------------------------------------------
     fill primitives
 ------------------------------------------------------------------------------}
-
-
 -- | Draw a filled rectangle.
 --
 -- The 'fillStyle' attribute determines the color.
