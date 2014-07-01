@@ -9,3 +9,6 @@ log
 /haddocks.html
 .cabal-sandbox/
 cabal.sandbox.config
+/.dist-buildwrapper
+/.project
+/.externalToolBuilders
