@@ -5,14 +5,14 @@ module Graphics.UI.Threepenny.Canvas (
     -- * Documentation
     Canvas
     , Vector, Point
-    , Color(..), ColorStop, Gradient, FillStyle
+    , Color(..), ColorStop, Gradient, Style(..)
     , drawImage, clearCanvas
     , solidColor, linearGradient, horizontalLinearGradient, verticalLinearGradient
     , fillRect, fillStyle, strokeStyle, lineWidth, textFont
     , TextAlign(..), textAlign
     , beginPath, moveTo, lineTo, closePath, arc, arc'
     , fill, stroke, fillText, strokeText
-    , Drawing, renderDrawing, closedPath, line
+    , Drawing, renderDrawing, closedPath, line, path
     ) where
 
 import Data.Char (toUpper)
@@ -26,11 +26,10 @@ import qualified Data.Aeson as JSON
 {-----------------------------------------------------------------------------
     Canvas
 ------------------------------------------------------------------------------}
-newtype Drawing = Drawing { draw :: Canvas -> UI () }
 type Canvas = Element
-
 type Vector = Point
 type Point  = (Double, Double)
+
 data Color  = RGB  { red :: Int, green :: Int, blue :: Int }
             | RGBA { red :: Int, green :: Int, blue :: Int, alpha :: Double }
             deriving (Eq, Show)
@@ -47,7 +46,7 @@ data Gradient
       , colorStops :: [ColorStop] -- ^ the gradients color stops
       } deriving (Show, Eq)
 
-data FillStyle 
+data Style 
     = SolidColor Color
     | Gradient Gradient
     deriving (Show, Eq) 
@@ -67,7 +66,7 @@ drawImage image (x,y) canvas =
 ------------------------------------------------------------------------------}
 
 -- | creates a solid-color fillstyle
-solidColor :: Color -> FillStyle
+solidColor :: Color -> Style
 solidColor rgb = SolidColor rgb
 
 -- | creates a linear gradient fill style
@@ -75,7 +74,7 @@ linearGradient :: Point       -- ^ The upper-left coordinate of the gradient
                -> Double      -- ^ The width of the gradient
                -> Double      -- ^ The height of the gradient
                -> [ColorStop] -- ^ the color-stops for the gradient
-               -> FillStyle
+               -> Style
 linearGradient (x0, y0) w h sts = Gradient $ LinearGradient (x0,y0) w h sts
 
 -- | creates a simple horizontal gradient
@@ -83,7 +82,7 @@ horizontalLinearGradient:: Point  -- ^ The upper-left coordinate of the gradient
                         -> Double -- ^ The width of the gradient
                         -> Color  -- ^ The starting color of the gradient
                         -> Color  -- ^ The ending color of the gradient
-                        -> FillStyle
+                        -> Style
 horizontalLinearGradient pt w c0 c1 = linearGradient pt w 0 [(0, c0), (1, c1)]
 
 -- | creates a simple vertical gradient
@@ -91,7 +90,7 @@ verticalLinearGradient:: Point  -- ^ The upper-left coordinate of the gradient
                       -> Double -- ^ The height of the gradient
                       -> Color  -- ^ The starting color of the gradient
                       -> Color  -- ^ The ending color of the gradient
-                      -> FillStyle
+                      -> Style
 verticalLinearGradient pt h c0 c1 = linearGradient pt 0 h [(0, c0), (1, c1)]
 
 {-----------------------------------------------------------------------------
@@ -104,6 +103,10 @@ clearCanvas = runFunction . ffi "%1.getContext('2d').clear()"
 {-----------------------------------------------------------------------------
     Drawing
 ------------------------------------------------------------------------------}
+newtype Drawing 
+    -- | Describe how to draw on a canvas
+    = Drawing { draw :: Canvas -> UI () }
+
 instance Monoid Drawing where
     mappend (Drawing first) (Drawing second) = Drawing seq
         where 
@@ -133,12 +136,24 @@ line start end = Drawing line'
         line' canvas = do
             moveTo start canvas
             lineTo end canvas
+
+-- | Add arc to the current path
+arc 
+    :: Point    -- ^ Center of the circle of which the arc is a part.
+    -> Double   -- ^ Radius of the circle of which the arc is a part.
+    -> Double   -- ^ Starting angle, in radians.
+    -> Double   -- ^ Ending angle, in radians.
+    -> Drawing
+arc center radius startAngle endAngle = Drawing $ addArc center radius startAngle endAngle
+
 -- | Draw a path
 -- 
 -- The path is drawn following the list of point
 path :: [Point] -> Drawing
 path [] = mempty
 path (first:points) = drawBeginPath first <> (mconcat $ fmap drawLineTo points)
+
+
 
 -- | Draw a closed path
 --
@@ -169,26 +184,13 @@ fillRect (x,y) w h canvas =
 
 -- | The Fillstyle to use inside shapes.
 -- write-only as I could not find how to consistently read the fillstyle
-fillStyle :: WriteAttr Canvas FillStyle
-fillStyle = mkWriteAttr assignFillStyle
-
--- | sets the current fill style of the canvas context
-assignFillStyle :: FillStyle -> Canvas -> UI ()
-assignFillStyle (Gradient fs) canvas =
-    runFunction $ ffi cmd canvas
-        where cmd = "var ctx=%1.getContext('2d'); var grd=" ++ fsStr fs ++ cStops fs ++ "ctx.fillStyle=grd;"
-              fsStr (LinearGradient (x0, y0) w h _) 
-                                                = "ctx.createLinearGradient(" ++ pStr [x0, y0, x0+w, y0+h] ++ ");"
-              cStops (LinearGradient _ _ _ sts) = concatMap addStop sts
-              addStop (p,c)                     = "grd.addColorStop(" ++ show p ++ ",'" ++ rgbString c ++ "');"
-              pStr                              = intercalate "," . map show
-assignFillStyle (SolidColor color) canvas =
-    runFunction $ ffi "%1.getContext('2d').fillStyle=%2" canvas (rgbString color)
+fillStyle :: WriteAttr Canvas Style
+fillStyle = mkWriteAttr $ assignStyle "fillStyle"
 
 -- | The color or style to use for the lines around shapes.
 -- Default is @#000@ (black).
-strokeStyle :: Attr Canvas String
-strokeStyle = fromObjectProperty "getContext('2d').strokeStyle"
+strokeStyle :: WriteAttr Canvas Style
+strokeStyle = mkWriteAttr $ assignStyle "strokeStyle"
 
 -- | The width of lines. Default is @1@.
 lineWidth :: Attr Canvas Double
@@ -198,6 +200,19 @@ lineWidth = fromObjectProperty "getContext('2d').lineWidth"
 -- Default is @10px sans-serif@.
 textFont :: Attr Canvas String
 textFont = fromObjectProperty "getContext('2d').font"
+
+-- | sets the current property' style of the canvas context
+assignStyle :: String -> Style -> Canvas -> UI ()
+assignStyle prop (Gradient fs) canvas =
+    runFunction $ ffi cmd canvas
+        where cmd = "var ctx=%1.getContext('2d'); var grd=" ++ fsStr fs ++ cStops fs ++ "ctx." ++ prop ++ "=grd;"
+              fsStr (LinearGradient (x0, y0) w h _) 
+                                                = "ctx.createLinearGradient(" ++ pStr [x0, y0, x0+w, y0+h] ++ ");"
+              cStops (LinearGradient _ _ _ sts) = concatMap addStop sts
+              addStop (p,c)                     = "grd.addColorStop(" ++ show p ++ ",'" ++ rgbString c ++ "');"
+              pStr                              = intercalate "," . map show
+assignStyle prop (SolidColor color) canvas =
+    runFunction $ ffi ("%1.getContext('2d')." ++ prop ++ "=%2") canvas (rgbString color)
 
 data TextAlign = Start | End | LeftAligned | RightAligned | Center
                deriving (Eq, Show, Read)
@@ -251,13 +266,13 @@ closePath :: Canvas -> UI()
 closePath = runFunction . ffi "%1.getContext('2d').closePath()"
 
 -- | Add a circular arc to the current path.
-arc
+addArc
     :: Point    -- ^ Center of the circle of which the arc is a part.
     -> Double   -- ^ Radius of the circle of which the arc is a part.
     -> Double   -- ^ Starting angle, in radians.
     -> Double   -- ^ Ending angle, in radians.
     -> Canvas -> UI ()
-arc (x,y) radius startAngle endAngle canvas =
+addArc (x,y) radius startAngle endAngle canvas =
     runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6)"
         canvas x y radius startAngle endAngle
 
