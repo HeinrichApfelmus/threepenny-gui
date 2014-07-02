@@ -165,10 +165,24 @@ path (first:points) = DrawingPath (drawBeginPath first <> (mconcat $ fmap drawLi
 -- | Draw a closed path
 --
 -- The path is drawn following the list of point and it is closed after the final point.
-closedPath :: DrawingPath -> Drawing
-closedPath (DrawingPath draw) = draw <> Drawing closePath <> Drawing stroke
-
-
+closedPath 
+    :: Style        -- ^ Style to apply to the path
+    -> Double       -- ^ Width of the path
+    -> DrawingPath  -- ^ Path to draw
+    -> Drawing
+closedPath style width (DrawingPath draw) = 
+    draw <> 
+    Drawing closePath <> 
+    Drawing setWidth <> 
+    Drawing setStyle <>
+    Drawing stroke
+        where
+            setWidth canvas = do 
+                set lineWidth width (element canvas)
+                return ()
+            setStyle canvas = do 
+                set strokeStyle style (element canvas)
+                return ()
 
 -- | Render a drawing on a canvas
 renderDrawing :: Canvas -> Drawing -> UI ()
@@ -289,6 +303,15 @@ arc' :: Point -> Double -> Double -> Double -> Bool -> Canvas -> UI ()
 arc' (x,y) radius startAngle endAngle anti canvas =
     runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6, %7)"
         canvas x y radius startAngle endAngle anti
+
+bezierCurveTo :: [Point] -> UI ()
+bezierCurveTo points = 
+
+
+buildBezierParameter :: Int -> [Point] -> String
+buildBezierParameter index [] = ")"
+buildBezierParameter index [a] = "%" ++ (show index) ++ ")"
+buildBezierParameter index (x:xs) = "%" ++ (show index) ++ "," ++ buildBezierParameter (index+1) xs
 
 -- | Fills the subpaths with the current fill style.
 fill :: Canvas -> UI ()
