@@ -100,12 +100,19 @@ verticalLinearGradient pt h c0 c1 = linearGradient pt 0 h [(0, c0), (1, c1)]
 -- | Clear the canvas
 clearCanvas :: Canvas -> UI ()
 clearCanvas = runFunction . ffi "%1.getContext('2d').clear()"
+
 {-----------------------------------------------------------------------------
     Drawing
 ------------------------------------------------------------------------------}
 newtype Drawing 
     -- | Describe how to draw on a canvas
     = Drawing { draw :: Canvas -> UI () }
+
+newtype DrawingPath = DrawingPath Drawing
+
+instance Monoid DrawingPath where
+    mappend (DrawingPath first) (DrawingPath second) = DrawingPath $ first <> second
+    mempty = DrawingPath mempty
 
 instance Monoid Drawing where
     mappend (Drawing first) (Drawing second) = Drawing seq
@@ -130,8 +137,8 @@ drawLineTo :: Point -> Drawing
 drawLineTo start = Drawing $ lineTo start
 
 -- | Draw a line
-line :: Point -> Point -> Drawing
-line start end = Drawing line'
+line :: Point -> Point -> DrawingPath
+line start end = DrawingPath $ Drawing line'
     where
         line' canvas = do
             moveTo start canvas
@@ -143,30 +150,30 @@ arc
     -> Double   -- ^ Radius of the circle of which the arc is a part.
     -> Double   -- ^ Starting angle, in radians.
     -> Double   -- ^ Ending angle, in radians.
-    -> Drawing
-arc center radius startAngle endAngle = Drawing $ addArc center radius startAngle endAngle
+    -> DrawingPath
+arc center radius startAngle endAngle = DrawingPath $ Drawing $ addArc center radius startAngle endAngle
 
 -- | Draw a path
 -- 
 -- The path is drawn following the list of point
-path :: [Point] -> Drawing
+path :: [Point] -> DrawingPath
 path [] = mempty
-path (first:points) = drawBeginPath first <> (mconcat $ fmap drawLineTo points)
+path (first:points) = DrawingPath (drawBeginPath first <> (mconcat $ fmap drawLineTo points))
 
 
 
 -- | Draw a closed path
 --
 -- The path is drawn following the list of point and it is closed after the final point.
-closedPath :: [Point] -> Drawing
-closedPath [] = Drawing closePath
-closedPath points = path points <> Drawing closePath
+closedPath :: DrawingPath -> Drawing
+closedPath (DrawingPath draw) = draw <> Drawing closePath <> Drawing stroke
+
+
 
 -- | Render a drawing on a canvas
 renderDrawing :: Canvas -> Drawing -> UI ()
 renderDrawing canvas (Drawing draw) = do
     draw canvas 
-    stroke canvas
 
 {-----------------------------------------------------------------------------
     fill primitives
