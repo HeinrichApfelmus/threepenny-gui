@@ -12,7 +12,7 @@ module Graphics.UI.Threepenny.Canvas (
     , TextAlign(..), textAlign
     , beginPath, moveTo, lineTo, closePath, arc, arc'
     , fill, stroke, fillText, strokeText
-    , Drawing, renderDrawing, closedPath, line, path
+    , Drawing, renderDrawing, closedPath, line, path, bezierCurve
     ) where
 
 import Data.Char (toUpper)
@@ -21,6 +21,7 @@ import Data.Monoid
 import Numeric (showHex)
 
 import Graphics.UI.Threepenny.Core
+import Graphics.UI.Threepenny.Internal.FFI
 import qualified Data.Aeson as JSON
 
 {-----------------------------------------------------------------------------
@@ -160,7 +161,9 @@ path :: [Point] -> DrawingPath
 path [] = mempty
 path (first:points) = DrawingPath (drawBeginPath first <> (mconcat $ fmap drawLineTo points))
 
-
+-- | Draw a bwzier curve in the current path
+bezierCurve :: [Point] -> Drawing
+bezierCurve points = Drawing $ bezierCurveTo points
 
 -- | Draw a closed path
 --
@@ -304,14 +307,14 @@ arc' (x,y) radius startAngle endAngle anti canvas =
     runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6, %7)"
         canvas x y radius startAngle endAngle anti
 
-bezierCurveTo :: [Point] -> UI ()
-bezierCurveTo points = 
+-- | Add a bezier curve to the current path
+bezierCurveTo :: [Point] -> Canvas -> UI ()
+bezierCurveTo points canvas = 
+    runFunction $ ffi "%1.getContext('2d').bezierCurveTo(%2)" canvas (VariadicJSParam (concat $ map flatenPoint  points))
 
-
-buildBezierParameter :: Int -> [Point] -> String
-buildBezierParameter index [] = ")"
-buildBezierParameter index [a] = "%" ++ (show index) ++ ")"
-buildBezierParameter index (x:xs) = "%" ++ (show index) ++ "," ++ buildBezierParameter (index+1) xs
+-- | Helper function to convert point to variadic parameter for ffi.
+flatenPoint :: Point -> [Double]
+flatenPoint (x,y) = [x,y]
 
 -- | Fills the subpaths with the current fill style.
 fill :: Canvas -> UI ()

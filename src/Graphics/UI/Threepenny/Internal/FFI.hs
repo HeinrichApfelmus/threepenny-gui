@@ -6,7 +6,7 @@ module Graphics.UI.Threepenny.Internal.FFI (
     
     -- * Documentation
     ffi,
-    FFI(..), ToJS(..),
+    FFI(..), ToJS(..), VariadicJSParam(..),
     JSFunction,
     
     showJSON,
@@ -20,6 +20,7 @@ import qualified Data.Aeson.Encode
 import           Data.ByteString       (ByteString)
 import           Data.Data
 import           Data.Functor
+import           Data.List
 import           Data.Maybe
 import           Data.String           (fromString)
 import qualified Data.Text.Lazy
@@ -47,6 +48,8 @@ showJSON
 newtype JSCode = JSCode { unJSCode :: String }
     deriving (Eq, Ord, Show, Data, Typeable)
 
+data VariadicJSParam a = VariadicJSParam { param :: [a] }
+
 -- | Helper class for rendering Haskell values as JavaScript expressions.
 class ToJS a where
     render :: a -> JSCode
@@ -62,6 +65,8 @@ instance ToJS ByteString where render   = JSCode . show
 instance ToJS ElementId  where
     render (ElementId x) = apply "elidToElement(%1)" [render x]
 instance ToJS Element    where render = render . unprotectedGetElementId
+instance ToJS a => ToJS (VariadicJSParam a) where 
+    render (VariadicJSParam list) = JSCode $ intercalate "," (map (unJSCode . render) list)
 
 
 -- | A JavaScript function with a given output type @a@.
