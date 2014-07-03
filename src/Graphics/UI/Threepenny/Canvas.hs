@@ -12,7 +12,7 @@ module Graphics.UI.Threepenny.Canvas (
     , TextAlign(..), textAlign
     , beginPath, moveTo, lineTo, closePath, arc, arc'
     , fill, stroke, fillText, strokeText
-    , Drawing, renderDrawing, closedPath, line, path, bezierCurve
+    , Drawing, renderDrawing, closedPath, openedPath, line, path, bezierCurve
     ) where
 
 import Data.Char (toUpper)
@@ -162,8 +162,8 @@ path [] = mempty
 path (first:points) = DrawingPath (drawBeginPath first <> (mconcat $ fmap drawLineTo points))
 
 -- | Draw a bwzier curve in the current path
-bezierCurve :: [Point] -> Drawing
-bezierCurve points = Drawing $ bezierCurveTo points
+bezierCurve :: [Point] -> DrawingPath
+bezierCurve points = DrawingPath ( Drawing $ bezierCurveTo points )
 
 -- | Draw a closed path
 --
@@ -177,6 +177,25 @@ closedPath style width (DrawingPath draw) =
     draw <> 
     Drawing closePath <> 
     Drawing setWidth <> 
+    Drawing setStyle <>
+    Drawing stroke
+        where
+            setWidth canvas = do 
+                set lineWidth width (element canvas)
+                return ()
+            setStyle canvas = do 
+                set strokeStyle style (element canvas)
+                return ()
+
+-- | Draw a path
+openedPath 
+    :: Style
+    -> Double
+    -> DrawingPath
+    -> Drawing
+openedPath style width (DrawingPath draw) =
+    draw <>
+    Drawing setWidth <>
     Drawing setStyle <>
     Drawing stroke
         where
