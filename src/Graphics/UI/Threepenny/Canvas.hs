@@ -5,14 +5,14 @@ module Graphics.UI.Threepenny.Canvas (
     -- * Documentation
     Canvas
     , Vector, Point
-    , Color(..), ColorStop, Gradient, Style(..)
+    , Color, ColorStop, Gradient, Style
     , drawImage, clearCanvas
     , solidColor, linearGradient, horizontalLinearGradient, verticalLinearGradient
-    , fillRect, fillStyle, strokeStyle, lineWidth, textFont
+    , fillStyle, strokeStyle, lineWidth, textFont
     , TextAlign(..), textAlign
-    , arc'
     , fill, stroke, fillText, strokeText
-    , Drawing, renderDrawing, closedPath, openedPath, line, path, bezierCurve, move, arc
+    , Drawing, DrawingPath, renderDrawing, closedPath, openedPath, line, path, bezierCurve, move
+    , fillRect, arc, arc'
     ) where
 
 import Data.Char (toUpper)
@@ -63,10 +63,17 @@ drawImage image (x,y) canvas =
     runFunction $ ffi "%1.getContext('2d').drawImage(%2,%3,%4)" canvas image x y
 
 {-----------------------------------------------------------------------------
-    Fill Styles
+    Styles
 ------------------------------------------------------------------------------}
+-- | Create a color from rgb
+rgbColor :: Int -> Int -> Int -> Color
+rgbColor r g b = RGB r g b
 
--- | creates a solid-color fillstyle
+-- | Create a color from rgba
+rgbaColor :: Int -> Int -> Int -> Double -> Color
+rgbaColor r g b a = RGBA r g b a 
+
+-- | creates a solid-color style
 solidColor :: Color -> Style
 solidColor rgb = SolidColor rgb
 
@@ -109,11 +116,19 @@ newtype Drawing
     -- | Describe how to draw on a canvas
     = Drawing { draw :: Canvas -> UI () }
 
-newtype DrawingPath = DrawingPath Drawing
+newtype DrawingPath
+    -- | Describe how to draw a path on a canvas.
+    = DrawingPath { drawPath :: Canvas -> UI () }
 
 instance Monoid DrawingPath where
-    mappend (DrawingPath first) (DrawingPath second) = DrawingPath $ first <> second
-    mempty = DrawingPath mempty
+    mappend (DrawingPath first) (DrawingPath second) = DrawingPath seq
+        where 
+            seq canvas = do
+                first canvas
+                second canvas
+    mempty = DrawingPath emptyDraw
+        where 
+            emptyDraw canvas = return ()
 
 instance Monoid Drawing where
     mappend (Drawing first) (Drawing second) = Drawing seq
@@ -126,20 +141,20 @@ instance Monoid Drawing where
             emptyDraw canvas = return ()
 
 -- | Low level pimitive to start a path
-drawBeginPath :: Point -> Drawing
-drawBeginPath start = Drawing startPath'
+drawBeginPath :: Point -> DrawingPath
+drawBeginPath start = DrawingPath startPath'
     where
         startPath' canvas = do
             beginPath canvas
             moveTo start canvas
 
 -- | Low level primitive to join a line
-drawLineTo :: Point -> Drawing
-drawLineTo start = Drawing $ lineTo start
+drawLineTo :: Point -> DrawingPath
+drawLineTo = DrawingPath . lineTo
 
 -- | Draw a line
 line :: Point -> Point -> DrawingPath
-line start end = DrawingPath $ Drawing line'
+line start end = DrawingPath line'
     where
         line' canvas = do
             moveTo start canvas
@@ -152,18 +167,30 @@ arc
     -> Double   -- ^ Starting angle, in radians.
     -> Double   -- ^ Ending angle, in radians.
     -> DrawingPath
-arc center radius startAngle endAngle = DrawingPath $ Drawing $ addArc center radius startAngle endAngle
+arc center radius startAngle endAngle = DrawingPath $ addArc center radius startAngle endAngle
+
+
+-- | Like 'arc', but with an extra argument that indicates whether
+-- we go in counter-clockwise ('True') or clockwise ('False') direction.
+arc'
+    :: Point    -- ^ Center of the circle of which the arc is a part.
+    -> Double   -- ^ Radius of the circle of which the arc is a part.
+    -> Double   -- ^ Starting angle, in radians.
+    -> Double   -- ^ Ending angle, in radians.
+    -> Bool
+    -> DrawingPath
+arc' center radius startAngle endAngle anti = DrawingPath $ addArc' center radius startAngle endAngle anti
 
 -- | Draw a path
 -- 
 -- The path is drawn following the list of point
 path :: [Point] -> DrawingPath
 path [] = mempty
-path (first:points) = DrawingPath (drawBeginPath first <> (mconcat $ fmap drawLineTo points))
+path (first:points) = drawBeginPath first <> (mconcat $ fmap drawLineTo points)
 
 -- | Draw a bwzier curve in the current path
 bezierCurve :: [Point] -> DrawingPath
-bezierCurve points = DrawingPath ( Drawing $ bezierCurveTo points )
+bezierCurve = DrawingPath . bezierCurveTo
 
 -- | Draw a closed path
 --
@@ -175,7 +202,7 @@ closedPath
     -> Drawing
 closedPath style width (DrawingPath draw) = 
     Drawing beginPath <>
-    draw <> 
+    Drawing draw <> 
     Drawing closePath <> 
     Drawing setWidth <> 
     Drawing setStyle <>
@@ -190,7 +217,7 @@ closedPath style width (DrawingPath draw) =
 
 -- | Stop the drawing and move to a new location
 move :: Point -> DrawingPath
-move point = DrawingPath $ Drawing $ moveTo point
+move = DrawingPath . moveTo
 
 -- | Draw a path
 openedPath 
@@ -200,22 +227,29 @@ openedPath
     -> Drawing
 openedPath style width (DrawingPath draw) =
     Drawing beginPath <>
-    draw <>
-    Drawing setWidth <>
-    Drawing setStyle <>
+    Drawing draw <>
+    setDraw lineWidth width <>
+    setDraw strokeStyle style <>
     Drawing stroke
-        where
-            setWidth canvas = do 
-                set lineWidth width (element canvas)
-                return ()
-            setStyle canvas = do 
-                set strokeStyle style (element canvas)
-                return ()
+
+-- | Drawing a filled rectangle.
+--
+-- The attribute determines the color.
+fillRect
+    :: Point    -- ^ upper left corner
+    -> Double   -- ^ width in pixels
+    -> Double   -- ^ height in pixels
+    -> Drawing
+fillRect point width height = Drawing $ fillRect' point width height
 
 -- | Render a drawing on a canvas
 renderDrawing :: Canvas -> Drawing -> UI ()
 renderDrawing canvas (Drawing draw) = do
     draw canvas 
+
+-- | Set an attribute in the drawing canvas context
+setDraw :: ReadWriteAttr Canvas i o -> i -> Drawing 
+setDraw attr i = Drawing $ set' attr i 
 
 {-----------------------------------------------------------------------------
     fill primitives
@@ -223,12 +257,12 @@ renderDrawing canvas (Drawing draw) = do
 -- | Draw a filled rectangle.
 --
 -- The 'fillStyle' attribute determines the color.
-fillRect
+fillRect'
     :: Point    -- ^ upper left corner
     -> Double   -- ^ width in pixels
     -> Double   -- ^ height in pixels
     -> Canvas -> UI ()
-fillRect (x,y) w h canvas =
+fillRect' (x,y) w h canvas =
   runFunction $ ffi "%1.getContext('2d').fillRect(%2, %3, %4, %5)" canvas x y w h
 
 -- | The Fillstyle to use inside shapes.
@@ -327,8 +361,8 @@ addArc (x,y) radius startAngle endAngle canvas =
 
 -- | Like 'arc', but with an extra argument that indicates whether
 -- we go in counter-clockwise ('True') or clockwise ('False') direction.
-arc' :: Point -> Double -> Double -> Double -> Bool -> Canvas -> UI ()
-arc' (x,y) radius startAngle endAngle anti canvas =
+addArc' :: Point -> Double -> Double -> Double -> Bool -> Canvas -> UI ()
+addArc' (x,y) radius startAngle endAngle anti canvas =
     runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6, %7)"
         canvas x y radius startAngle endAngle anti
 
