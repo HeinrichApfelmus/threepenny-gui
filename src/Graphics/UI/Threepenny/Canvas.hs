@@ -31,6 +31,9 @@ type Canvas = Element
 type Vector = Point
 type Point  = (Double, Double)
 
+data PointCoord 
+    = PA (Double,Double) -- ^ This is a point in the absolute coordinate
+    | PU (Double,Double) -- ^ This is a point in the unity coordiante [-1;1], [-1,1] 
 data Color  = RGB  { red :: Int, green :: Int, blue :: Int }
             | RGBA { red :: Int, green :: Int, blue :: Int, alpha :: Double }
             deriving (Eq, Show)
@@ -252,7 +255,7 @@ setDraw :: ReadWriteAttr Canvas i o -> i -> Drawing
 setDraw attr i = Drawing $ set' attr i 
 
 {-----------------------------------------------------------------------------
-    fill primitives
+    Primitives
 ------------------------------------------------------------------------------}
 -- | Draw a filled rectangle.
 --
@@ -403,6 +406,15 @@ strokeText :: String -> Point -> Canvas -> UI ()
 strokeText text (x,y) canvas =
   runFunction $ ffi "%1.getContext('2d').strokeText(%2, %3, %4)" canvas text x y
 
+-- | Scale subsequent drawing
+scale :: Double -> Double -> Canvas -> UI ()
+scale xscale yscale canvas = 
+    runFunction $ ffi "%1.getContext('2d').scale(%2,%3)" canvas xscale yscale
+
+-- | Translate all subsequent drawing
+translate :: Double -> Double -> Canvas -> UI ()
+translate x y canvas =
+    runFunction $ ffi "%1.getContext('2d').translate(%2,%3)" canvas x y
 {-----------------------------------------------------------------------------
     helper functions
 ------------------------------------------------------------------------------}
