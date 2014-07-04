@@ -10,9 +10,9 @@ module Graphics.UI.Threepenny.Canvas (
     , solidColor, linearGradient, horizontalLinearGradient, verticalLinearGradient
     , fillRect, fillStyle, strokeStyle, lineWidth, textFont
     , TextAlign(..), textAlign
-    , beginPath, moveTo, lineTo, closePath, arc, arc'
+    , arc'
     , fill, stroke, fillText, strokeText
-    , Drawing, renderDrawing, closedPath, openedPath, line, path, bezierCurve
+    , Drawing, renderDrawing, closedPath, openedPath, line, path, bezierCurve, move, arc
     ) where
 
 import Data.Char (toUpper)
@@ -174,6 +174,7 @@ closedPath
     -> DrawingPath  -- ^ Path to draw
     -> Drawing
 closedPath style width (DrawingPath draw) = 
+    Drawing beginPath <>
     draw <> 
     Drawing closePath <> 
     Drawing setWidth <> 
@@ -187,6 +188,10 @@ closedPath style width (DrawingPath draw) =
                 set strokeStyle style (element canvas)
                 return ()
 
+-- | Stop the drawing and move to a new location
+move :: Point -> DrawingPath
+move point = DrawingPath $ Drawing $ moveTo point
+
 -- | Draw a path
 openedPath 
     :: Style
@@ -194,6 +199,7 @@ openedPath
     -> DrawingPath
     -> Drawing
 openedPath style width (DrawingPath draw) =
+    Drawing beginPath <>
     draw <>
     Drawing setWidth <>
     Drawing setStyle <>
