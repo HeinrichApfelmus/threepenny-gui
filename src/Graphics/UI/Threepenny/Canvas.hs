@@ -12,7 +12,7 @@ module Graphics.UI.Threepenny.Canvas (
     , TextAlign(..), textAlign
     , fill, stroke, fillText, strokeText
     , Drawing, DrawingPath, renderDrawing, closedPath, openedPath, line, path, bezierCurve, move
-    , fillRect, arc, arc'
+    , fillRect, arc, arc', scale, translate, rgbColor, rgbaColor
     ) where
 
 import Data.Char (toUpper)
@@ -163,6 +163,14 @@ line start end = DrawingPath line'
             moveTo start canvas
             lineTo end canvas
 
+-- | Scale subsequent drawing
+scale :: Double -> Double -> DrawingPath
+scale xscale yscale = DrawingPath $ scaleTo xscale yscale
+
+-- | Translate subsequent drawing
+translate :: Double -> Double -> DrawingPath
+translate x y = DrawingPath $ translateTo x y
+
 -- | Add arc to the current path
 arc 
     :: Point    -- ^ Center of the circle of which the arc is a part.
@@ -207,16 +215,9 @@ closedPath style width (DrawingPath draw) =
     Drawing beginPath <>
     Drawing draw <> 
     Drawing closePath <> 
-    Drawing setWidth <> 
-    Drawing setStyle <>
+    setDraw lineWidth width <>
+    setDraw strokeStyle style <>
     Drawing stroke
-        where
-            setWidth canvas = do 
-                set lineWidth width (element canvas)
-                return ()
-            setStyle canvas = do 
-                set strokeStyle style (element canvas)
-                return ()
 
 -- | Stop the drawing and move to a new location
 move :: Point -> DrawingPath
@@ -407,14 +408,17 @@ strokeText text (x,y) canvas =
   runFunction $ ffi "%1.getContext('2d').strokeText(%2, %3, %4)" canvas text x y
 
 -- | Scale subsequent drawing
-scale :: Double -> Double -> Canvas -> UI ()
-scale xscale yscale canvas = 
+scaleTo :: Double -> Double -> Canvas -> UI ()
+scaleTo xscale yscale canvas = 
     runFunction $ ffi "%1.getContext('2d').scale(%2,%3)" canvas xscale yscale
 
 -- | Translate all subsequent drawing
-translate :: Double -> Double -> Canvas -> UI ()
-translate x y canvas =
+translateTo :: Double -> Double -> Canvas -> UI ()
+translateTo x y canvas =
     runFunction $ ffi "%1.getContext('2d').translate(%2,%3)" canvas x y
+
+resetTransform :: Canvas -> UI ()
+resetTransform canvas = runFunction $ ffi "%1.getContext('2d').resetTransform()" canvas
 {-----------------------------------------------------------------------------
     helper functions
 ------------------------------------------------------------------------------}
