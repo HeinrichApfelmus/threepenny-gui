@@ -12,7 +12,7 @@ module Graphics.UI.Threepenny.Canvas (
     , TextAlign(..), textAlign
     , fill, stroke, fillText, strokeText
     , Drawing, DrawingPath, renderDrawing, closedPath, openedPath, line, path, bezierCurve, move
-    , fillRect, arc, arc', scale, translate, rgbColor, rgbaColor
+    , fillRect, arc, arc', scale, translate, rgbColor, rgbaColor, setDraw
     ) where
 
 import Data.Char (toUpper)
@@ -143,6 +143,24 @@ instance Monoid Drawing where
         where 
             emptyDraw canvas = return ()
 
+-- | Render the outline of a text at a certain point on the canvas.
+-- 
+-- The 'strokeStyle' attribute determines the color of the outline.
+-- The 'textFont' attribute determines the font used.
+-- The 'textAlign' attributes determines the position of the text
+-- relative to the point.
+strokeText :: String -> Point -> Drawing
+strokeText text point = Drawing $ strokeTextAt text point
+
+-- | Render a text in solid color at a certain point on the canvas.
+-- 
+-- The 'fillStyle' attribute determines the color.
+-- The 'textFont' attribute determines the font used.
+-- The 'textAlign' attributes determines the position of the text
+-- relative to the point.
+fillText :: String -> Point -> Drawing
+fillText text point = Drawing $ fillTextAt text point
+
 -- | Low level pimitive to start a path
 drawBeginPath :: Point -> DrawingPath
 drawBeginPath start = DrawingPath startPath'
@@ -164,12 +182,12 @@ line start end = DrawingPath line'
             lineTo end canvas
 
 -- | Scale subsequent drawing
-scale :: Double -> Double -> DrawingPath
-scale xscale yscale = DrawingPath $ scaleTo xscale yscale
+scale :: Double -> Double -> Drawing
+scale xscale yscale = Drawing $ scaleTo xscale yscale
 
 -- | Translate subsequent drawing
-translate :: Double -> Double -> DrawingPath
-translate x y = DrawingPath $ translateTo x y
+translate :: Double -> Double -> Drawing
+translate x y = Drawing $ translateTo x y
 
 -- | Add arc to the current path
 arc 
@@ -393,8 +411,8 @@ stroke = runFunction . ffi "%1.getContext('2d').stroke()"
 -- The 'textFont' attribute determines the font used.
 -- The 'textAlign' attributes determines the position of the text
 -- relative to the point.
-fillText :: String -> Point -> Canvas -> UI ()
-fillText text (x,y) canvas =
+fillTextAt :: String -> Point -> Canvas -> UI ()
+fillTextAt text (x,y) canvas =
   runFunction $ ffi "%1.getContext('2d').fillText(%2, %3, %4)" canvas text x y
 
 -- | Render the outline of a text at a certain point on the canvas.
@@ -403,8 +421,8 @@ fillText text (x,y) canvas =
 -- The 'textFont' attribute determines the font used.
 -- The 'textAlign' attributes determines the position of the text
 -- relative to the point.
-strokeText :: String -> Point -> Canvas -> UI ()
-strokeText text (x,y) canvas =
+strokeTextAt :: String -> Point -> Canvas -> UI ()
+strokeTextAt text (x,y) canvas =
   runFunction $ ffi "%1.getContext('2d').strokeText(%2, %3, %4)" canvas text x y
 
 -- | Scale subsequent drawing
