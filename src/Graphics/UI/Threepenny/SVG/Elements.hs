@@ -1,21 +1,18 @@
 --------------------------------------------------------------------------------
 -- |
--- Module      : Graphics.UI.Threepenny.ElementsSVG
+-- Module      : Graphics.UI.Threepenny.SVG.Elements
 -- Description : Elements used in SVG markup
 --
 --  Elements are defined by W3C, Scalable Vector Graphics (SVG) 1.1
 --    (Second Edition) Appendix M <http://www.w3.org/TR/2011/REC-SVG11-20110816/>.
 --
---  The prefix 'svg_' is utilized on those exposed elements that conflict with
---  existing threepenny-gui symbols or have analogs defined in the HTML namespace.
---
 --------------------------------------------------------------------------------
 
-module Graphics.UI.Threepenny.ElementsSVG (
+module Graphics.UI.Threepenny.SVG.Elements (
     -- * SVG Elements
-    svg_a, altGlyph, altGlyphDef, altGlyphItem,
-    svg_animate, animateColor, animateMotion, animateTransform,
-    circle, clipPath, color_profile, cursor,
+    a, altGlyph, altGlyphDef, altGlyphItem,
+    animate, animateColor, animateMotion, animateTransform,
+    circle, clipPath, colorProfile, cursor,
     defs, desc,
     ellipse,
     feBlend, feColorMatrix, feComponentTransfer, feComposite, feConvolveMatrix,
@@ -23,17 +20,17 @@ module Graphics.UI.Threepenny.ElementsSVG (
     feFuncA, feFuncB, feFuncG, feFuncR,
     feGaussianBlur, feImage, feMerge, feMergeNode, feMorphology, feOffset,
     fePointLight, feSpecularLighting, feSpotLight, feTile, feTurbulence,
-    svg_filter, svg_font, font_face, font_face_format, font_face_name,
-    font_face_srv, font_face_uri, foreignObject,
+    filter_, font,  fontface, fontfaceformat, fontfacename, fontfacesrv,
+    fontfaceuri, foreignObject,
     g, glyph, glyphRef,
     hkern,
-    svg_image,
+    image,
     line, linearGradient,
-    marker, mask, metadata, missing_glyph, mpath,
+    marker, mask, metadata, missingglyph, mpath,
     path, pattern, polygon, polyline,
     radialGradient, rect,
-    script, svg_set, svg_stop, svg_style, svg, switch, symbol,
-    svg_text, textPath, svg_title, tref, tspan,
+    script, set, stop, style, svg, switch, symbol,
+    text, textPath, title, tref, tspan,
     use,
     view, vkern,
     ) where
@@ -44,17 +41,17 @@ import           Graphics.UI.Threepenny.Core (mkElement)
 tag    = mkElement
 itag   = mkElement
 
-svg_a                 =  tag "svg:a"
+a                     =  tag "svg:a"
 altGlyph              =  tag "svg:altGlyph"
 altGlyphDef           = itag "svg:altGlyphDef"
 altGlyphItem          = itag "svg:altGlyphItem"
-svg_animate           =  tag "svg:animate"
+animate               =  tag "svg:animate"
 animateColor          =  tag "svg:animateColor"
 animateMotion         =  tag "svg:animateMotion"
 animateTransform      = itag "svg:animateTransform"
 circle                = itag "svg:circle"
 clipPath              =  tag "svg:clipPath"
-color_profile         = itag "svg:color-profile"
+colorProfile          = itag "svg:colorProfile"
 cursor                = itag "svg:cursor"
 defs                  =  tag "svg:defs"
 desc                  = itag "svg:desc"
@@ -83,25 +80,25 @@ feSpecularLighting    =  tag "svg:feSpecularLighting"
 feSpotLight           = itag "svg:feSpotLight"
 feTile                =  tag "svg:feTile"
 feTurbulence          =  tag "svg:feTurbulence"
-svg_filter            =  tag "svg:filter"
-svg_font              =  tag "svg:font"
-font_face             = itag "svg:font-face"
-font_face_format      = itag "svg:font-face-format"
-font_face_name        = itag "svg:font-face-name"
-font_face_srv         = itag "svg:font-face-src"
-font_face_uri         = itag "svg:font-face-uri"
+filter_               =  tag "svg:filter"
+font                  =  tag "svg:font"
+fontface              = itag "svg:font-face"
+fontfaceformat        = itag "svg:font-face-format"
+fontfacename          = itag "svg:font-face-name"
+fontfacesrv           = itag "svg:font-face-src"
+fontfaceuri           = itag "svg:font-face-uri"
 foreignObject         =  tag "svg:foreignObject"
 g                     =  tag "svg:g"
 glyph                 =  tag "svg:glyph"
 glyphRef              =  tag "svg:glyphRef"
 hkern                 = itag "svg:hkern"
-svg_image             =  tag "svg:image"
+image                 =  tag "svg:image"
 line                  =  tag "svg:line"
 linearGradient        =  tag "svg:linearGradient"
 marker                =  tag "svg:marker"
 mask                  =  tag "svg:mask"
 metadata              = itag "svg:metadata"
-missing_glyph         =  tag "svg:missing-glyph"
+missingglyph          =  tag "svg:missing-glyph"
 mpath                 = itag "svg:mpath"
 path                  = itag "svg:path"
 pattern               =  tag "svg:pattern"
@@ -110,15 +107,15 @@ polyline              =  tag "svg:polyline"
 radialGradient        =  tag "svg:radialGradient"
 rect                  =  tag "svg:rect"
 script                = itag "svg:script"
-svg_set               = itag "svg:set"
-svg_stop              =  tag "svg:stop"
-svg_style             = itag "svg:style"
+set                   = itag "svg:set"
+stop                  =  tag "svg:stop"
+style                 = itag "svg:style"
 svg                   =  tag "svg:svg"
 switch                =  tag "svg:switch"
 symbol                =  tag "svg:symbol"
-svg_text              =  tag "svg:text"
+text                  =  tag "svg:text"
 textPath              =  tag "svg:textPath"
-svg_title             = itag "svg:title"
+title                 = itag "svg:title"
 tref                  =  tag "svg:tref"
 tspan                 =  tag "svg:tspan"
 use                   =  tag "svg:use"

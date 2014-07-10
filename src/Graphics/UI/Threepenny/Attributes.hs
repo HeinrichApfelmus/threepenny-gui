@@ -1,10 +1,10 @@
 module Graphics.UI.Threepenny.Attributes (
     -- * Synopsis
     -- | Element attributes.
-    
+
     -- * Input elements
     checked, selection, enabled,
-    
+
     -- * HTML attributes
     action, align, alink, alt, altcode, archive,
     background, base, bgcolor, border, bordercolor,
@@ -18,8 +18,8 @@ module Graphics.UI.Threepenny.Attributes (
     target, text_, title__, type_, usemap, valign, version, vlink, vspace, width,
     ) where
 
-import qualified Data.Aeson       as JSON
-import Graphics.UI.Threepenny.Core
+import qualified Data.Aeson                  as JSON
+import           Graphics.UI.Threepenny.Core
 
 {-----------------------------------------------------------------------------
     Attributes
@@ -39,13 +39,13 @@ enabled = fromJQueryProp "disabled" (== JSON.Bool False) (JSON.Bool . not)
 selection :: Attr Element (Maybe Int)
 selection = fromJQueryProp "selectedIndex" from (JSON.toJSON . maybe (-1) id)
     where
-    from s = let JSON.Success x = JSON.fromJSON s in 
+    from s = let JSON.Success x = JSON.fromJSON s in
         if x == -1 then Nothing else Just x
 
 
 {-----------------------------------------------------------------------------
-    HTML attributes
-    
+    HTML atributes
+
     Taken from the HTML library (BSD3 license)
     http://hackage.haskell.org/package/html
 ------------------------------------------------------------------------------}
@@ -60,7 +60,7 @@ emptyAttr name = mkWriteAttr (set' (attr name) . f)
     where
     f True  = "1"
     f False = "0"
-    
+
 action              =   strAttr "action"
 align               =   strAttr "align"
 alink               =   strAttr "alink"
