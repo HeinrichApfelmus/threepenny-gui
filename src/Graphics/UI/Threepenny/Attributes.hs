@@ -15,7 +15,7 @@ module Graphics.UI.Threepenny.Attributes (
     name, nohref, noresize, noshade, nowrap,
     rel, rev, rows, rowspan, rules,
     scrolling, selected, shape, size, src,
-    target, text_, type_, usemap, valign, version, vlink, vspace, width,
+    target, text_, title__, type_, usemap, valign, version, vlink, vspace, width,
     ) where
 
 import qualified Data.Aeson       as JSON
@@ -44,7 +44,7 @@ selection = fromProp "selectedIndex" from (JSON.toJSON . maybe (-1) id)
 
 
 {-----------------------------------------------------------------------------
-    HTML atributes
+    HTML attributes
     
     Taken from the HTML library (BSD3 license)
     http://hackage.haskell.org/package/html
@@ -118,7 +118,7 @@ target              =   strAttr "target"
 text_               =   strAttr "text"
 class_              =   strAttr "class"
 type_               =   strAttr "type"
-title               =   strAttr "title"
+title__             =   strAttr "title" -- ugly, but necessary to avoid conflicts with the window title and the title element
 usemap              =   strAttr "usemap"
 valign              =   strAttr "valign"
 version             =   strAttr "version"
