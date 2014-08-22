@@ -329,6 +329,15 @@ $.fn.livechange = function(ms,trigger){
     }
   }
  
+  // Let us not worry about null objects
+  // if we need a string and have a null object, the empty string is perfect!
+  function safeToString(o){
+	  if (!o){
+		  return "";
+	  }
+	  return o.toString();
+  }
+  
   // Get/generate a elid for an element.  This function is used for cases in which the
   // element is accessed without knowing an elid from the server, such as when the 
   // element is retrieved by type or html ID attribute.  The element is then added to 
