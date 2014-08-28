@@ -289,6 +289,12 @@ $.fn.livechange = function(ms,trigger){
             sendEvent(elid,eventType, [e.keyCode.toString()]);
             return true;
           });
+        } else if (eventType == "resize") {
+            // Only window can catch the resize event
+            $(window).bind(eventType,function(e){
+                sendEvent(elid,eventType, []);
+                return true;
+            });
         } else {
           $(el).bind(eventType,function(e){
             sendEvent(elid,eventType, e.which ? [e.which.toString()] : []);

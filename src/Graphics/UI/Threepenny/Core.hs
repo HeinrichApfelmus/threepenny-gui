@@ -23,7 +23,7 @@ module Graphics.UI.Threepenny.Core (
     -- | Create and manipulate DOM elements.
     Element, mkElement, getWindow, delete, (#+), string,
         getHead, getBody,
-        children, text, html, attr, style, value,
+        children, text, html, attr, style, value, elementWidth, elementHeight,
     getValuesList,
     getElementsByTagName, getElementById, getElementsByClassName,
     
@@ -287,6 +287,16 @@ getValuesList = mapM (get value)
 text :: WriteAttr Element String
 text = mkWriteAttr $ \s el ->
     runFunction $ ffi "$(%1).text(%2)" el s
+
+-- | Width of an element.
+elementWidth :: ReadAttr Element Int
+elementWidth = mkReadAttr $ \el -> 
+    callFunction $ ffi "$(%1).width()" el
+
+-- | Height of an element.
+elementHeight :: ReadAttr Element Int
+elementHeight = mkReadAttr $ \el -> 
+    callFunction $ ffi "$(%1).height()" el
 
 -- | Make a @span@ element with a given text content.
 string :: String -> UI Element
