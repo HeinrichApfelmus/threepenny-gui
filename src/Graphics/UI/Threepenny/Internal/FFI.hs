@@ -55,7 +55,7 @@ class ToJS a where
 instance ToJS String     where render   = render . JSON.String . fromString
 instance ToJS Text       where render   = render . JSON.String
 instance ToJS Int        where render   = JSCode . show
-instance ToJS Bool       where render b = JSCode $ if b then "false" else "true"
+instance ToJS Bool       where render b = JSCode $ if b then "true" else "false"
 instance ToJS JSON.Value where render   = JSCode . showJSON
 -- TODO: ByteString instance may be wrong. Only needed for ElementId right now.
 instance ToJS ByteString where render   = JSCode . show
