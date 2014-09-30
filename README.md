@@ -106,6 +106,7 @@ Many thanks to everyone who contributed, provided feedback or simply wrote an ap
 * *Heinrich Apfelmus*
 * *Daniel Austin*
 * Daniel Díaz
+* Yuval Langer
 * *Daniel Mlot*
 * Luke Palmer
 * Jens Petersen

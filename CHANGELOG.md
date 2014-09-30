@@ -1,5 +1,9 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.4.3.0** -- Snapshot release.
+
+* Possibility to specify IP address to bind the server to.
+
 **0.4.2.0** -- Maintenance release.
 
 * Dependency `bytestring >=0.9.2` is now implemented correctly.
