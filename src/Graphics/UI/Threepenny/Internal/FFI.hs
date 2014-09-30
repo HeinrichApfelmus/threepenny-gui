@@ -22,6 +22,7 @@ import           Data.Data
 import           Data.Functor
 import           Data.Maybe
 import           Data.String           (fromString)
+import           Data.Text             (Text)
 import qualified Data.Text.Lazy
 import qualified Data.Text.Lazy.Builder
 
@@ -52,8 +53,9 @@ class ToJS a where
     render :: a -> JSCode
 
 instance ToJS String     where render   = render . JSON.String . fromString
+instance ToJS Text       where render   = render . JSON.String
 instance ToJS Int        where render   = JSCode . show
-instance ToJS Bool       where render b = JSCode $ if b then "false" else "true"
+instance ToJS Bool       where render b = JSCode $ if b then "true" else "false"
 instance ToJS JSON.Value where render   = JSCode . showJSON
 -- TODO: ByteString instance may be wrong. Only needed for ElementId right now.
 instance ToJS ByteString where render   = JSCode . show
@@ -98,7 +100,8 @@ instance (ToJS a, FFI b) => FFI (a -> b) where
     fancy f a = fancy $ f . (render a:)
 
 instance FFI (JSFunction ())          where fancy f = fromJSCode $ f []
-instance FFI (JSFunction String)      where fancy   = mkResult "%1.toString()"
+instance FFI (JSFunction String)      where fancy   = mkResult "safeToString(%1)"
+instance FFI (JSFunction Text)        where fancy   = mkResult "safeToString(%1)"
 instance FFI (JSFunction JSON.Value)  where fancy   = mkResult "%1"
 instance FFI (JSFunction [ElementId]) where fancy   = mkResult "elementsToElids(%1)"
 
