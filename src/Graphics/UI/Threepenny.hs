@@ -79,7 +79,7 @@ First, set the title of the HTML document
 
 Then create a button element
 
->     button <- UI.button # set UI.text "Click me!s"
+>     button <- UI.button # set UI.text "Click me!"
 
 DOM elements can be accessed much in the same way they are
 accessed from JavaScript; they can be searched, updated, moved and
