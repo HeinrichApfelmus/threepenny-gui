@@ -114,10 +114,12 @@ serve :: Config -> (Session -> IO ()) -> IO ()
 serve Config{..} worker = do
     env    <- getEnvironment
     let portEnv = Safe.readMay =<< Prelude.lookup "PORT" env
+    let addrEnv = Safe.readMay =<< Prelude.lookup "ADDR" env
     
     server <- newServerState
     _      <- forkIO $ custodian 30 (sSessions server)
     let config = Snap.setPort      (maybe defaultPort id (tpPort `mplus` portEnv))
+               $ Snap.setBind      (maybe defaultAddr id (tpAddr `mplus` addrEnv))
                $ Snap.setErrorLog  (Snap.ConfigIoLog tpLog)
                $ Snap.setAccessLog (Snap.ConfigIoLog tpLog)
                $ Snap.defaultConfig
