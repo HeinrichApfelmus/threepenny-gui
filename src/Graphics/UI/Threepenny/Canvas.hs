@@ -7,7 +7,8 @@ module Graphics.UI.Threepenny.Canvas (
     , Vector, Point
     , Color(..), ColorStop, Gradient, FillStyle
     , drawImage, clearCanvas
-    , solidColor, linearGradient, horizontalLinearGradient, verticalLinearGradient
+    , solidColor, htmlColor
+    , linearGradient, horizontalLinearGradient, verticalLinearGradient
     , fillRect, fillStyle, strokeStyle, lineWidth, textFont
     , TextAlign(..), textAlign
     , beginPath, moveTo, lineTo, closePath, arc, arc'
@@ -44,8 +45,9 @@ data Gradient
       , colorStops :: [ColorStop] -- ^ the gradients color stops
       } deriving (Show, Eq)
 
-data FillStyle 
+data FillStyle
     = SolidColor Color
+    | HtmlColor String    -- Html representation of a color
     | Gradient Gradient
     deriving (Show, Eq) 
 
@@ -66,6 +68,10 @@ drawImage image (x,y) canvas =
 -- | creates a solid-color fillstyle
 solidColor :: Color -> FillStyle
 solidColor rgb = SolidColor rgb
+
+-- | Solid color represented as a HTML string.
+htmlColor :: String -> FillStyle
+htmlColor = HtmlColor
 
 -- | creates a linear gradient fill style
 linearGradient :: Point       -- ^ The upper-left coordinate of the gradient
@@ -133,6 +139,8 @@ assignFillStyle (Gradient fs) canvas =
               pStr                              = intercalate "," . map show
 assignFillStyle (SolidColor color) canvas =
     runFunction $ ffi "%1.getContext('2d').fillStyle=%2" canvas (rgbString color)
+assignFillStyle (HtmlColor  color) canvas =
+    runFunction $ ffi "%1.getContext('2d').fillStyle=%2" canvas color
 
 -- | The color or style to use for the lines around shapes.
 -- Default is @#000@ (black).

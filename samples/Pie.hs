@@ -11,10 +11,14 @@ main :: IO ()
 main = startGUI defaultConfig setup
 
 
--- A data set that conveniently sum to 360, and have labels that can be used as colors
-dataset = [(100, "#1f77b4"), (45, "#ff7f0e"), (80, "#2ca02c"), (10, "#d62728")
-          ,(105,"#9467bd"), (20,"#8c564b")]
-
+-- A data set that conveniently sum to 360,
+-- and have labels that can be used as colors
+dataset = [(100, "#1f77b4")
+          , (45, "#ff7f0e")
+          , (80, "#2ca02c")
+          , (10, "#d62728")
+          , (105,"#9467bd")
+          , (20, "#8c564b")]
 
 canvasSide = 416
 center = (fromIntegral canvasSide / 2, fromIntegral canvasSide / 2)
@@ -43,7 +47,7 @@ setup window = do
         ]
 
     let drawSlice start end col = do
-          canvas # set' UI.fillStyle col
+          canvas # set' UI.fillStyle (UI.htmlColor col)
           canvas # UI.beginPath
           canvas # UI.arc center radius start end
           canvas # UI.lineTo center
