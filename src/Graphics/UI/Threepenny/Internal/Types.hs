@@ -17,11 +17,13 @@ import qualified Data.ByteString.Char8  as BS
 import Data.Map                         (Map)
 import Data.String                      (fromString)
 import Data.Time
+import Data.Text.Encoding               (encodeUtf8, decodeUtf8)
 
 import Network.URI
 import Data.Data
 import           Data.Aeson             as JSON
 import qualified Data.Aeson.Types       as JSON
+import Data.Text
 
 import System.IO (stderr)
 import System.IO.Unsafe
@@ -61,9 +63,9 @@ type Events   = EventId -> E.Event EventData
 
 -- Marshalling ElementId
 instance ToJSON ElementId where
-    toJSON (ElementId o)  = toJSON o
+    toJSON (ElementId o)  = toJSON $ decodeUtf8 o
 instance FromJSON ElementId where
-    parseJSON (Object v)  = ElementId <$> v .: "Element"
+    parseJSON (Object v)  = (ElementId . encodeUtf8) <$> v .: "Element"
     parseJSON _           = mzero
 
 
@@ -144,6 +146,7 @@ data ConnectedState
 data HsFunction a = HsFunction ElementId EventId
     deriving (Typeable, Data, Show)
 
+
 {-----------------------------------------------------------------------------
     Public types
 ------------------------------------------------------------------------------}
@@ -199,19 +202,19 @@ data Instruction
   deriving (Typeable,Data,Show)
 
 instance ToJSON Instruction where
-    toJSON (Debug x)          = object [ "tag" .= ("Debug" :: ByteString)
+    toJSON (Debug x)          = object [ "tag" .= ("Debug" :: Text)
                                        , "contents" .= x]
-    toJSON (SetToken x)       = object [ "tag" .= ("SetToken" :: ByteString)
+    toJSON (SetToken x)       = object [ "tag" .= ("SetToken" :: Text)
                                        , "contents" .= x]
-    toJSON (Bind x y)         = object [ "tag" .= ("Bind" :: ByteString)
+    toJSON (Bind x y)         = object [ "tag" .= ("Bind" :: Text)
                                        , "contents" .= [toJSON x, toJSON y]]
-    toJSON (GetValues xs)     = object [ "tag" .= ("GetValues" :: ByteString)
+    toJSON (GetValues xs)     = object [ "tag" .= ("GetValues" :: Text)
                                        , "contents" .= xs]
-    toJSON (RunJSFunction  x) = object [ "tag" .= ("RunJSFunction" :: ByteString)
+    toJSON (RunJSFunction  x) = object [ "tag" .= ("RunJSFunction" :: Text)
                                        , "contents" .= x]
-    toJSON (CallJSFunction x) = object [ "tag" .= ("CallJSFunction" :: ByteString)
+    toJSON (CallJSFunction x) = object [ "tag" .= ("CallJSFunction" :: Text)
                                        , "contents" .= x]
-    toJSON (Delete x)         = object [ "tag" .= ("Delete" :: ByteString)
+    toJSON (Delete x)         = object [ "tag" .= ("Delete" :: Text)
                                        , "contents" .= x]
 
 instance NFData Instruction where

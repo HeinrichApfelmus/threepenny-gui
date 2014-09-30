@@ -71,5 +71,5 @@ viewSource :: UI Element
 viewSource = UI.p #+
     [UI.anchor #. "view-source" # set UI.href url #+ [string "View source code"]]
     where
-    url = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/src/Buttons.hs"
+    url = samplesURL ++ "Buttons.hs"
 

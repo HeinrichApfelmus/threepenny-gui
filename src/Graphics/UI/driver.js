@@ -211,7 +211,6 @@ $.fn.livechange = function(ms,trigger){
     
     console_log("Event: %s",JSON.stringify(event));
     switch(event.tag){
-
     case "RunJSFunction": {
         eval(event.contents);
         reply();

@@ -4,6 +4,14 @@
 
 * FFI now supports callbacks into Haskell. Remove `callDeferredFunction` function.
 
+**0.4.2.0** -- Maintenance release.
+
+* Dependency `bytestring >=0.9.2` is now implemented correctly.
+* Allow newer versions of `aeson` dependency.
+* Allow newer versions of `network`, `transformers` and `template-haskell` dependencies.
+* Helper scripts in the `samples` directory now assume that you use a cabal sandbox for development.
+* The `UI` monad is now an instance of the `Applicative` class.
+
 **0.4.1.0** -- Maintenance release.
 
 * Dependency on `text` package now from version 0.11 to 1.1.*.
