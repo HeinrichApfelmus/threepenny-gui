@@ -1,8 +1,10 @@
 ## Changelog for the `threepenny-gui` package
 
-**0.4.3.0** -- Snapshot release.
+**0.5.0.0** -- Snapshot release.
 
 * Possibility to specify IP address to bind the server to.
+* `Bool` is now correctly marshalled to JavaScript.
+* `Text` can now be marshalled to JavaScrtip.
 
 **0.4.2.0** -- Maintenance release.
 

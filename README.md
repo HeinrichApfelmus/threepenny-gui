@@ -108,6 +108,7 @@ Many thanks to everyone who contributed, provided feedback or simply wrote an ap
 * Daniel Díaz
 * Yuval Langer
 * *Daniel Mlot*
+* JP Moresmau
 * Luke Palmer
 * Jens Petersen
 * rnons
