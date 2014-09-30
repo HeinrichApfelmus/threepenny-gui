@@ -4,6 +4,7 @@
 
 * Possibility to specify IP address to bind the server to.
 * FFI now supports callbacks into Haskell. Remove `callDeferredFunction` function.
+* 2D graphics API in `Graphics.UI.Threepenny.Canvas` is beginning to grow.
 * `Bool` is now correctly marshalled to JavaScript.
 * `Text` can now be marshalled to JavaScrtip.
 
