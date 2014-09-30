@@ -7,7 +7,7 @@ module Graphics.UI.Threepenny.Internal.FFI (
     -- * Documentation
     ffi,
     FFI(..), ToJS(..),
-    JSFunction,
+    JSFunction, HsFunction,
     
     showJSON,
     
@@ -54,6 +54,8 @@ class ToJS a where
 
 instance ToJS String     where render   = render . JSON.String . fromString
 instance ToJS Text       where render   = render . JSON.String
+instance ToJS Float      where render   = JSCode . showJSON
+instance ToJS Double     where render   = JSCode . showJSON
 instance ToJS Int        where render   = JSCode . show
 instance ToJS Bool       where render b = JSCode $ if b then "true" else "false"
 instance ToJS JSON.Value where render   = JSCode . showJSON
@@ -62,6 +64,10 @@ instance ToJS ByteString where render   = JSCode . show
 instance ToJS ElementId  where
     render (ElementId x) = apply "elidToElement(%1)" [render x]
 instance ToJS Element    where render = render . unprotectedGetElementId
+-- Haskell function with no parameters
+instance ToJS (HsFunction (IO ())) where
+    render (HsFunction (ElementId elid) name) =
+        apply "callback(%1,%2)" [render elid, render name]
 
 
 -- | A JavaScript function with a given output type @a@.
@@ -103,6 +109,9 @@ instance FFI (JSFunction ())          where fancy f = fromJSCode $ f []
 instance FFI (JSFunction String)      where fancy   = mkResult "%1.toString()"
 instance FFI (JSFunction Text)        where fancy   = mkResult "%1.toString()"
 instance FFI (JSFunction JSON.Value)  where fancy   = mkResult "%1"
+instance FFI (JSFunction Int)         where fancy   = mkResult "%1"
+instance FFI (JSFunction Double)      where fancy   = mkResult "%1"
+instance FFI (JSFunction Float)       where fancy   = mkResult "%1"
 instance FFI (JSFunction [ElementId]) where fancy   = mkResult "elementsToElids(%1)"
 
 -- FIXME: We need access to IO in order to turn a Coupon into an Element.

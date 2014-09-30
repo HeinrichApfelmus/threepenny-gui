@@ -40,12 +40,12 @@ module Graphics.UI.Threepenny.Internal.Driver
   
   -- * Utilities
   ,debug
-  ,callDeferredFunction
   ,atomic
 
   -- * JavaScript FFI
   ,ToJS, FFI, ffi, JSFunction
   ,runFunction, callFunction
+  ,newHsFunction
   
   -- * Types
   ,Window
@@ -98,6 +98,19 @@ import           Reactive.Threepenny
 
 import qualified Foreign.Coupon as Foreign
 import qualified System.Mem
+
+{-----------------------------------------------------------------------------
+    Import #ifdefs
+------------------------------------------------------------------------------}
+#if defined(CABAL) || defined(FPCOMPLETE)
+#if MIN_VERSION_bytestring(0,10,0)
+fromStrictBS = LBS.fromStrict
+#else
+fromStrictBS = LBS.fromChunks . (:[])
+#endif
+#else
+fromStrictBS = LBS.fromStrict
+#endif
 
 {-----------------------------------------------------------------------------
     Server and and session management
@@ -227,9 +240,10 @@ snapRequestCookies = do
 -- | Respond to poll requests.
 poll :: Session -> Snap ()
 poll Session{..} = do
-    let setDisconnected = do
-        now <- getCurrentTime
-        modifyMVar_ sConnectedState (const (return (Disconnected now)))
+    let
+        setDisconnected = do
+            now <- getCurrentTime
+            modifyMVar_ sConnectedState (const (return (Disconnected now)))
     
     instructions <- liftIO $ do
         modifyMVar_ sConnectedState (const (return Connected))
@@ -352,17 +366,6 @@ run :: Session -> Instruction -> IO ()
 run (Session{..}) instruction =
     writeChan sInstructions $!! instruction  -- see note [Instruction strictness]
 
--- | Call the given function with the given continuation. Doesn't block.
-callDeferredFunction
-  :: Window                    -- ^ Browser window
-  -> String                    -- ^ The function name.
-  -> [String]                  -- ^ Parameters.
-  -> ([Maybe String] -> IO ()) -- ^ The continuation to call if/when the function completes.
-  -> IO ()
-callDeferredFunction window fun params thunk = do
-    closure <- newClosure window fun $ \(EventData xs) -> thunk xs
-    run window $ CallDeferredFunction (closure,fun,params)
-
 -- | Run the given JavaScript function and carry on. Doesn't block.
 --
 -- The client window uses JavaScript's @eval()@ function to run the code.
@@ -381,21 +384,20 @@ callFunction window jsfunction =
                 Error   _ -> return Nothing
             _ -> return Nothing
 
-
 -- | Package a Haskell function such that it can be called from JavaScript.
--- 
+--
 -- At the moment, we implement this as an event handler that is
--- attached to the @head@ element.
-newClosure
-    :: Window               -- ^ Browser window context
-    -> String               -- ^ Function name (for debugging).
-    -> (EventData -> IO ()) -- ^ Function to call
-    -> IO Closure
-newClosure window@(Session{..}) fun thunk = do
+-- attached to the @head@ element. In particular, it is not garbage
+-- collected as long as the head element is alive.
+newHsFunction
+    :: Window       -- ^ Browser window context
+    -> IO ()        -- ^ Haskell function
+    -> IO (HsFunction (IO ()))
+newHsFunction window@(Session{..}) fun = do
     cid <- modifyMVar sClosures $ \(x:xs) -> return (xs,x)
-    let eventId = fun ++ "-" ++ show cid
-    attachClosure sHeadElement eventId thunk
-    return $ Closure (unprotectedGetElementId sHeadElement, eventId)
+    let eventId = "callback-" ++ show cid
+    attachClosure sHeadElement eventId (const $ fun)
+    return $ HsFunction (unprotectedGetElementId sHeadElement) eventId
 
 
 {-----------------------------------------------------------------------------

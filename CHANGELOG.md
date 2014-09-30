@@ -3,6 +3,7 @@
 **0.5.0.0** -- Snapshot release.
 
 * Possibility to specify IP address to bind the server to.
+* FFI now supports callbacks into Haskell. Remove `callDeferredFunction` function.
 * `Bool` is now correctly marshalled to JavaScript.
 * `Text` can now be marshalled to JavaScrtip.
 

@@ -2,6 +2,9 @@
 {-# LANGUAGE RecordWildCards #-}
 module VideoAnnotate.MediaPlayer where
 
+#ifdef FPCOMPLETE
+#else
+    
 import Control.Monad
 import Control.Monad.IO.Class
 
@@ -48,4 +51,4 @@ duration = undefined
 view :: MonadIO m => MediaPlayer -> m Element
 view = element . mpVideo
 
-
+#endif

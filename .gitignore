@@ -12,3 +12,4 @@ cabal.sandbox.config
 /.dist-buildwrapper
 /.project
 /.externalToolBuilders
+*.sublime-workspace
