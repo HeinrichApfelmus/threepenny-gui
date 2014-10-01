@@ -33,7 +33,7 @@ mkDragPair color position = do
         # set UI.style [("left", show position ++ "px"), ("color",color)]
         # set text "Drag me!"
         # set UI.draggable True
-        # set UI.dragData color
+        # set UI.dragData (Just color, (0,0))
 
     elDrop  <- UI.new #. "box-drop"
         # set UI.style [("border","2px solid " ++ color), ("left", show position ++ "px")]
@@ -52,7 +52,7 @@ mkDragPair color position = do
                 # set text ""
                 # set UI.droppable False
 
-    on UI.drop elDrop $ \color' -> when (color == color') $ void $ do
+    on UI.drop elDrop $ \(Just color',(_,_)) -> when (color == color') $ void $ do
         liftIO $ writeIORef dropSuccess True
         delete elDrag
         element elDrop
