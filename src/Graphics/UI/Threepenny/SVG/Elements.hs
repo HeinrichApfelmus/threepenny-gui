@@ -1,14 +1,16 @@
---------------------------------------------------------------------------------
--- |
--- Module      : Graphics.UI.Threepenny.SVG.Elements
--- Description : Elements used in SVG markup
---
---  Elements are defined by W3C, Scalable Vector Graphics (SVG) 1.1
---    (Second Edition) Appendix M <http://www.w3.org/TR/2011/REC-SVG11-20110816/>.
---
---------------------------------------------------------------------------------
-
 module Graphics.UI.Threepenny.SVG.Elements (
+    -- * Synopsis
+    -- | SVG elements as defined by W3C, Scalable Vector Graphics (SVG) 1.1
+    --   (Second Edition) Appendix M <http://www.w3.org/TR/2011/REC-SVG11-20110816/>.
+    -- 
+    -- Whenever possible, the Haskell identifier for an element is the 
+    -- same as the attribute name. However, sometimes changes are necessary:
+    --
+    --     1. Hyphens @-@ are replaced by underscores @_@, e.g. 'stroke_width'.
+    --
+    --     2. An underscore is used whenever the attribute name conflicts with 
+    --       a reserved word in Haskell, e.g. 'class_'.
+
     -- * SVG Elements
     a, altGlyph, altGlyphDef, altGlyphItem,
     animate, animateColor, animateMotion, animateTransform,
@@ -20,13 +22,14 @@ module Graphics.UI.Threepenny.SVG.Elements (
     feFuncA, feFuncB, feFuncG, feFuncR,
     feGaussianBlur, feImage, feMerge, feMergeNode, feMorphology, feOffset,
     fePointLight, feSpecularLighting, feSpotLight, feTile, feTurbulence,
-    filter_, font,  fontface, fontfaceformat, fontfacename, fontfacesrv,
-    fontfaceuri, foreignObject,
+    filter, font,
+    font_face, font_face_format, font_face_name, font_face_srv, font_face_uri,
+    foreignObject,
     g, glyph, glyphRef,
     hkern,
     image,
     line, linearGradient,
-    marker, mask, metadata, missingglyph, mpath,
+    marker, mask, metadata, missing_glyph, mpath,
     path, pattern, polygon, polyline,
     radialGradient, rect,
     script, set, stop, style, svg, switch, symbol,
@@ -35,7 +38,8 @@ module Graphics.UI.Threepenny.SVG.Elements (
     view, vkern,
     ) where
 
-import           Graphics.UI.Threepenny.Core (mkElement)
+import Prelude ()
+import Graphics.UI.Threepenny.Core (mkElement)
 
 
 tag    = mkElement
@@ -80,13 +84,13 @@ feSpecularLighting    =  tag "svg:feSpecularLighting"
 feSpotLight           = itag "svg:feSpotLight"
 feTile                =  tag "svg:feTile"
 feTurbulence          =  tag "svg:feTurbulence"
-filter_               =  tag "svg:filter"
+filter                =  tag "svg:filter"
 font                  =  tag "svg:font"
-fontface              = itag "svg:font-face"
-fontfaceformat        = itag "svg:font-face-format"
-fontfacename          = itag "svg:font-face-name"
-fontfacesrv           = itag "svg:font-face-src"
-fontfaceuri           = itag "svg:font-face-uri"
+font_face             = itag "svg:font-face"
+font_face_format      = itag "svg:font-face-format"
+font_face_name        = itag "svg:font-face-name"
+font_face_srv         = itag "svg:font-face-src"
+font_face_uri         = itag "svg:font-face-uri"
 foreignObject         =  tag "svg:foreignObject"
 g                     =  tag "svg:g"
 glyph                 =  tag "svg:glyph"
@@ -98,7 +102,7 @@ linearGradient        =  tag "svg:linearGradient"
 marker                =  tag "svg:marker"
 mask                  =  tag "svg:mask"
 metadata              = itag "svg:metadata"
-missingglyph          =  tag "svg:missing-glyph"
+missing_glyph         =  tag "svg:missing-glyph"
 mpath                 = itag "svg:mpath"
 path                  = itag "svg:path"
 pattern               =  tag "svg:pattern"

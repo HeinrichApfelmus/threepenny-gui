@@ -31,7 +31,7 @@ svgElems = do
                                # set SVG_A.cy "50"
                                # set SVG_A.r "40"
                                # set SVG_A.stroke "green"
-                               # set SVG_A.strokewidth "4"
+                               # set SVG_A.stroke_width "4"
                                # set SVG_A.fill "yellow"
     return context #+ [element elemCircle]
 
