@@ -115,6 +115,7 @@ Many thanks to everyone who contributed, provided feedback or simply wrote an ap
 * Jens Petersen
 * rnons
 * Michael Snoyman
+* *Steve Bigham*
 * tailcalled
 
 Special thanks to *Chris Done* for starting the precursor project Ji.
