@@ -73,6 +73,7 @@ Library
                     ,Graphics.UI.Threepenny.Elements
                     ,Graphics.UI.Threepenny.Events
                     ,Graphics.UI.Threepenny.JQuery
+                    ,Graphics.UI.Threepenny.SVG
                     ,Graphics.UI.Threepenny.SVG.Attributes
                     ,Graphics.UI.Threepenny.SVG.Elements 
                     ,Graphics.UI.Threepenny.Timer

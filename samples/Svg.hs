@@ -1,9 +1,8 @@
-import           Control.Monad                         (void)
+import           Control.Monad                      (void)
 
-import qualified Graphics.UI.Threepenny                as UI
+import qualified Graphics.UI.Threepenny      as UI
 import           Graphics.UI.Threepenny.Core
-import qualified Graphics.UI.Threepenny.SVG.Attributes as SVG_A
-import qualified Graphics.UI.Threepenny.SVG.Elements   as SVG_E
+import qualified Graphics.UI.Threepenny.SVG  as SVG
 
 {-----------------------------------------------------------------------------
     SVG
@@ -25,14 +24,14 @@ setup w = void $ do
 
 svgElems :: UI Element
 svgElems = do
-    context <- SVG_E.svg # set SVG_A.width "150"
-                         # set SVG_A.height "100"
-    elemCircle <- SVG_E.circle # set SVG_A.cx "100"
-                               # set SVG_A.cy "50"
-                               # set SVG_A.r "40"
-                               # set SVG_A.stroke "green"
-                               # set SVG_A.stroke_width "4"
-                               # set SVG_A.fill "yellow"
+    context <- SVG.svg # set SVG.width "150"
+                         # set SVG.height "100"
+    elemCircle <- SVG.circle # set SVG.cx "100"
+                               # set SVG.cy "50"
+                               # set SVG.r "40"
+                               # set SVG.stroke "green"
+                               # set SVG.stroke_width "4"
+                               # set SVG.fill "yellow"
     return context #+ [element elemCircle]
 
 
