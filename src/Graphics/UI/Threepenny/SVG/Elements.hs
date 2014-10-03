@@ -6,10 +6,7 @@ module Graphics.UI.Threepenny.SVG.Elements (
     -- Whenever possible, the Haskell identifier for an element is the 
     -- same as the attribute name. However, sometimes changes are necessary:
     --
-    --     1. Hyphens @-@ are replaced by underscores @_@, e.g. 'stroke_width'.
-    --
-    --     2. An underscore is used whenever the attribute name conflicts with 
-    --       a reserved word in Haskell, e.g. 'class_'.
+    --     1. Hyphens @-@ are replaced by underscores @_@, e.g. 'font_face'.
 
     -- * SVG Elements
     a, altGlyph, altGlyphDef, altGlyphItem,
