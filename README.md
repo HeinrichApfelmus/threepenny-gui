@@ -8,7 +8,7 @@ for more information on what it does and can do for you as a library user.
 
 ## Examples
 
-The library comes with many examples, which can be found in the [samples](https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/) folder. Follow the link for more information on how to run them.
+The library comes with many examples, which can be found in the [samples](https://github.com/HeinrichApfelmus/threepenny-gui/tree/master/samples#readme) folder. Follow the link for more information on how to run them.
 
 ## Technical overview
 
