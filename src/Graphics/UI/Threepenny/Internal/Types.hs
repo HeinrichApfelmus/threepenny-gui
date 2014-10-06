@@ -141,16 +141,10 @@ data ConnectedState
                          -- since when.
   deriving (Show)
 
-
--- | An opaque reference to a closure that the event manager uses to
---   trigger events signalled by the client.
-data Closure = Closure (ElementId,EventId)
-    deriving (Typeable,Data,Show)
-
-instance NFData Closure where rnf (Closure x) = rnf x
-
-instance ToJSON Closure where
-    toJSON (Closure (x,y)) = toJSON [toJSON x, toJSON y]
+-- | A Haskell value/function of type 'a',
+-- presented in a form that can be called from JavaScript.
+data HsFunction a = HsFunction ElementId EventId
+    deriving (Typeable, Data, Show)
 
 
 {-----------------------------------------------------------------------------
@@ -169,6 +163,12 @@ data Config = Config
         -- @Nothing@ means that the port number is
         -- read from the environment variable @PORT@.
         -- Alternatively, port @8023@ is used if this variable is not set.
+    , tpAddr       :: Maybe ByteString
+        -- ^ Bind address.
+        -- @Nothing@ means that the bind address is
+        -- read from the environment variable @ADDR@.
+        -- Alternatively, address @127.0.0.1@ is
+        -- used if this variable is not set.
     , tpCustomHTML :: Maybe FilePath
         -- ^ Custom HTML file to replace the default one.
     , tpStatic     :: Maybe FilePath
@@ -180,6 +180,9 @@ data Config = Config
 defaultPort :: Int
 defaultPort = 8023
 
+defaultAddr :: ByteString
+defaultAddr = "127.0.0.1"
+
 -- | Default configuration.
 --
 -- Port from environment variable or @8023@,
@@ -187,6 +190,7 @@ defaultPort = 8023
 defaultConfig :: Config
 defaultConfig = Config
     { tpPort       = Nothing
+    , tpAddr       = Nothing
     , tpCustomHTML = Nothing
     , tpStatic     = Nothing
     , tpLog        = \s -> BS.hPut stderr s >> BS.hPut stderr "\n"
@@ -204,7 +208,6 @@ data Instruction
   | GetValues [ElementId]
   | RunJSFunction String
   | CallJSFunction String
-  | CallDeferredFunction (Closure,String,[String])
   | Delete ElementId
   deriving (Typeable,Data,Show)
 
@@ -221,9 +224,6 @@ instance ToJSON Instruction where
                                        , "contents" .= x]
     toJSON (CallJSFunction x) = object [ "tag" .= ("CallJSFunction" :: Text)
                                        , "contents" .= x]
-    toJSON (CallDeferredFunction (x,y,z))
-                              = object [ "tag" .= ("CallDeferredFunction" :: Text)
-                                       , "contents" .= [toJSON x, toJSON y, toJSON z]]
     toJSON (Delete x)         = object [ "tag" .= ("Delete" :: Text)
                                        , "contents" .= x]
 
@@ -234,7 +234,6 @@ instance NFData Instruction where
     rnf (GetValues xs) = rnf xs
     rnf (RunJSFunction  x) = rnf x
     rnf (CallJSFunction x) = rnf x
-    rnf (CallDeferredFunction x) = rnf x
     rnf (Delete x)     = rnf x
 
 -- | A signal (mostly events) that are sent from the client to the server.

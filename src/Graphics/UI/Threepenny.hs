@@ -4,7 +4,7 @@ module Graphics.UI.Threepenny (
 
     -- * Example
     -- $example
-    
+
     -- * Modules
     module Graphics.UI.Threepenny.Attributes,
     module Graphics.UI.Threepenny.Core,
@@ -17,15 +17,15 @@ module Graphics.UI.Threepenny (
     module Graphics.UI.Threepenny.Widgets,
     ) where
 
-import Graphics.UI.Threepenny.Attributes
-import Graphics.UI.Threepenny.Core
-import Graphics.UI.Threepenny.Canvas
-import Graphics.UI.Threepenny.DragNDrop
-import Graphics.UI.Threepenny.Elements
-import Graphics.UI.Threepenny.Events
-import Graphics.UI.Threepenny.JQuery
-import Graphics.UI.Threepenny.Timer
-import Graphics.UI.Threepenny.Widgets
+import           Graphics.UI.Threepenny.Attributes
+import           Graphics.UI.Threepenny.Canvas
+import           Graphics.UI.Threepenny.Core
+import           Graphics.UI.Threepenny.DragNDrop
+import           Graphics.UI.Threepenny.Elements
+import           Graphics.UI.Threepenny.Events
+import           Graphics.UI.Threepenny.JQuery
+import           Graphics.UI.Threepenny.Timer
+import           Graphics.UI.Threepenny.Widgets
 
 {- $intro
 
@@ -79,7 +79,7 @@ First, set the title of the HTML document
 
 Then create a button element
 
->     button <- UI.button # set UI.text "Click me!s"
+>     button <- UI.button # set UI.text "Click me!"
 
 DOM elements can be accessed much in the same way they are
 accessed from JavaScript; they can be searched, updated, moved and

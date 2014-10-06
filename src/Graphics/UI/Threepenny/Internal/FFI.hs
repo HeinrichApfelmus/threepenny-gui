@@ -7,7 +7,7 @@ module Graphics.UI.Threepenny.Internal.FFI (
     -- * Documentation
     ffi,
     FFI(..), ToJS(..), VariadicJSParam(..),
-    JSFunction,
+    JSFunction, HsFunction,
     
     showJSON,
     
@@ -23,6 +23,7 @@ import           Data.Functor
 import           Data.List
 import           Data.Maybe
 import           Data.String           (fromString)
+import           Data.Text             (Text)
 import qualified Data.Text.Lazy
 import qualified Data.Text.Lazy.Builder
 
@@ -55,10 +56,11 @@ class ToJS a where
     render :: a -> JSCode
 
 instance ToJS String     where render   = render . JSON.String . fromString
+instance ToJS Text       where render   = render . JSON.String
 instance ToJS Float      where render   = JSCode . showJSON
 instance ToJS Double     where render   = JSCode . showJSON
 instance ToJS Int        where render   = JSCode . show
-instance ToJS Bool       where render b = JSCode $ if b then "false" else "true"
+instance ToJS Bool       where render b = JSCode $ if b then "true" else "false"
 instance ToJS JSON.Value where render   = JSCode . showJSON
 -- TODO: ByteString instance may be wrong. Only needed for ElementId right now.
 instance ToJS ByteString where render   = JSCode . show
@@ -67,6 +69,10 @@ instance ToJS ElementId  where
 instance ToJS Element    where render = render . unprotectedGetElementId
 instance ToJS a => ToJS (VariadicJSParam a) where 
     render (VariadicJSParam list) = JSCode $ intercalate "," (map (unJSCode . render) list)
+-- Haskell function with no parameters
+instance ToJS (HsFunction (IO ())) where
+    render (HsFunction (ElementId elid) name) =
+        apply "callback(%1,%2)" [render elid, render name]
 
 
 -- | A JavaScript function with a given output type @a@.
@@ -106,6 +112,7 @@ instance (ToJS a, FFI b) => FFI (a -> b) where
 
 instance FFI (JSFunction ())          where fancy f = fromJSCode $ f []
 instance FFI (JSFunction String)      where fancy   = mkResult "%1.toString()"
+instance FFI (JSFunction Text)        where fancy   = mkResult "%1.toString()"
 instance FFI (JSFunction JSON.Value)  where fancy   = mkResult "%1"
 instance FFI (JSFunction Int)         where fancy   = mkResult "%1"
 instance FFI (JSFunction Double)      where fancy   = mkResult "%1"

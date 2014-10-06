@@ -1,7 +1,7 @@
 {-# LANGUAGE QuasiQuotes, CPP #-}
 module Graphics.UI.Threepenny.Internal.Resources where
 
-import           Data.Text                               (Text)
+import           Data.Text                                       (Text)
 import qualified Data.Text                               as Text
 import           Graphics.UI.Threepenny.Internal.Include
 

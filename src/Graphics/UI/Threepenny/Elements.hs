@@ -4,7 +4,7 @@ module Graphics.UI.Threepenny.Elements (
     addStyleSheet,
     -- text,
     new,
-    
+
     -- * Primitive HTML elements
     address, a, anchor, applet, area, audio,
     basefont, big, blockquote, body, bold, br, button,
@@ -21,10 +21,10 @@ module Graphics.UI.Threepenny.Elements (
     underline, variable, video,
     ) where
 
-import Control.Monad
-import Control.Monad.Trans.Reader
-import Prelude hiding (span,div,map)
-import Graphics.UI.Threepenny.Core
+import           Control.Monad
+import           Control.Monad.Trans.Reader
+import           Graphics.UI.Threepenny.Core
+import           Prelude                     hiding (div, map, span)
 
 {-----------------------------------------------------------------------------
     Combinations
@@ -52,7 +52,7 @@ new = div
 
 {-----------------------------------------------------------------------------
     Primitives
-    
+
     Taken from the HTML library (BSD3 license)
     http://hackage.haskell.org/package/html
 ------------------------------------------------------------------------------}

@@ -1,5 +1,14 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.5.0.0** -- Snapshot release.
+
+* Possibility to specify IP address to bind the server to.
+* FFI now supports callbacks into Haskell. Remove `callDeferredFunction` function.
+* `Graphics.UI.Threepenny.Canvas.SVG` for creating SVG elements and attributes.
+* 2D graphics API in `Graphics.UI.Threepenny.Canvas` is beginning to grow.
+* `Bool` is now correctly marshalled to JavaScript.
+* `Text` can now be marshalled to JavaScrtip.
+
 **0.4.2.0** -- Maintenance release.
 
 * Dependency `bytestring >=0.9.2` is now implemented correctly.

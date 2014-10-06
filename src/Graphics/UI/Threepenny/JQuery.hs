@@ -2,13 +2,11 @@
 module Graphics.UI.Threepenny.JQuery where
 
 import Control.Arrow
-import           Data.Aeson                 as JSON
 import Data.String
 import Data.Char
 import Data.Default
 import Data.Maybe
 import Graphics.UI.Threepenny.Core
-import Graphics.UI.Threepenny.Internal.FFI    (showJSON)
 import qualified Graphics.UI.Threepenny.Internal.Driver as Core
 import qualified Graphics.UI.Threepenny.Internal.Types  as Core
 import Reactive.Threepenny
@@ -17,29 +15,21 @@ import Reactive.Threepenny
 data Easing = Swing | Linear
   deriving (Eq,Enum,Show)
 
-instance Default Easing where
-  def = Linear
-
--- | Animate property changes of a function.
-animate :: Element -> [(String,String)] -> Int -> Easing -> IO () -> IO ()
-animate el props duration easing complete =
-    Core.withElement (toElement el) $ \elid window ->
-        callDeferredFunction window
-            "jquery_animate"
-            [showJSON elid,showJSON propsJSON,show duration,map toLower (show easing)]
-            (const complete)
-    where
-    propsJSON = JSON.object [fromString name .= val | (name,val) <- props]
+instance Default Easing where def = Linear
 
 -- | Fade in an element.
-fadeIn :: Element -> Int -> Easing -> IO () -> IO ()
-fadeIn el duration easing complete =
-    animate el [("opacity","1")] duration easing complete
+fadeIn :: Element -> Int -> Easing -> IO () -> UI ()
+fadeIn el duration easing complete = do
+    callback <- ffiExport complete
+    runFunction $ ffi "$(%1).animate({opacity: 1}, %2 * 1, %3, %4)"
+        el duration (map toLower (show easing)) callback
 
 -- | Fade out an element.
-fadeOut :: Element -> Int -> Easing -> IO () -> IO ()
-fadeOut el duration easing complete =
-    animate el [("opacity","0")] duration easing complete
+fadeOut :: Element -> Int -> Easing -> IO () -> UI ()
+fadeOut el duration easing complete = do
+    callback <- ffiExport complete
+    runFunction $ ffi "$(%1).animate({opacity: 0}, %2 * 1, %3, %4)"
+        el duration (map toLower (show easing)) callback
 
 -- | Do something on return.
 sendValue :: Element -> Event String

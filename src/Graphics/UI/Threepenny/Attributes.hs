@@ -1,10 +1,10 @@
 module Graphics.UI.Threepenny.Attributes (
     -- * Synopsis
     -- | Element attributes.
-    
+
     -- * Input elements
     checked, selection, enabled,
-    
+
     -- * HTML attributes
     action, align, alink, alt, altcode, archive,
     background, base, bgcolor, border, bordercolor,
@@ -15,37 +15,37 @@ module Graphics.UI.Threepenny.Attributes (
     name, nohref, noresize, noshade, nowrap,
     rel, rev, rows, rowspan, rules,
     scrolling, selected, shape, size, src,
-    target, text_, type_, usemap, valign, version, vlink, vspace, width,
+    target, text_, title__, type_, usemap, valign, version, vlink, vspace, width,
     ) where
 
-import qualified Data.Aeson       as JSON
-import Graphics.UI.Threepenny.Core
+import qualified Data.Aeson                  as JSON
+import           Graphics.UI.Threepenny.Core
 
 {-----------------------------------------------------------------------------
     Attributes
 ------------------------------------------------------------------------------}
 -- | The @checked@ status of an input element of type checkbox.
 checked :: Attr Element Bool
-checked = fromProp "checked" (== JSON.Bool True) JSON.Bool
+checked = fromJQueryProp "checked" (== JSON.Bool True) JSON.Bool
 
 -- | The @enabled@ status of an input element
 enabled :: Attr Element Bool
-enabled = fromProp "disabled" (== JSON.Bool False) (JSON.Bool . not)
+enabled = fromJQueryProp "disabled" (== JSON.Bool False) (JSON.Bool . not)
 
 -- | Index of the currently selected option of a @<select>@ element.
 --
 -- The index starts at @0@.
 -- If no option is selected, then the selection is 'Nothing'.
 selection :: Attr Element (Maybe Int)
-selection = fromProp "selectedIndex" from (JSON.toJSON . maybe (-1) id)
+selection = fromJQueryProp "selectedIndex" from (JSON.toJSON . maybe (-1) id)
     where
-    from s = let JSON.Success x = JSON.fromJSON s in 
+    from s = let JSON.Success x = JSON.fromJSON s in
         if x == -1 then Nothing else Just x
 
 
 {-----------------------------------------------------------------------------
     HTML atributes
-    
+
     Taken from the HTML library (BSD3 license)
     http://hackage.haskell.org/package/html
 ------------------------------------------------------------------------------}
@@ -60,7 +60,7 @@ emptyAttr name = mkWriteAttr (set' (attr name) . f)
     where
     f True  = "1"
     f False = "0"
-    
+
 action              =   strAttr "action"
 align               =   strAttr "align"
 alink               =   strAttr "alink"
@@ -118,7 +118,7 @@ target              =   strAttr "target"
 text_               =   strAttr "text"
 class_              =   strAttr "class"
 type_               =   strAttr "type"
-title               =   strAttr "title"
+title__             =   strAttr "title" -- ugly, but necessary to avoid conflicts with the window title and the title element
 usemap              =   strAttr "usemap"
 valign              =   strAttr "valign"
 version             =   strAttr "version"

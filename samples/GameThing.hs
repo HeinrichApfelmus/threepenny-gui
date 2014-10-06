@@ -94,7 +94,7 @@ place image pixels board = board // [(location, Just image)]
     where location = pixelsToGrid pixels
 
 pixelsToGrid (x,y) = (x `div` 32 + 1, y `div` 32 + 1)
-gridToPixels (x,y) = (32*(x-1),32*(y-1))
+gridToPixels (x,y) = (32*(fromIntegral x-1),32*(fromIntegral y-1))
 
 {-----------------------------------------------------------------------------
     Images

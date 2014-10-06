@@ -50,11 +50,13 @@ module Graphics.UI.Threepenny.Core (
     -- * JavaScript FFI
     -- | Direct interface to JavaScript in the browser window.
     debug,
-    ToJS, FFI, ffi, JSFunction, runFunction, callFunction,
-    callDeferredFunction, atomic,
+    ToJS, FFI,
+    JSFunction, ffi, runFunction, callFunction,
+    HsFunction, ffiExport,
+    atomic,
     
     -- * Internal and oddball functions
-    fromProp, toElement,
+    fromJQueryProp, toElement,
     audioPlay, audioStop,
     
     ) where
@@ -82,7 +84,7 @@ import qualified Reactive.Threepenny as Reactive
 import qualified Graphics.UI.Threepenny.Internal.Driver  as Core
 import           Graphics.UI.Threepenny.Internal.Driver
     ( getRequestLocation
-    , callDeferredFunction, atomic, )
+    , atomic, )
 import           Graphics.UI.Threepenny.Internal.FFI
 import           Graphics.UI.Threepenny.Internal.Types   as Core
     ( Window, Config, defaultConfig, Events, EventData
@@ -355,6 +357,14 @@ callFunction fun = do
     window <- askWindow
     liftIO $ Core.callFunction window fun
 
+-- | Export the given Haskell function so that it can be called
+-- from JavaScript code.
+--
+-- TODO: At the moment, the function is not garbage collected.
+ffiExport :: IO () -> UI (HsFunction (IO ()))
+ffiExport fun = do
+    window <- askWindow
+    liftIO $ Core.newHsFunction window fun
 
 {-----------------------------------------------------------------------------
     Oddball
@@ -370,13 +380,6 @@ audioPlay el = runFunction $ ffi "%1.play()" el
 -- | Invoke the JavaScript expression @audioElement.stop();@.
 audioStop :: Element -> UI ()
 audioStop el = runFunction $ ffi "prim_audio_stop(%1)" el
-
--- Turn a jQuery property @.prop()@ into an attribute.
-fromProp :: String -> (JSON.Value -> a) -> (a -> JSON.Value) -> Attr Element a
-fromProp name from to = mkReadWriteAttr get set
-    where
-    set v el = runFunction $ ffi "$(%1).prop(%2,%3)" el name (to v)
-    get   el = fmap from $ callFunction $ ffi "$(%1).prop(%2)" el name
 
 {-----------------------------------------------------------------------------
     Layout

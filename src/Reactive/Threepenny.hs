@@ -341,6 +341,10 @@ mapAccum acc ef = do
 
 {-----------------------------------------------------------------------------
     Tidings
+
+    Data type for combining user events.
+    See <http://apfelmus.nfshost.com/blog/2012/03/29-frp-three-principles-bidirectional-gui.html>
+    for more information.
 ------------------------------------------------------------------------------}
 -- | Data type representing a behavior ('facts')
 -- and suggestions to change it ('rumors').
