@@ -259,10 +259,12 @@ $.fn.livechange = function(ms,trigger){
           });
         } else if(eventType.match('dragstart|dragenter|dragover|dragleave|drag|drop|dragend')) {
           $(el).bind(eventType,function(e){
+            var x      = Math.round(e.originalEvent.pageX);
+            var y      = Math.round(e.originalEvent.pageY);
             sendEvent(elid,eventType,
                 e.originalEvent.dataTransfer
-                    ? [e.originalEvent.dataTransfer.getData("dragData")]
-                    : []
+                    ? [e.originalEvent.dataTransfer.getData("dragData"), x.toString(), y.toString()]
+                    : [x.toString(), y.toString()]
               );
             return true;
           });
@@ -279,6 +281,12 @@ $.fn.livechange = function(ms,trigger){
             sendEvent(elid,eventType, [e.keyCode.toString()]);
             return true;
           });
+        } else if (eventType == "resize") {
+            // Only window can catch the resize event
+            $(window).bind(eventType,function(e){
+                sendEvent(elid,eventType, []);
+                return true;
+            });
         } else {
           $(el).bind(eventType,function(e){
             sendEvent(elid,eventType, e.which ? [e.which.toString()] : []);

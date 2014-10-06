@@ -36,7 +36,7 @@ draggable = mkWriteAttr set
 dragData :: WriteAttr Element DragData
 dragData = mkWriteAttr set
     where
-    set v = set' (attr "ondragstart") $
+    set (Just v,_) = set' (attr "ondragstart") $
         "event.dataTransfer.setData('dragData', '" ++ v ++ "')"
 
 -- | Enable or disable whether the element accepts drops.
@@ -68,13 +68,15 @@ droppable = mkWriteAttr enable
 --
 -- FIXME: Empty data is currently encoded by the empty String.
 -- Change this to 'Maybe String' instead.
-type DragData = String
+type DragCoord = (Int,Int)
+type DragData = (Maybe String,DragCoord)
 
 
 withDragData = fmap extract
     where
-    extract (EventData [Just s]) = s
-    extract _                    = ""
+    extract (EventData (Just s:Just x:Just y:_)) = (Just s,(read x, read y))
+    extract (EventData (Just x:Just y:_))        = (Nothing,(read x, read y))
+    extract _        = (Nothing,(0,0))
 
 -- | Occurs periodically while the element is being dragged around.
 drag :: Element -> Event DragData
