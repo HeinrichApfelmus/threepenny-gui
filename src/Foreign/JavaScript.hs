@@ -8,9 +8,9 @@ module Foreign.JavaScript (
     Window, root,
     
     -- * JavaScript FFI
-    FFI, ToJS, JSFunction, JSObject,
+    FFI, ToJS(..), JSFunction, JSObject,
     ffi, runFunction, callFunction,
-    exportHandler,
+    HsEvent, exportHandler,
     debug,
     ) where
 

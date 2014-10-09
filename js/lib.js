@@ -3,7 +3,6 @@
   
   Additional JavaScript functions that are available
   for Threepenny.
-  
 ********************************************************************* */
 window.jquery_scrollToBottom = function(el){
   $(el).scrollTop(el.scrollHeight);
@@ -13,6 +12,14 @@ function prim_audio_stop(audio){
   audio.pause();
   audio.currentTime = 0;
 }
+
+Haskell.map = function (fun, array) {
+  var result;
+  for (i=0; i<array.length; i++) {
+    result[i] = fun(array[i]);
+  }
+  return result;
+};
 
 // Canvas API additions.
 // See http://stackoverflow.com/a/9722502/403805 .

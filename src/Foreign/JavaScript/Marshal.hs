@@ -1,16 +1,18 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
 module Foreign.JavaScript.Marshal (
-    FFI, ToJS,
+    FFI, ToJS(..),
     JSFunction, toCode, marshalResult, ffi,
     ) where
 
 import           Data.Aeson             as JSON
 import qualified Data.Aeson.Encode
 import qualified Data.Aeson.Types       as JSON
+import           Data.Functor                     ((<$>))
 import           Data.Text              as T
 import qualified Data.Text.Lazy
 import qualified Data.Text.Lazy.Builder
-import           Safe                           (atMay)
+import qualified Data.Vector            as Vector
+import           Safe                             (atMay)
 
 import Foreign.JavaScript.EventLoop (fromJSStablePtr)
 import Foreign.JavaScript.Types
@@ -99,7 +101,15 @@ mkResult client f = JSFunction
 instance FFI (JSFunction JSObject) where
     fancy f = JSFunction
         { code    = apply "Haskell.getStablePtr(%1)" [f []]
-        , marshal = \w v -> fmap JSON.Success $ fromJSStablePtr v w
+        , marshal = \w v -> JSON.Success <$> fromJSStablePtr v w
+        }
+
+-- FIXME: Not sure whether this instance is really a good idea.
+instance FFI (JSFunction [JSObject]) where
+    fancy f = JSFunction
+        { code    = apply "Haskell.map(Haskell.getStablePtr, %1)" [f []]
+        , marshal = \w (JSON.Array vs) -> do
+            JSON.Success <$> mapM (\v -> fromJSStablePtr v w) (Vector.toList vs)
         }
 
 -- | Simple JavaScript FFI with string substitution.
