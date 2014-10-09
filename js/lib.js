@@ -14,7 +14,7 @@ function prim_audio_stop(audio){
 }
 
 Haskell.map = function (fun, array) {
-  var result;
+  var result = [];
   for (i=0; i<array.length; i++) {
     result[i] = fun(array[i]);
   }
