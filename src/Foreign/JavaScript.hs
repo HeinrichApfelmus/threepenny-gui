@@ -4,7 +4,7 @@ module Foreign.JavaScript (
     -- | Communicate with a web browser and execute JavaScript code.
 
     -- * Server
-    serve, Config, defaultConfig,
+    serve, Config(..), defaultConfig,
     Window, root,
     
     -- * JavaScript FFI
