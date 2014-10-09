@@ -36,8 +36,10 @@ httpComm :: Config -> (Comm -> IO ()) -> IO ()
 httpComm Config{..} worker = do
     env <- getEnvironment
     let portEnv = Safe.readMay =<< Prelude.lookup "PORT" env
+    let addrEnv = Safe.readMay =<< Prelude.lookup "ADDR" env
     
     let config = Snap.setPort      (maybe defaultPort id (jsPort `mplus` portEnv))
+               $ Snap.setBind      (maybe defaultAddr id (jsAddr `mplus` addrEnv))
                $ Snap.setErrorLog  (Snap.ConfigIoLog jsLog)
                $ Snap.setAccessLog (Snap.ConfigIoLog jsLog)
                $ Snap.defaultConfig

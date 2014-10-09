@@ -26,6 +26,12 @@ data Config = Config
         -- @Nothing@ means that the port number is
         -- read from the environment variable @PORT@.
         -- Alternatively, port @8023@ is used if this variable is not set.
+    , jsAddr       :: Maybe ByteString
+        -- ^ Bind address.
+        -- @Nothing@ means that the bind address is
+        -- read from the environment variable @ADDR@.
+        -- Alternatively, address @127.0.0.1@ is
+        -- used if this variable is not set.
     , jsCustomHTML :: Maybe FilePath
         -- ^ Custom HTML file to replace the default one.
     , jsStatic     :: Maybe FilePath
@@ -37,13 +43,18 @@ data Config = Config
 defaultPort :: Int
 defaultPort = 8023
 
+defaultAddr :: ByteString
+defaultAddr = "127.0.0.1"
+
 -- | Default configuration.
 --
 -- Port from environment variable or @8023@,
--- no custom HTML, no static directory, logging to stderr.
+-- listening on @localhost@, no custom HTML, no static directory,
+-- logging to stderr.
 defaultConfig :: Config
 defaultConfig = Config
     { jsPort       = Nothing
+    , jsAddr       = Nothing
     , jsCustomHTML = Nothing
     , jsStatic     = Nothing
     , jsLog        = BS.hPutStrLn stderr
