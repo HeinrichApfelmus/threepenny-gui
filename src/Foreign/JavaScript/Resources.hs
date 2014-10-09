@@ -18,7 +18,7 @@ jsDriverCode = Text.unlines $ map Text.pack
     ]
 
 cssDriverCode :: Text
-cssDriverCode = Text.pack [include|js/driver.css|]
+cssDriverCode = Text.pack [include|js/haskell.css|]
 
 defaultHtmlFile :: Text
 defaultHtmlFile = Text.pack [include|js/index.html|]
