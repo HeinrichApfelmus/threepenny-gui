@@ -68,6 +68,10 @@ Haskell.initFFI = function () {
   
   /////////////////////////////////////////////////////////////////////
   // Stable Pointers on JavaScript objects
+  //
+  // Warning: We assume that each object can have at most one StablePtr
+  // associated to it. We have to pay attention that we don't 
+  // free a stable pointer twice.
   var stablePtrs = {};
   var counter    = 0;
   
@@ -89,6 +93,7 @@ Haskell.initFFI = function () {
   };
   
   Haskell.freeStablePtr = function (ptr) {
+    delete stablePtrs[ptr].stablePtr;
     delete stablePtrs[ptr];
   };
 };
