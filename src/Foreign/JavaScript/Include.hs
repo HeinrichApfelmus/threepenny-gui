@@ -7,12 +7,12 @@ import           Language.Haskell.TH.Quote
 import           System.IO
 
 
-#if defined(CABAL) || defined(FPCOMPLETE)
+#if defined(SAMPLES)
 root :: FilePath
-root = "./"
+root = "../" -- we are running the examples from ghci
 #else
 root :: FilePath
-root = "./" -- running examples from ghci
+root = "./"
 #endif
 
 include :: QuasiQuoter

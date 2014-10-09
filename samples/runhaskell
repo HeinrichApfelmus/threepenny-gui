@@ -2,4 +2,4 @@
 ghc -i../src \
   -no-user-package-db \
   -package-db ../.cabal-sandbox/*-packages.conf.d \
-  "$@" -e main
+  -DSAMPLES "$@" -e main
