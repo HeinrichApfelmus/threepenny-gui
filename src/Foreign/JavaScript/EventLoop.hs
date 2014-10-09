@@ -106,7 +106,6 @@ exportHandler handler w@(Window{..}) = do
 -- | Convert a stable pointer from JavaScript into a 'JSObject'.
 fromJSStablePtr :: JSON.Value -> Window -> IO JSObject
 fromJSStablePtr js w@(Window{..}) = do
-    print js
     let JSON.Success coupon = JSON.fromJSON js
     mhs <- Foreign.lookup coupon wJSObjects
     case mhs of
