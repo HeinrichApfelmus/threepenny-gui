@@ -321,17 +321,15 @@ $.fn.livechange = function(ms,trigger){
     if( create[1] == "svg"){
       ns    = "http://www.w3.org/2000/svg";
       tag   = create[2];
-      elid_ = create[0] + ":" + create[2];
     }
     else {
       ns    = "http://www.w3.org/1999/xhtml";
       tag   = create[1];
-      elid_ = elid;
     }
-    if(el_table[elid_]) return el_table[elid_];
-    element         = document.createElementNS(ns, tag);
-    element.elid    = elid_;
-    el_table[elid_] = element;
+    if(el_table[elid]) return el_table[elid];
+    element        = document.createElementNS(ns, tag);
+    element.elid   = elid;
+    el_table[elid] = element;
     return element;
   }
  
