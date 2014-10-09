@@ -12,8 +12,6 @@ import qualified Data.Text.Lazy
 import qualified Data.Text.Lazy.Builder
 import           Safe                           (atMay)
 
-import System.IO.Unsafe (unsafePerformIO)
-
 import Foreign.JavaScript.EventLoop (fromJSStablePtr)
 import Foreign.JavaScript.Types
 import Foreign.RemotePtr
@@ -42,8 +40,6 @@ instance ToJS HsEvent    where
 instance ToJS JSObject   where
     render x = apply "Haskell.deRefStablePtr(%1)" [render $ unprotectedGetCoupon x]
 
--- FIXME: This function belongs to the 'RemotePtr' module!
-unprotectedGetCoupon x = unsafePerformIO $ withRemotePtr x (\c _ -> return c)
 
 -- | Show a type in a JSON compatible way.
 showJSON :: ToJSON a => a -> String

@@ -7,6 +7,7 @@ module Foreign.RemotePtr (
     -- * RemotePtr
     RemotePtr,
     withRemotePtr, addFinalizer, destroy, addReachable, clearReachable,
+    unprotectedGetCoupon,
 
     -- * Coupons and Vendors
     Coupon, newCoupon,
@@ -22,8 +23,9 @@ import qualified Data.Map              as Map
 import Data.Functor
 import Data.IORef
 
-import           System.Mem.Weak hiding (addFinalizer)
-import qualified System.Mem.Weak as Weak
+import           System.IO.Unsafe         (unsafePerformIO)
+import           System.Mem.Weak          hiding (addFinalizer)
+import qualified System.Mem.Weak  as Weak
 
 import qualified GHC.Base  as GHC
 import qualified GHC.Weak  as GHC
@@ -144,6 +146,15 @@ withRemotePtr ptr f = do
     where
     -- make sure that the pointer is alive at this point in the code
     touch ptr = ptr `seq` return () 
+
+-- | Unprotected access the 'Coupon' of a 'RemotePtr'.
+--
+-- Note: There is no guarantee that the 'RemotePtr' is alive
+-- after this operation and that the 'Coupon' can be redeemed at a 'Vendor'.
+-- Most of the time, you should use 'withRemotePtr' instead.
+unprotectedGetCoupon :: RemotePtr a -> Coupon
+unprotectedGetCoupon ptr = unsafePerformIO $ coupon <$> readIORef ptr
+
 
 -- | Add a finalizer that is run when the 'RemotePtr' is garbage collected.
 --
