@@ -136,7 +136,7 @@ Executable threepenny-examples-bartab
                           ,filepath
     else
         buildable: False
-    main-is:           BarTab.hs
+    main-is:           BarTab.lhs
     other-modules:     Paths_threepenny_gui, Paths
     hs-source-dirs:    samples
 
