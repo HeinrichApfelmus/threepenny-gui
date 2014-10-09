@@ -13,7 +13,7 @@ module Graphics.UI.Threepenny.Elements (
     dterm, emphasize, fieldset, font, form, frame, frameset,
     h1, h2, h3, h4, h5, h6, header, hr,
     img, image, input, italics,
-    keyboard, legend, li, link, map, meta, noframes, olist, option,
+    keyboard, label, legend, li, link, map, meta, noframes, olist, option,
     p, paragraph, param, pre,
     sample, select, small, source, span, strong, sub, sup,
     table, td, textarea, th, thebase,
@@ -101,6 +101,7 @@ image               = itag "img"
 input               = itag "input"
 italics             =  tag "i"
 keyboard            =  tag "kbd"
+label               =  tag "label"
 legend              =  tag "legend"
 li                  =  tag "li"
 link                =  tag "link"

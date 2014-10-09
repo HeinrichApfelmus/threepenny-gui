@@ -10,7 +10,7 @@ module Graphics.UI.Threepenny.Attributes (
     background, base, bgcolor, border, bordercolor,
     cellpadding, cellspacing, checked_, class_, clear_, code_, codebase,
     color, cols, colspan, compact, content, coords,
-    enctype, face, frameborder, height, href, hspace, httpequiv,
+    enctype, face, for, frameborder, height, href, hspace, httpequiv,
     id_, ismap, lang, marginheight, marginwidth, maxlength, method, multiple,
     name, nohref, noresize, noshade, nowrap,
     rel, rev, rows, rowspan, rules,
@@ -86,6 +86,7 @@ content             =   strAttr "content"
 coords              =   strAttr "coords"
 enctype             =   strAttr "enctype"
 face                =   strAttr "face"
+for                 =   strAttr "for"
 frameborder         =   intAttr "frameborder"
 height              =   intAttr "height"
 href                =   strAttr "href"
