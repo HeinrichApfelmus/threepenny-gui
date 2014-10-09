@@ -25,13 +25,14 @@ import Foreign.JavaScript.Types
 eventLoop :: (Window -> IO void) -> (Comm -> IO ())
 eventLoop init c = do
     w <- newWindow c
-    init w
-    forever $ do
-        e <- readEvent w
-        handleEvent w e
+    Foreign.withRemotePtr (wRoot w) $ \_ _ -> do -- ensure that root is alive
+        init w
+        forever $ do
+            e <- readEvent w
+            handleEvent w e
 #ifdef REBUG
-        -- debug garbage collection of elements:
-        System.Mem.performGC
+            -- debug garbage collection of elements:
+            System.Mem.performGC
 #endif
 
 handleEvent w@(Window{..}) (name, args, consistency) = do

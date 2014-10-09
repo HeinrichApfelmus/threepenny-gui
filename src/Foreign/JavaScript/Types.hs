@@ -157,10 +157,19 @@ data Window = Window
     , wEventQueue    :: IORef [Event]
     , wEventHandlers :: Vendor (JSON.Value -> IO ())
     , wJSObjects     :: Vendor JSPtr
+    , wRoot          :: RemotePtr ()
     }
 
 newWindow :: Comm -> IO Window
-newWindow comm = Window comm <$> newIORef [] <*> newVendor <*> newVendor
+newWindow comm = do
+    ptr <- newRemotePtr "" () =<< newVendor
+    Window comm <$> newIORef [] <*> newVendor <*> newVendor <*> return ptr
+
+-- | For the purpose of controlling garbage collection,
+-- every 'Window' as an associated 'RemotePtr' that is alive
+-- as long as the external JavaScript connection is alive.
+root :: Window -> RemotePtr ()
+root = wRoot
 
 {-----------------------------------------------------------------------------
     Marshalling

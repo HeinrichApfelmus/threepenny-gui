@@ -5,7 +5,7 @@ module Foreign.JavaScript (
 
     -- * Server
     serve, Config, defaultConfig,
-    Window,
+    Window, root,
     
     -- * JavaScript FFI
     FFI, ToJS, JSFunction, JSObject,
