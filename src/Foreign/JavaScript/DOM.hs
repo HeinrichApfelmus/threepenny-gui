@@ -29,6 +29,8 @@ addHandler name handler e w = do
 -- | Append a child element to a parent element.
 appendChild :: Element -> Element -> Window -> IO ()
 appendChild eParent eChild w = do
+    -- FIXME: We have to stop the child being reachable from its
+    -- /previous/ parent.
     addReachable eParent eChild
     runFunction w $ ffi "$(%1).append($(%2))" eParent eChild
 
