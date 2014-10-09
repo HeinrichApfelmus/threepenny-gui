@@ -1,16 +1,17 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, CPP #-}
 module Foreign.JavaScript.EventLoop (
     eventLoop,
     runEval, callEval, debug,
     exportHandler, fromJSStablePtr,
     ) where
 
-import qualified Control.Concurrent.Chan   as Chan
+import qualified Control.Concurrent.Chan as Chan
 import           Control.Monad
-import qualified Data.Aeson                as JSON
-import qualified Data.Map                  as Map
-import Data.IORef
-import qualified Data.Text as T
+import qualified Data.Aeson              as JSON
+import           Data.IORef
+import qualified Data.Map                as Map
+import qualified Data.Text               as T
+import qualified System.Mem
 
 import Foreign.RemotePtr        as Foreign
 import Foreign.JavaScript.Types
@@ -28,7 +29,10 @@ eventLoop init c = do
     forever $ do
         e <- readEvent w
         handleEvent w e
-        -- FIXME: flag for performing garbage collection
+#ifdef REBUG
+        -- debug garbage collection of elements:
+        System.Mem.performGC
+#endif
 
 handleEvent w@(Window{..}) (name, args, consistency) = do
     mhandler <- Foreign.lookup name wEventHandlers
