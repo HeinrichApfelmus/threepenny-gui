@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
-{-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Graphics.UI.Threepenny.Core (
     -- * Synopsis
@@ -34,7 +32,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * Events
     -- | For a list of predefined events, see "Graphics.UI.Threepenny.Events".
-    EventData(..), domEvent, disconnect, on, onEvent, onChanges,
+    EventData, domEvent, disconnect, on, onEvent, onChanges,
     module Reactive.Threepenny,
     
     -- * Attributes
@@ -52,47 +50,28 @@ module Graphics.UI.Threepenny.Core (
     debug,
     ToJS, FFI,
     JSFunction, ffi, runFunction, callFunction,
-    HsFunction, ffiExport,
-    atomic,
+    HsEvent, ffiExport,
     
     -- * Internal and oddball functions
-    fromJQueryProp, toElement,
+    fromJQueryProp,
     audioPlay, audioStop,
     
     ) where
 
-import Data.Dynamic
-import Data.IORef
-import qualified Data.Map as Map
-import Data.Maybe (listToMaybe)
-import Data.Functor
-import Data.String (fromString)
-
-import Control.Applicative (Applicative)
-import Control.Concurrent.MVar
-import Control.Monad
+import Control.Monad          (forM_, forM, void)
 import Control.Monad.Fix
 import Control.Monad.IO.Class
-import qualified Control.Monad.Trans.RWS.Lazy as Monad
 
-import Network.URI
-import qualified Data.Aeson as JSON
+import qualified Data.Aeson                           as JSON
+import qualified Foreign.JavaScript                   as JS
+import qualified Graphics.UI.Threepenny.Internal.Core as Core
+import qualified Reactive.Threepenny                  as Reactive
 
-import           Reactive.Threepenny hiding (onChange)
-import qualified Reactive.Threepenny as Reactive
+-- exports
+import Foreign.JavaScript                   (Config(..), defaultConfig)
+import Graphics.UI.Threepenny.Internal.Core
+import Reactive.Threepenny                  hiding (onChange)
 
-import qualified Graphics.UI.Threepenny.Internal.Driver  as Core
-import           Graphics.UI.Threepenny.Internal.Driver
-    ( getRequestLocation
-    , atomic, )
-import           Graphics.UI.Threepenny.Internal.FFI
-import           Graphics.UI.Threepenny.Internal.Types   as Core
-    ( Window, Config, defaultConfig, Events, EventData
-    , ElementData(..), withElementData,)
-
-
-import Graphics.UI.Threepenny.Internal.Types as Core
-    (unprotectedGetElementId, withElementData, ElementData(..))
 
 {-----------------------------------------------------------------------------
     Server
@@ -101,7 +80,7 @@ import Graphics.UI.Threepenny.Internal.Types as Core
 
 To display the user interface, you have to start a server using 'startGUI'.
 Then, visit the URL <http://localhost:10000/> in your browser
-(assuming that you have set the port number to @tpPort=10000@
+(assuming that you have set the port number to @jsPort=10000@
 in the server configuration).
 
 The server is multithreaded,
@@ -118,79 +97,22 @@ startGUI
     :: Config               -- ^ Server configuration.
     -> (Window -> UI ())    -- ^ Action to run whenever a client browser connects.
     -> IO ()
-startGUI config handler = Core.serve config (\w -> runUI w $ handler w)
-
+startGUI config handler = JS.serve config (\w -> runUI w $ handler w)
 
 -- | Make a local file available as a relative URI.
+--
+-- FIXME: Not implemented!
 loadFile
     :: String     -- ^ MIME type
     -> FilePath   -- ^ Local path to the file
     -> UI String  -- ^ Generated URI
-loadFile mime path = askWindow >>= \w -> liftIO $
-    Core.loadFile w (fromString mime) path
+loadFile mime path = undefined
 
 -- | Make a local directory available as a relative URI.
+--
+-- FIXME: Not implemented!
 loadDirectory :: FilePath -> UI String
-loadDirectory path = askWindow >>= \w -> liftIO $
-    Core.loadDirectory w path
-
-
-{-----------------------------------------------------------------------------
-    UI monad
-------------------------------------------------------------------------------}
-{- |
-
-User interface elements are created and manipulated in the 'UI' monad.
-
-This monad is essentially just a thin wrapper around the familiar 'IO' monad.
-Use the 'liftIO' function to access 'IO' operations like reading
-and writing from files.
-
-There are several subtle reasons why Threepenny
-uses a custom 'UI' monad instead of the standard 'IO' monad:
-
-* More convenience when calling JavaScript.
-The monad keeps track of a browser 'Window' context
-in which JavaScript function calls are executed.
-
-* Recursion for functional reactive programming.
-
--}
-newtype UI a = UI { unUI :: Monad.RWST Window [IO ()] () IO a }
-    deriving (Typeable)
-
-instance Functor UI where
-    fmap f = UI . fmap f . unUI
-
-instance Applicative UI where
-    pure  = return
-    (<*>) = ap
-
-instance Monad UI where
-    return  = UI . return
-    m >>= k = UI $ unUI m >>= unUI . k
-
-instance MonadIO UI where
-    liftIO = UI . liftIO
-
-instance MonadFix UI where
-    mfix f = UI $ mfix (unUI . f)  
-
--- | Execute an 'UI' action in a particular browser window.
--- Also runs all scheduled 'IO' action.
-runUI :: Window -> UI a -> IO a
-runUI window m = do
-    (a, _, actions) <- Monad.runRWST (unUI m) window ()
-    sequence_ actions
-    return a
-
--- | Retrieve current 'Window' context in the 'UI' monad.
-askWindow :: UI Window
-askWindow = UI Monad.ask
-
--- | Schedule an 'IO' action to be run later.
-liftIOLater :: IO () -> UI ()
-liftIOLater x = UI $ Monad.tell [x]
+loadDirectory path = undefined
 
 {-----------------------------------------------------------------------------
     Browser window
@@ -202,58 +124,29 @@ title = mkWriteAttr $ \s _ ->
 
 -- | Cookies on the client.
 cookies :: ReadAttr Window [(String,String)]
-cookies = mkReadAttr (liftIO . Core.getRequestCookies)
+cookies = undefined -- mkReadAttr (liftIO . Core.getRequestCookies)
+
+getRequestLocation :: Window -> IO a
+getRequestLocation = undefined
 
 {-----------------------------------------------------------------------------
-    Elements
+    DOM Elements
 ------------------------------------------------------------------------------}
-data Element = Element { eEvents :: Core.Events, toElement :: Core.Element }
-    deriving (Typeable)
-
-fromElement :: Core.Element -> IO Element
-fromElement e = do
-    events <- Core.withElementData e $ \_ x -> return $ elEvents x 
-    return $ Element events e
-
-instance ToJS Element where
-    render = render . toElement
-
--- | Make a new DOM element.
-mkElement
-    :: String           -- ^ Tag name
-    -> UI Element
-mkElement tag = mdo
-    -- create events and initialize them when element becomes Alive
-    let initializeEvent (name,_,handler) = Core.bind name el handler
-    events  <- liftIO $ newEventsNamed initializeEvent
-    
-    window  <- askWindow
-    el      <- liftIO $ Core.newElement window tag events
-    return $ Element events el
-
--- | Retrieve the browser 'Window' in which the element resides.
-getWindow :: Element -> IO Window
-getWindow e = Core.getWindow (toElement e)
-
--- | Delete the given element.
-delete :: Element -> UI ()
-delete = liftIO . Core.delete . toElement
-
 -- | Append DOM elements as children to a given element.
 (#+) :: UI Element -> [UI Element] -> UI Element
 (#+) mx mys = do
     x  <- mx
     ys <- sequence mys
-    liftIO $ mapM_ (Core.appendElementTo (toElement x) . toElement) ys
+    mapM_ (Core.appendChild x) ys
     return x
 
 -- | Child elements of a given element.
 children :: WriteAttr Element [Element]
 children = mkWriteAttr set
     where
-    set xs x = liftIO $ do
-        Core.emptyEl $ toElement x
-        mapM_ (Core.appendElementTo (toElement x) . toElement) xs
+    set xs x = do
+        Core.clearChildren x
+        mapM_ (Core.appendChild x) xs
 
 -- | Child elements of a given element as a HTML string.
 html :: WriteAttr Element String
@@ -294,82 +187,38 @@ text = mkWriteAttr $ \s el ->
 string :: String -> UI Element
 string s = mkElement "span" # set text s
 
-
 -- | Get the head of the page.
 getHead :: Window -> UI Element
-getHead w = liftIO $ fromElement =<< Core.getHead w
+getHead _ = fromJSObject =<< callFunction (ffi "document.head")
 
 -- | Get the body of the page.
 getBody :: Window -> UI Element
-getBody w = liftIO $ fromElement =<< Core.getBody w
+getBody _ = fromJSObject =<< callFunction (ffi "document.body")
 
--- | Get all elements of the given tag name.  Blocks.
+-- | Get all elements of the given tag name.
 getElementsByTagName
     :: Window        -- ^ Browser window
     -> String        -- ^ The tag name.
     -> UI [Element]  -- ^ All elements with that tag name.
-getElementsByTagName window name = liftIO $
-    mapM fromElement =<< Core.getElementsByTagName window name
+getElementsByTagName _ tag =
+    mapM fromJSObject =<< callFunction (ffi "document.getElementsByTagName(%1)" tag)
 
--- | Get an element by a particular ID.  Blocks.
+-- | Get an element by a particular ID.
 getElementById
     :: Window              -- ^ Browser window
     -> String              -- ^ The ID string.
     -> UI (Maybe Element)  -- ^ Element (if any) with given ID.
-getElementById window id = liftIO $
-    fmap listToMaybe $ mapM fromElement =<< Core.getElementsById window [id]
+getElementById _ id = do
+    x <- fromJSObject =<< callFunction (ffi "document.getElementById(%1)" id)
+    return $ Just x
 
--- | Get a list of elements by particular class.  Blocks.
+-- | Get a list of elements by particular class.
 getElementsByClassName
     :: Window        -- ^ Browser window
     -> String        -- ^ The class string.
     -> UI [Element]  -- ^ Elements with given class.
-getElementsByClassName window cls = liftIO $
-    mapM fromElement =<< Core.getElementsByClassName window cls
-
-
-{-----------------------------------------------------------------------------
-    FFI
-------------------------------------------------------------------------------}
--- | Run the given JavaScript function and carry on. Doesn't block.
---
--- The client window uses JavaScript's @eval()@ function to run the code.
-runFunction :: JSFunction () -> UI ()
-runFunction fun = do
-    window <- askWindow
-    liftIO $ Core.runFunction window fun 
-
--- | Run the given JavaScript function and wait for results. Blocks.
---
--- The client window uses JavaScript's @eval()@ function to run the code.
-callFunction :: JSFunction a -> UI a
-callFunction fun = do
-    window <- askWindow
-    liftIO $ Core.callFunction window fun
-
--- | Export the given Haskell function so that it can be called
--- from JavaScript code.
---
--- TODO: At the moment, the function is not garbage collected.
-ffiExport :: IO () -> UI (HsFunction (IO ()))
-ffiExport fun = do
-    window <- askWindow
-    liftIO $ Core.newHsFunction window fun
-
-{-----------------------------------------------------------------------------
-    Oddball
-------------------------------------------------------------------------------}
--- | Print a message on the client console if the client has debugging enabled.
-debug :: String -> UI ()
-debug s = askWindow >>= \w -> liftIO $ Core.debug w s
-
--- | Invoke the JavaScript expression @audioElement.play();@.
-audioPlay :: Element -> UI ()
-audioPlay el = runFunction $ ffi "%1.play()" el
-
--- | Invoke the JavaScript expression @audioElement.stop();@.
-audioStop :: Element -> UI ()
-audioStop el = runFunction $ ffi "prim_audio_stop(%1)" el
+getElementsByClassName window s =
+    mapM fromJSObject =<< callFunction (ffi "document.getElementsByClassName(%1)" s)
 
 {-----------------------------------------------------------------------------
     Layout
@@ -417,25 +266,13 @@ grid mrows = do
 {-----------------------------------------------------------------------------
     Events
 ------------------------------------------------------------------------------}
--- | Obtain DOM event for a given element.
-domEvent
-    :: String
-        -- ^ Event name. A full list can be found at
-        --   <http://www.w3schools.com/jsref/dom_obj_event.asp>.
-        --   Note that the @on@-prefix is not included,
-        --   the name is @click@ and so on.
-    -> Element          -- ^ Element where the event is to occur.
-    -> Event EventData
-domEvent name (Element events _) = events name
-
-
 -- | Event that occurs whenever the client has disconnected,
 -- be it by closing the browser window or by exception.
 --
 -- Note: DOM Elements in the browser window that has been closed
 -- can no longer be manipulated.
 disconnect :: Window -> Event ()
-disconnect = Core.disconnect
+disconnect = undefined -- FIXME: Implement  disconnect
 
 -- | Convenience function to register 'Event's for 'Element's.
 --
@@ -460,7 +297,6 @@ onChanges :: Behavior a -> (a -> UI void) -> UI ()
 onChanges b f = do
     window <- askWindow
     liftIO $ Reactive.onChange b (void . runUI window . f)
-
 
 {-----------------------------------------------------------------------------
     Attributes
@@ -573,7 +409,6 @@ class Widget w where
 instance Widget Element where
     getElement = id
 
-
 -- | Convience synonym for 'return' to make elements work well with 'set'.
 -- Also works on 'Widget's.
 --
@@ -588,3 +423,13 @@ element = return . getElement
 widget  :: Widget w => w -> UI w
 widget  = return
 
+{-----------------------------------------------------------------------------
+    Oddball
+------------------------------------------------------------------------------}
+-- | Invoke the JavaScript expression @audioElement.play();@.
+audioPlay :: Element -> UI ()
+audioPlay el = runFunction $ ffi "%1.play()" el
+
+-- | Invoke the JavaScript expression @audioElement.stop();@.
+audioStop :: Element -> UI ()
+audioStop el = runFunction $ ffi "prim_audio_stop(%1)" el

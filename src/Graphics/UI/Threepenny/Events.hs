@@ -57,7 +57,7 @@ mousemove :: Element -> Event (Int,Int)
 mousemove = fmap readCoordinates . domEvent "mousemove"
 
 readCoordinates :: EventData -> (Int,Int)
-readCoordinates (EventData (Just x:Just y:_)) = (read x, read y)
+readCoordinates (x:y:_) = (read x, read y)
 
 -- | Mouse down event.
 -- The mouse coordinates are relative to the element. 
@@ -92,4 +92,4 @@ keydown = fmap read1  . domEvent "keydown"
 keyup :: Element -> Event KeyCode
 keyup   = fmap read1 . domEvent "keyup"
 
-read1 (EventData (Just s:_)) = read s
+read1 (s:_) = read s

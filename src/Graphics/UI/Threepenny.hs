@@ -12,7 +12,7 @@ module Graphics.UI.Threepenny (
     module Graphics.UI.Threepenny.DragNDrop,
     module Graphics.UI.Threepenny.Elements,
     module Graphics.UI.Threepenny.Events,
-    module Graphics.UI.Threepenny.JQuery,
+--    module Graphics.UI.Threepenny.JQuery,
     module Graphics.UI.Threepenny.Timer,
     module Graphics.UI.Threepenny.Widgets,
     ) where
@@ -23,7 +23,7 @@ import           Graphics.UI.Threepenny.Core
 import           Graphics.UI.Threepenny.DragNDrop
 import           Graphics.UI.Threepenny.Elements
 import           Graphics.UI.Threepenny.Events
-import           Graphics.UI.Threepenny.JQuery
+--import           Graphics.UI.Threepenny.JQuery
 import           Graphics.UI.Threepenny.Timer
 import           Graphics.UI.Threepenny.Widgets
 
