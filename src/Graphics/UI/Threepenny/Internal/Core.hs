@@ -12,7 +12,7 @@ module Graphics.UI.Threepenny.Internal.Core (
     HsEvent,
     
     Element, fromJSObject, getWindow,
-    mkElement, delete, appendChild, clearChildren,
+    mkElementNamespace, mkElement, delete, appendChild, clearChildren,
     
     EventData, domEvent,
     ) where
@@ -73,10 +73,18 @@ domEvent name el = fmap (fromSuccess . JSON.fromJSON . head) $ eEvents el name
     where
     fromSuccess (JSON.Success x) = x
 
--- | Make a new DOM element with a given tag name
+-- | Make a new DOM element with a given tag name.
 mkElement :: String -> UI Element
-mkElement tag = liftWindow $ \w -> do
-    el <- JS.callFunction w $ ffi "document.createElement(%1)" tag
+mkElement = mkElementNamespace Nothing
+
+-- | Make a new DOM element with a namespace and a given tag name.
+--
+-- A namespace 'Nothing' corresponds to the default HTML namespace.
+mkElementNamespace :: Maybe String -> String -> UI Element
+mkElementNamespace namespace tag = liftWindow $ \w -> do
+    el <- JS.callFunction w $ case namespace of
+        Nothing -> ffi "document.createElement(%1)" tag
+        Just ns -> ffi "document.createElementNS(%1,%2)" ns tag
 
     -- Lazily create FRP events whenever they are needed.
     let initializeEvent (name,_,handler) = do
