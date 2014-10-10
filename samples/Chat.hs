@@ -22,8 +22,8 @@ main = do
     static   <- getStaticDir
     messages <- Chan.newChan
     startGUI defaultConfig
-        { tpCustomHTML = Just "chat.html"
-        , tpStatic     = Just static
+        { jsCustomHTML = Just "chat.html"
+        , jsStatic     = Just static
         } $ setup messages
 
 type Message = (UTCTime, String, String)

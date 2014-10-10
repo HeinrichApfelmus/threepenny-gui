@@ -17,7 +17,7 @@ import Paths
 main :: IO ()
 main = do
     static <- getStaticDir
-    startGUI defaultConfig { tpStatic = Just static } setup
+    startGUI defaultConfig { jsStatic = Just static } setup
 
 
 setup :: Window -> UI ()
@@ -50,8 +50,8 @@ renderVarChoice :: VariableViews -> Variable -> UI Element
 renderVarChoice views (label,(name,def)) = do
     input <- UI.input #. "var-value" # set value def
     
-    on (domEvent "livechange") input $ \(EventData xs) -> do
-        let s = concat $ catMaybes xs
+    on (domEvent "livechange") input $ \xs -> do
+        let s = concat xs
         forM_ (filter ((==name).fst) views) $ \(_,el) -> do
             element el # set text s
     

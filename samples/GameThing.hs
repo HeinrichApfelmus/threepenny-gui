@@ -17,7 +17,7 @@ main = do
     static     <- getStaticDir
     playground <- mkPlayground
     startGUI defaultConfig
-        { tpStatic     = Just static
+        { jsStatic     = Just static
         } $ setup playground
 
 setup :: Playground -> Window -> UI ()
