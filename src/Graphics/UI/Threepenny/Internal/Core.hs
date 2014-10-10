@@ -93,7 +93,9 @@ mkElement tag = liftWindow $ \w -> do
 
 -- | Delete the given element.
 delete :: Element -> UI ()
-delete = liftIO . Foreign.destroy . toJSObject
+delete el = liftWindow $ \w -> do
+    JS.runFunction w $ ffi "$(%1).detach()" el
+    Foreign.destroy $ toJSObject el
 
 -- | Remove all child elements.
 clearChildren :: Element -> UI ()
