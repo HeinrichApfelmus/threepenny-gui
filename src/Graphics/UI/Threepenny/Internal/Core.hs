@@ -35,7 +35,7 @@ import Foreign.JavaScript hiding (runFunction, callFunction, debug)
 {-----------------------------------------------------------------------------
     Elements
 ------------------------------------------------------------------------------}
-type Events = String -> E.Event JSON.Value
+type Events = String -> E.Event [JSON.Value]
 
 data Element = Element
     { eEvents    :: Events      -- FRP event mapping
@@ -68,9 +68,10 @@ domEvent
         --   Note that the @on@-prefix is not included,
         --   the name is @click@ and so on.
     -> Element          -- ^ Element where the event is to occur.
-    -> E.Event [String]
-domEvent name el = fmap (f . JSON.fromJSON) $ eEvents el name
-    where f (JSON.Success x) = x
+    -> E.Event EventData
+domEvent name el = fmap (fromSuccess . JSON.fromJSON . head) $ eEvents el name
+    where
+    fromSuccess (JSON.Success x) = x
 
 -- | Make a new DOM element with a given tag name
 mkElement :: String -> UI Element
@@ -82,7 +83,8 @@ mkElement tag = liftWindow $ \w -> do
             handlerPtr <- JS.exportHandler handler w
             -- make handler reachable from element
             Foreign.addReachable el handlerPtr
-            JS.runFunction w $ ffi "$(%1).on(%2,%3)" el name handlerPtr
+            JS.runFunction w $
+                ffi "Haskell.bind(%1,%2,%3)" el name handlerPtr
 
     events <- E.newEventsNamed initializeEvent
     

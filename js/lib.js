@@ -21,6 +21,46 @@ Haskell.map = function (fun, array) {
   return result;
 };
 
+/////////////////////////////////////////////////////////////////////
+// Binding to events
+Haskell.bind = function (el, eventType, fun) {
+  if(eventType === 'livechange') {
+    $(el).livechange(300,function(e){
+      fun([ $(el).val() ]);
+      return true;
+    });
+  } else if(eventType === 'sendvalue') {
+    $(el).sendvalue(function(x){
+      fun([ x ]);
+    });
+  } else if (eventType.match('dragstart|dragenter|dragover|dragleave|drag|drop|dragend')) {
+    $(el).bind(eventType, function(e) {
+      fun( e.originalEvent.dataTransfer
+            ? [e.originalEvent.dataTransfer.getData("dragData")]
+            : [] );
+    });
+  } else if(eventType.match('mousemove|mousedown|mouseup')) {
+    $(el).bind(eventType, function(e) {
+      var offset = $(this).offset();
+      var x      = e.pageX - offset.left;
+      var y      = e.pageY - offset.top;
+      fun([x.toString(), y.toString()]);
+    });
+  } else if(eventType.match('keydown|keyup')) {
+    $(el).bind(eventType, function(e) {
+      fun([e.keyCode.toString()]);
+      return true;
+    });
+  } else {
+    $(el).bind(eventType, function(e) {
+      fun(e.which ? [e.which.toString()] : []);
+      return true;
+    });
+  }
+};
+
+
+/////////////////////////////////////////////////////////////////////
 // Canvas API additions.
 // See http://stackoverflow.com/a/9722502/403805 .
 CanvasRenderingContext2D.prototype.clear = 

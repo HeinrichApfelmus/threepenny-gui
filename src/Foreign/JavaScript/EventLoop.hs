@@ -99,10 +99,18 @@ debug s w = write w $ Debug s
 -- keep a reference to it /on the Haskell side/!
 -- Registering it with a JavaScript function will generally /not/
 -- keep it alive.
-exportHandler :: (JSON.Value -> IO ()) -> Window -> IO HsEvent
+--
+-- Note: The input to the handler is a list of JavaScript arguments.
+--
+-- FIXME: Support marshalled arguments.
+exportHandler :: ([JSON.Value] -> IO ()) -> Window -> IO HsEvent
 exportHandler handler w@(Window{..}) = do
     coupon <- newCoupon wEventHandlers
-    newRemotePtr coupon handler wEventHandlers
+    newRemotePtr coupon (handler . parseArgs) wEventHandlers
+    where
+    fromSuccess (JSON.Success x) = x
+    parseArgs x = Map.elems (fromSuccess (JSON.fromJSON x) :: Map.Map String JSON.Value)
+
 
 -- | Convert a stable pointer from JavaScript into a 'JSObject'.
 fromJSStablePtr :: JSON.Value -> Window -> IO JSObject

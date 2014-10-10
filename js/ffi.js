@@ -59,9 +59,8 @@ Haskell.initFFI = function () {
       reply({
         tag       : "Event",
         name      : name,
-        arguments : []
+        arguments : arguments
       });
-      // FIXME: How to transmit the event argument?
     };
     return that;
   };  
@@ -97,14 +96,3 @@ Haskell.initFFI = function () {
     delete stablePtrs[ptr];
   };
 };
-
-/*
-  var sendEvent = function (elid, key, params) {
-    ws.send(JSON.stringify({ Event : 
-        { Element : { Element : elid }
-        , EventId : key
-        , Params  : params
-        }
-      }));
-  };
-*/
