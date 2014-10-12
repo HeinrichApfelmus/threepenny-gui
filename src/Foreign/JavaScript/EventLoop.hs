@@ -5,7 +5,7 @@ module Foreign.JavaScript.EventLoop (
     exportHandler, fromJSStablePtr,
     ) where
 
-import qualified Control.Concurrent.Chan as Chan
+import           Control.Concurrent.STM  as STM
 import           Control.Monad
 import qualified Data.Aeson              as JSON
 import           Data.IORef
@@ -45,7 +45,7 @@ handleEvent w@(Window{..}) (name, args, consistency) = do
 -- If we get an event instead, queue it and label it "potentially inconsistent".
 readResult :: Window -> IO JSON.Value
 readResult w@(Window{..}) = do
-    c <- readClient wComm
+    c <- atomically $ readClient wComm
     case c of
         Result x  -> return x
         Event x y -> do
@@ -61,7 +61,7 @@ readEvent w@(Window{..}) = do
     es <- readIORef wEventQueue
     case es of
         []   -> do
-            msg <- readClient wComm
+            msg <- atomically $ readClient wComm
             case msg of
                 Event x y -> return (x,y,Consistent)
                 Quit      -> return quit
@@ -73,7 +73,7 @@ readEvent w@(Window{..}) = do
     Calling JavaScript functions
 ------------------------------------------------------------------------------}
 write :: Window -> ServerMsg -> IO ()
-write Window{..} = writeServer wComm
+write Window{..} = atomically . writeServer wComm
 
 -- | Run a JavaScript expression.
 runEval :: String -> Window -> IO ()

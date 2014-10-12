@@ -2,6 +2,7 @@
 module Foreign.JavaScript.Types where
 
 import           Control.Applicative
+import           Control.Concurrent.STM  as STM
 import           Control.Concurrent.Chan as Chan
 import           Control.Concurrent.MVar
 import           Control.DeepSeq
@@ -65,18 +66,18 @@ defaultConfig = Config
 ------------------------------------------------------------------------------}
 -- | Bidirectional communication channel.
 data Comm = Comm
-    { commIn  :: Chan JSON.Value 
-    , commOut :: Chan JSON.Value 
+    { commIn  :: TQueue JSON.Value 
+    , commOut :: TQueue JSON.Value 
     }
 
 newComm :: IO Comm
-newComm = Comm <$> Chan.newChan <*> Chan.newChan
+newComm = Comm <$> STM.newTQueueIO <*> STM.newTQueueIO
 
-writeComm :: Comm -> JSON.Value -> IO ()
-writeComm c = Chan.writeChan (commOut c)
+writeComm :: Comm -> JSON.Value -> STM ()
+writeComm c = STM.writeTQueue (commOut c)
 
-readComm :: Comm -> IO JSON.Value
-readComm c = Chan.readChan (commIn c)
+readComm :: Comm -> STM JSON.Value
+readComm c = STM.readTQueue (commIn c)
 
 {-----------------------------------------------------------------------------
     Communication protocol
@@ -99,7 +100,7 @@ instance FromJSON ClientMsg where
             "Quit"   ->
                 return Quit
 
-readClient :: Comm -> IO ClientMsg
+readClient :: Comm -> STM ClientMsg
 readClient c = do
     msg <- readComm c
     case JSON.fromJSON msg of
@@ -125,7 +126,7 @@ instance ToJSON ServerMsg where
 
 t s = fromString s :: Text
 
-writeServer :: Comm -> ServerMsg -> IO ()
+writeServer :: Comm -> ServerMsg -> STM ()
 writeServer c = writeComm c . toJSON . force
 
 {- Note [ServerMsg strictness]

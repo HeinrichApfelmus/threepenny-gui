@@ -5,7 +5,7 @@ module Foreign.JavaScript.Server (
 
 -- import general libraries
 import           Control.Concurrent
-import qualified Control.Concurrent.Chan    as Chan
+import           Control.Concurrent.STM     as STM
 import qualified Control.Exception          as E
 import           Control.Monad
 import           Data.ByteString                    (ByteString)
@@ -64,7 +64,7 @@ communicationFromWebSocket request = do
 
     -- write data (in another thread)
     sendData <- forkIO . forever $ do
-        x <- Chan.readChan (commOut communication)
+        x <- atomically $ STM.readTQueue (commOut communication)
         -- see note [ServerMsg strictness]
         WS.sendTextData connection . JSON.encode $ x
 
@@ -75,14 +75,14 @@ communicationFromWebSocket request = do
                 "ping" -> WS.sendTextData connection . LBS.pack $ "pong"
                 "quit" -> E.throw WS.ConnectionClosed
                 input  -> case JSON.decode input of
-                    Just x   -> Chan.writeChan (commIn communication) x
+                    Just x   -> atomically $ STM.writeTQueue (commIn communication) x
                     Nothing  -> error $
                         "Foreign.JavaScript: Couldn't parse JSON input"
                         ++ show input
     
     forkIO $ E.finally (forever readData) $ do   -- we're done here
         killThread sendData                      -- kill sending thread
-        writeChan (commIn communication) $
+        atomically $ STM.writeTQueue (commIn communication) $
             JSON.object [ "tag" .= ("Quit" :: Text) ] -- write Quit event
 
     return communication
