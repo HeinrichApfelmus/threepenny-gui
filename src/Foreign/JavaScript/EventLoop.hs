@@ -1,11 +1,15 @@
 {-# LANGUAGE RecordWildCards, CPP #-}
+{-# LANGUAGE RecursiveDo #-}
 module Foreign.JavaScript.EventLoop (
     eventLoop,
     runEval, callEval, debug,
     exportHandler, fromJSStablePtr,
     ) where
 
+import           Control.Applicative
+import           Control.Concurrent
 import           Control.Concurrent.STM  as STM
+import           Control.Exception               (finally)
 import           Control.Monad
 import qualified Data.Aeson              as JSON
 import           Data.IORef
@@ -16,79 +20,105 @@ import qualified System.Mem
 import Foreign.RemotePtr        as Foreign
 import Foreign.JavaScript.Types
 
+rebug :: IO ()
+#ifdef REBUG
+rebug = System.Mem.performGC
+#else
+rebug = return ()
+#endif
+
 {-----------------------------------------------------------------------------
     Event Loop
 ------------------------------------------------------------------------------}
--- | Event loop.
--- 
--- TODO: For the moment, we assume that the event loop is *single-threaded*.
-eventLoop :: (Window -> IO void) -> (Comm -> IO ())
-eventLoop init c = do
-    w <- newWindow c
-    Foreign.withRemotePtr (wRoot w) $ \_ _ -> do -- ensure that root is alive
-        init w
-        forever $ do
-            e <- readEvent w
-            handleEvent w e
-#ifdef REBUG
-            -- debug garbage collection of elements:
-            System.Mem.performGC
-#endif
-
+-- | Handle a single event
 handleEvent w@(Window{..}) (name, args, consistency) = do
     mhandler <- Foreign.lookup name wEventHandlers
     case mhandler of
         Nothing -> return ()
         Just f  -> withRemotePtr f (\_ f -> f args)
 
--- | Read an expected @Result@ from the client.
--- If we get an event instead, queue it and label it "potentially inconsistent".
-readResult :: Window -> IO JSON.Value
-readResult w@(Window{..}) = do
-    c <- atomically $ readClient wComm
-    case c of
-        Result x  -> return x
-        Event x y -> do
-            modifyIORef wEventQueue (++ [(x, y, Inconsistent)])
-            readResult w
-        Quit      -> do
-            writeIORef wEventQueue [quit]
-            return $ error $ "Foreign.JavaScript: Client has Quit!"
 
--- | Read an event from the queue or the client.
-readEvent :: Window -> IO Event
-readEvent w@(Window{..}) = do
-    es <- readIORef wEventQueue
-    case es of
-        []   -> do
-            msg <- atomically $ readClient wComm
+-- | Event loop for a browser window.
+-- Supports concurrent invocations of `runEval` and `callEval`.
+eventLoop :: (Window -> IO void) -> (Comm -> IO ())
+eventLoop init comm = mdo
+    -- To support concurrency, we make three threads.
+    -- The thread `multiplexer` reads from the client and 
+    --   sorts the messages into the appropriate queue.
+    events      <- newTQueueIO
+    results     <- newTQueueIO :: IO (TQueue JSON.Value)
+    -- The thread `handleCalls` executes FFI calls
+    --    from the Haskell side in order.
+    -- The corresponding queue records `TMVar`s in which to put the results.
+    calls       <- newTQueueIO :: IO (TQueue (Maybe (TMVar JSON.Value), ServerMsg))
+    -- The thread `handleEvents` handles client Events in order.
+
+    -- Events will be queued (and labelled `Inconsistent`) whenever
+    -- the server is
+    --    * busy handling an event
+    --    * or waiting for the result of a function call.
+    handling    <- newTVarIO False
+    calling     <- newTVarIO False
+
+    
+    w0 <- newPartialWindow
+    let runEval s = do
+            atomically $ writeTQueue calls (Nothing , RunEval s)
+        callEval s = do
+            ref <- newEmptyTMVarIO
+            atomically $ writeTQueue calls (Just ref, CallEval s)
+            atomically $ takeTMVar ref
+        debug    s = do
+            atomically $ writeServer comm $ Debug s
+    let w = w0 { runEval = runEval, callEval = callEval, debug = debug }
+
+
+    let fork m  = forkFinally m (const killall)
+
+    -- Read client messages and send them to the
+    -- thread that handles events or the thread that handles FFI calls.
+    multiplexer <- fork $ forever $ do
+        atomically $ do
+            msg <- readClient comm
             case msg of
-                Event x y -> return (x,y,Consistent)
-                Quit      -> return quit
-        e:_  -> do
-            modifyIORef wEventQueue tail
-            return e
+                Event x y -> do
+                    b <- (||) <$> readTVar handling <*> readTVar calling
+                    let c = if b then Inconsistent else Consistent
+                    writeTQueue events (x,y,c)
+                Quit      -> writeTQueue events quit
+                Result x  -> writeTQueue results x
 
-{-----------------------------------------------------------------------------
-    Calling JavaScript functions
-------------------------------------------------------------------------------}
-write :: Window -> ServerMsg -> IO ()
-write Window{..} = atomically . writeServer wComm
+    -- Send FFI calls to client and collect results
+    handleCalls <- fork $ forever $ do
+        ref <- atomically $ do
+            (ref, msg) <- readTQueue calls
+            writeTVar calling True
+            writeServer comm msg
+            return ref
+        atomically $ do
+            writeTVar calling False
+            case ref of
+                Just ref -> do
+                    result <- readTQueue results
+                    putTMVar ref result
+                Nothing  -> return ()
+    
+    -- Receive events from client and handle them in order.
+    -- Also ensure that root is alive
+    handleEvents <- myThreadId
+    flip finally killall $
+        Foreign.withRemotePtr (wRoot w) $ \_ _ -> do
+            init w
+            forever $ do
+                e <- atomically $ do
+                    writeTVar handling True
+                    readTQueue events
+                handleEvent w e
+                rebug
+                atomically $ writeTVar handling False
 
--- | Run a JavaScript expression.
-runEval :: String -> Window -> IO ()
-runEval s w = write w $ RunEval s
-
--- | Run a JavaScript expression and wait for result.
-callEval :: String -> Window -> IO JSON.Value
-callEval s w = do
-    write w $ CallEval s
-    x <- readResult w
-    return x
-
--- | Send a debug message to the client.
-debug :: String -> Window -> IO ()
-debug s w = write w $ Debug s
+    let killall = mapM_ killThread [multiplexer, handleCalls, handleEvents]
+    return ()
 
 {-----------------------------------------------------------------------------
     Exports, Imports and garbage collection
@@ -122,6 +152,6 @@ fromJSStablePtr js w@(Window{..}) = do
         Nothing -> do
             ptr <- newRemotePtr coupon (JSPtr coupon) wJSObjects
             addFinalizer ptr $
-                runEval ("Haskell.freeStablePtr('" ++ T.unpack coupon ++ "')") w
+                runEval ("Haskell.freeStablePtr('" ++ T.unpack coupon ++ "')")
             return ptr
 

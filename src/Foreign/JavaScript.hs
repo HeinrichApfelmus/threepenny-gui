@@ -34,10 +34,10 @@ serve config init = httpComm config (eventLoop init)
 ------------------------------------------------------------------------------}
 -- | Run a JavaScript function, but do not wait for a result.
 runFunction :: Window -> JSFunction () -> IO ()
-runFunction w f = runEval (toCode f) w
+runFunction w f = runEval w (toCode f)
 
 -- | Call a JavaScript function and wait for the result.
 callFunction :: Window -> JSFunction a -> IO a
 callFunction w f = do
-    resultJS <- callEval (toCode f) w
+    resultJS <- callEval w (toCode f)
     marshalResult f resultJS w

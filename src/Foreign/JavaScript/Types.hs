@@ -154,17 +154,20 @@ quit = ("quit", JSON.Null, Consistent)
 
 -- | Representation of a browser window.
 data Window = Window
-    { wComm          :: Comm
-    , wEventQueue    :: IORef [Event]
-    , wEventHandlers :: Vendor (JSON.Value -> IO ())
+    { wEventHandlers :: Vendor (JSON.Value -> IO ())
     , wJSObjects     :: Vendor JSPtr
     , wRoot          :: RemotePtr ()
+    , runEval        :: String -> IO ()
+    , callEval       :: String -> IO JSON.Value
+    , debug          :: String -> IO ()
     }
 
-newWindow :: Comm -> IO Window
-newWindow comm = do
+newPartialWindow :: IO Window
+newPartialWindow = do
     ptr <- newRemotePtr "" () =<< newVendor
-    Window comm <$> newIORef [] <*> newVendor <*> newVendor <*> return ptr
+    let nop = const $ return ()
+    Window <$> newVendor <*> newVendor <*> return ptr
+           <*> return nop <*> return undefined <*> return nop
 
 -- | For the purpose of controlling garbage collection,
 -- every 'Window' as an associated 'RemotePtr' that is alive

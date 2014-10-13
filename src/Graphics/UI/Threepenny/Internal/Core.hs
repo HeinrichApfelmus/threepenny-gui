@@ -208,4 +208,4 @@ ffiExport fun = liftWindow $ \w -> do
 
 -- | Print a message on the client console if the client has debugging enabled.
 debug :: String -> UI ()
-debug s = liftWindow $ JS.debug s
+debug s = liftWindow $ \w -> JS.debug w s
