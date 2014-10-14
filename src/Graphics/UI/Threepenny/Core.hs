@@ -62,14 +62,14 @@ import Control.Monad          (forM_, forM, void)
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 
-import qualified Data.Aeson                           as JSON
-import qualified Foreign.JavaScript                   as JS
-import qualified Graphics.UI.Threepenny.Internal.Core as Core
-import qualified Reactive.Threepenny                  as Reactive
+import qualified Data.Aeson                      as JSON
+import qualified Foreign.JavaScript              as JS
+import qualified Graphics.UI.Threepenny.Internal as Core
+import qualified Reactive.Threepenny             as Reactive
 
 -- exports
 import Foreign.JavaScript                   (Config(..), defaultConfig)
-import Graphics.UI.Threepenny.Internal.Core
+import Graphics.UI.Threepenny.Internal
 import Reactive.Threepenny                  hiding (onChange)
 
 

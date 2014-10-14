@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-module Graphics.UI.Threepenny.Internal.Core (
+module Graphics.UI.Threepenny.Internal (
     -- * Synopsis
     -- | Internal core:
     -- 'UI' monad, integrating FRP and JavaScript FFI. garbage collection
