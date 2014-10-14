@@ -10,8 +10,16 @@
     * StablePtr for JS objects.
 
 ********************************************************************* */
+
+// Connect to the Haskell server and initialize the FFI.
+// An optional string argument can be used to specify the server URL.
 Haskell.initFFI = function () {
   var connection;
+  var url = window.location.href.toString();
+
+  if (arguments[0]) {
+    url = arguments[0]; // take server url from argument
+  }
 
   /////////////////////////////////////////////////////////////////////
   // Listen to server and execute JS functions
@@ -47,7 +55,7 @@ Haskell.initFFI = function () {
   };
   
   // Initialize connection to server.
-  connection = Haskell.createWebSocket(receive);
+  connection = Haskell.createWebSocket(url, receive);
 
   /////////////////////////////////////////////////////////////////////
   // Calling Haskell functions
@@ -55,7 +63,7 @@ Haskell.initFFI = function () {
   // An event is a function on the server side that can be called anytime,
   // but whose execution will be queued.
   Haskell.newEvent = function (name) {
-    that = function () {
+    var that = function () {
       reply({
         tag       : "Event",
         name      : name,

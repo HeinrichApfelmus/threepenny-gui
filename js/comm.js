@@ -12,9 +12,9 @@
   createWebSocket :: (JSON -> IO ()) -> IO { send :: JSON -> IO () }
   
 ********************************************************************* */
-Haskell.createWebSocket = function (receive) {
+Haskell.createWebSocket = function (url0, receive) {
   var that = {};
-  var url  = 'ws:' + window.location.href.toString().slice(5) + 'websocket';
+  var url  = 'ws:' + url0.slice(5) + 'websocket';
   var ws   = new WebSocket(url);
   
   // Close WebSocket when the browser window is closed.

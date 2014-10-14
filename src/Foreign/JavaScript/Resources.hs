@@ -10,7 +10,7 @@ jsDriverCode :: Text
 jsDriverCode = Text.unlines $ map Text.pack
     [ [include|js/lib/jquery.js|]
     , [include|js/lib/jquery-cookie.js|]
-    , "Haskell = {};"
+    , "var Haskell = {};"
     , [include|js/comm.js|]
     , [include|js/ffi.js|]
     , [include|js/lib.js|]
