@@ -56,14 +56,14 @@ and import all other functions with a mandatory @UI@ prefix.
 > import qualified Graphics.UI.Threepenny       as UI
 > import           Graphics.UI.Threepenny.Core
 
-We begin by starting a server on port @10000@ using the 'startGUI' function.
+We begin by starting a server on port @8023@ using the 'startGUI' function.
 Additional static content is served from the @../wwwroot@ directory.
 
 > main :: IO ()
 > main = do
 >     startGUI defaultConfig
->         { tpPort       = 10000
->         , tpStatic     = Just "../wwwroot"
+>         { jsPort       = 8023
+>         , jsStatic     = Just "../wwwroot"
 >         } setup
 
 Whenever a browser connects to the server,
@@ -101,7 +101,7 @@ When that happens, we change the text of the button.
 That's it for a first example!
 
 The libary comes with a
-<https://github.com/HeinrichApfelmus/threepenny-gui#examples plethora of additional example code>.
+<https://github.com/HeinrichApfelmus/threepenny-gui/tree/master/samples#readme plethora of additional example code>.
 
 
 -}

@@ -73,8 +73,8 @@ type DragData = String
 
 withDragData = fmap extract
     where
-    extract (EventData [Just s]) = s
-    extract _                    = ""
+    extract [s] = s
+    extract _   = ""
 
 -- | Occurs periodically while the element is being dragged around.
 drag :: Element -> Event DragData

@@ -1,4 +1,6 @@
 #!/bin/sh
-ghci -isrc -no-user-package-db \
-  -package-db .cabal-sandbox/i386-osx-ghc-7.6.3-packages.conf.d \
-  "$@"
+#!/bin/sh
+ghci -isrc \
+  -no-user-package-db \
+  -package-db ./.cabal-sandbox/*-packages.conf.d \
+  -DREBUG "$@"

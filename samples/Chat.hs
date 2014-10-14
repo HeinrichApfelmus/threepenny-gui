@@ -22,8 +22,8 @@ main = do
     static   <- getStaticDir
     messages <- Chan.newChan
     startGUI defaultConfig
-        { tpCustomHTML = Just "chat.html"
-        , tpStatic     = Just static
+        { jsCustomHTML = Just "chat.html"
+        , jsStatic     = Just static
         } $ setup messages
 
 type Message = (UTCTime, String, String)
@@ -57,8 +57,7 @@ setup globalMsgs window = do
 receiveMessages w msgs messageArea = do
     messages <- Chan.getChanContents msgs
     forM_ messages $ \msg -> do
-        atomic w $ runUI w $ do
-          -- FIXME: withWindow  should include a call to  atomic ?
+        runUI w $ do
           element messageArea #+ [mkMessage msg]
           UI.scrollToBottom messageArea
 

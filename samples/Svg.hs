@@ -24,14 +24,16 @@ setup w = void $ do
 
 svgElems :: UI Element
 svgElems = do
-    context <- SVG.svg # set SVG.width "150"
-                         # set SVG.height "100"
-    elemCircle <- SVG.circle # set SVG.cx "100"
-                               # set SVG.cy "50"
-                               # set SVG.r "40"
-                               # set SVG.stroke "green"
-                               # set SVG.stroke_width "4"
-                               # set SVG.fill "yellow"
+    context <- SVG.svg
+        # set SVG.width "150"
+        # set SVG.height "100"
+    elemCircle <- SVG.circle
+        # set SVG.cx "100"
+        # set SVG.cy "50"
+        # set SVG.r "40"
+        # set SVG.stroke "green"
+        # set SVG.stroke_width "4"
+        # set SVG.fill "yellow"
     return context #+ [element elemCircle]
 
 

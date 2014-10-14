@@ -12,7 +12,7 @@ import Graphics.UI.Threepenny.Core
 main :: IO ()
 main = do
     static <- getStaticDir
-    startGUI defaultConfig { tpStatic = Just static } setup
+    startGUI defaultConfig { jsStatic = Just static } setup
 
 
 setup :: Window -> UI ()

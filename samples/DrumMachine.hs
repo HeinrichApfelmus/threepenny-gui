@@ -22,15 +22,15 @@ bpm2ms bpm = ceiling $ 1000*60 / fromIntegral bpm
 
 instruments = words "kick snare hihat"
 
-loadInstrumentSample name = do
-    static <- liftIO $ getStaticDir
-    loadFile "audio/wav" (static </> name <.> "wav")
+loadInstrumentSample name = return $ "static/" ++ name ++ ".wav"
 
 {-----------------------------------------------------------------------------
     Main
 ------------------------------------------------------------------------------}
 main :: IO ()
-main = startGUI defaultConfig setup
+main = do
+    static <- getStaticDir
+    startGUI defaultConfig { jsStatic = Just static } setup
 
 setup :: Window -> UI ()
 setup w = void $ do

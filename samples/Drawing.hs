@@ -11,7 +11,9 @@ import Graphics.UI.Threepenny.Core
     Main
 ------------------------------------------------------------------------------}
 main :: IO ()
-main = startGUI defaultConfig setup
+main = do
+    static <- getStaticDir
+    startGUI defaultConfig { jsStatic = Just static } setup
 
 setup :: Window -> UI ()
 setup window = do
@@ -28,9 +30,7 @@ setup window = do
         ,element clear
         ]
     
-    dir <- liftIO $ getStaticDir
-    url <- loadFile "image/png" (dir </> "game" </> "wizard-blue" <.> "png")
-    img <- UI.img # set UI.src url
+    img <- UI.img # set UI.src "static/game/wizard-blue.png"
     
     let positions = [(x,y) | x <- [0,20..300], y <- [0,20..300]] :: [UI.Point]
     on UI.click canvas $ const $ forM_ positions $

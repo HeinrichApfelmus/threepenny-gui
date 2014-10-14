@@ -1,4 +1,3 @@
-{-# OPTIONS -fno-warn-wrong-do-bind #-}
 module Graphics.UI.Threepenny.JQuery where
 
 import Control.Arrow
@@ -6,12 +5,12 @@ import Data.String
 import Data.Char
 import Data.Default
 import Data.Maybe
+
 import Graphics.UI.Threepenny.Core
-import qualified Graphics.UI.Threepenny.Internal.Driver as Core
-import qualified Graphics.UI.Threepenny.Internal.Types  as Core
-import Reactive.Threepenny
 
-
+{-----------------------------------------------------------------------------
+    jQuery utilities
+------------------------------------------------------------------------------}
 data Easing = Swing | Linear
   deriving (Eq,Enum,Show)
 
@@ -33,9 +32,7 @@ fadeOut el duration easing complete = do
 
 -- | Do something on return.
 sendValue :: Element -> Event String
-sendValue el = fmap f (domEvent "sendvalue" el)
-    where
-    f (EventData x) = concat . catMaybes $ x
+sendValue = fmap concat . domEvent "sendvalue"
 
 -- | Focus an element.
 setFocus :: Element -> UI ()

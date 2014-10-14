@@ -1,17 +1,18 @@
 {-# LANGUAGE TemplateHaskell, CPP #-}
-module Graphics.UI.Threepenny.Internal.Include (include) where
+module Foreign.JavaScript.Include (include) where
  
-import Data.Functor
-import System.IO
-import qualified Language.Haskell.TH as TH
-import Language.Haskell.TH.Quote
+import           Data.Functor
+import qualified Language.Haskell.TH       as TH
+import           Language.Haskell.TH.Quote
+import           System.IO
 
-#if defined(CABAL) || defined(FPCOMPLETE)
+
+#if defined(SAMPLES)
 root :: FilePath
-root = "src/"
+root = "../" -- we are running the examples from ghci
 #else
 root :: FilePath
-root = "../src/" -- running examples from ghci
+root = "./"
 #endif
 
 include :: QuasiQuoter
