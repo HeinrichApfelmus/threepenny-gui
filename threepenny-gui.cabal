@@ -88,6 +88,12 @@ Library
   other-modules:
                      Control.Concurrent.Chan.Extra
                     ,Control.Concurrent.Delay
+                    ,Foreign.JavaScript.EventLoop
+                    ,Foreign.JavaScript.Include
+                    ,Foreign.JavaScript.Marshal
+                    ,Foreign.JavaScript.Resources
+                    ,Foreign.JavaScript.Server
+                    ,Foreign.JavaScript.Types
                     ,Graphics.UI.Threepenny.Internal
                     ,Reactive.Threepenny.Memo
                     ,Reactive.Threepenny.Monads
@@ -122,6 +128,7 @@ Library
                     ,websockets             >= 0.8    && < 0.10
                     ,websockets-snap        >= 0.8    && < 0.10
                     ,vault                  == 0.3.*
+                    ,vector                 >= 0.10   && < 0.11
   if flag(network-uri)
       build-depends: network-uri            >= 2.6    && < 2.7
   else
