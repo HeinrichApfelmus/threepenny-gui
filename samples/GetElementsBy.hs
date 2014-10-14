@@ -1,7 +1,5 @@
-import Control.Applicative
 import Control.Monad
 import Data.IORef
-import Data.Maybe
 
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
@@ -14,9 +12,9 @@ setup :: Window -> UI ()
 setup w = do
     return w # set title "Element Test"
 
-    button1 <- UI.button # set UI.text "tag"
-    button2 <- UI.button # set UI.text "class"
-    button3 <- UI.button # set UI.text "id"    # set UI.id_ "me"
+    button1 <- UI.button # set UI.text "by tag"
+    button2 <- UI.button # set UI.text "by class"
+    button3 <- UI.button # set UI.text "by id"    # set UI.id_ "me"
 
     let mkString s = UI.string s # set UI.class_ "string"
 
@@ -32,7 +30,11 @@ setup w = do
         xs <- getElementsByClassName w "string"
         forM_ xs $ \x -> element x # set text "class"
 
+    Just button3 <- getElementById w "me"
+    ref <- liftIO $ newIORef True
     on UI.click button3 $ const $ void $ do
         Just x <- getElementById w "me"
-        element x # set UI.text "got me"
-
+        b <- liftIO $ readIORef ref
+        let s = if b then "yay" else "wow"
+        element x # set UI.text s
+        liftIO $ writeIORef ref (not b)

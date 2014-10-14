@@ -42,6 +42,7 @@ import Foreign.JavaScript hiding (runFunction, callFunction, debug, Window)
 data Window = Window
     { jsWindow    :: JS.Window  -- JavaScript window
     , eDisconnect :: E.Event () -- event that happens when client disconnects
+    , wEvents     :: Foreign.Vendor Events -- events associated to 'Element's
     }
 
 -- | Start server for GUI sessions.
@@ -53,11 +54,17 @@ startGUI config init = JS.serve config $ \w -> do
     -- set up disconnect event
     (eDisconnect, handleDisconnect) <- E.newEvent
     JS.onDisconnect w $ handleDisconnect ()
-    let window = Window { jsWindow = w, eDisconnect = eDisconnect }
-    
+
+    -- make window
+    wEvents <- Foreign.newVendor
+    let window = Window
+            { jsWindow    = w
+            , eDisconnect = eDisconnect
+            , wEvents     = wEvents
+            }
+
     -- run initialization
     runUI window $ init window
-
 
 -- | Event that occurs whenever the client has disconnected,
 -- be it by closing the browser window or by exception.
@@ -73,25 +80,57 @@ disconnect = eDisconnect
 type Events = String -> E.Event [JSON.Value]
 
 data Element = Element
-    { eEvents    :: Events      -- FRP event mapping
-    , toJSObject :: JS.JSObject -- corresponding JavaScript object
-    , eWindow    :: Window      -- Window in which the element was created
+    { toJSObject  :: JS.JSObject -- corresponding JavaScript object
+    , elEvents    :: Events      -- FRP event mapping
+    , elWindow    :: Window      -- Window in which the element was created
     }
 
 instance ToJS Element where
     render = render . toJSObject
 
--- Convert JavaScript object into an element
--- FIXME: Add events
-fromJSObject :: JS.JSObject -> UI Element
-fromJSObject e = do
-    w <- askWindow
-    liftIO $ Foreign.addReachable (JS.root $ jsWindow w) e
-    return $ Element (error "Not implemented!") e w
-
 getWindow :: Element -> IO Window
-getWindow = return . eWindow
+getWindow = return . elWindow
 
+-- | Convert JavaScript object into an element.
+--
+-- FIXME: For the purpose of garbage collection, this element
+-- will always be reachable from the root.
+fromJSObject :: JS.JSObject -> UI Element
+fromJSObject el = do
+    window <- askWindow
+    liftIO $ do
+        Foreign.addReachable (JS.root $ jsWindow window) el
+        events <- getEvents el window
+        return $ Element el events window
+
+-- | Add lazy FRP events to a JavaScript object.
+addEvents :: JS.JSObject -> Window -> IO Events
+addEvents el Window{ jsWindow = w, wEvents = wEvents } = do
+    -- Lazily create FRP events whenever they are needed.
+    let initializeEvent (name,_,handler) = do
+            handlerPtr <- JS.exportHandler handler w
+            -- make handler reachable from element
+            Foreign.addReachable el handlerPtr
+            JS.runFunction w $
+                ffi "Haskell.bind(%1,%2,%3)" el name handlerPtr
+
+    events <- E.newEventsNamed initializeEvent
+
+    -- Create new pointer and add reachability.
+    Foreign.withRemotePtr el $ \coupon _ -> do
+        ptr <- Foreign.newRemotePtr coupon events wEvents
+        Foreign.addReachable el ptr
+
+    return events
+
+-- | Lookup or create lazy events for an a JavaScript object.
+getEvents :: JS.JSObject -> Window -> IO Events
+getEvents el window@Window{ wEvents = wEvents } = do
+    Foreign.withRemotePtr el $ \coupon _ -> do
+        mptr <- Foreign.lookup coupon wEvents
+        case mptr of
+            Nothing -> addEvents el window
+            Just p  -> Foreign.withRemotePtr p $ \_ -> return
 
 type EventData = [String]
 
@@ -104,7 +143,7 @@ domEvent
         --   the name is @click@ and so on.
     -> Element          -- ^ Element where the event is to occur.
     -> E.Event EventData
-domEvent name el = fmap (fromSuccess . JSON.fromJSON . head) $ eEvents el name
+domEvent name el = fmap (fromSuccess . JSON.fromJSON . head) $ elEvents el name
     where
     fromSuccess (JSON.Success x) = x
 
@@ -119,22 +158,12 @@ mkElementNamespace :: Maybe String -> String -> UI Element
 mkElementNamespace namespace tag = do
     window <- askWindow
     let w = jsWindow window
-    el <- liftIO $ JS.callFunction w $ case namespace of
-        Nothing -> ffi "document.createElement(%1)" tag
-        Just ns -> ffi "document.createElementNS(%1,%2)" ns tag
-
-    -- Lazily create FRP events whenever they are needed.
-    let initializeEvent (name,_,handler) = do
-            handlerPtr <- JS.exportHandler handler w
-            -- make handler reachable from element
-            Foreign.addReachable el handlerPtr
-            JS.runFunction w $
-                ffi "Haskell.bind(%1,%2,%3)" el name handlerPtr
-
-    events <- liftIO $ E.newEventsNamed initializeEvent
-    
-    -- FIXME: Add support for JavaScript functions that /return/ elements.
-    return $ Element events el window
+    liftIO $ do
+        el <- JS.callFunction w $ case namespace of
+            Nothing -> ffi "document.createElement(%1)" tag
+            Just ns -> ffi "document.createElementNS(%1,%2)" ns tag
+        events <- getEvents el window
+        return $ Element el events window
 
 -- | Delete the given element.
 delete :: Element -> UI ()
@@ -144,14 +173,14 @@ delete el = liftJSWindow $ \w -> do
 
 -- | Remove all child elements.
 clearChildren :: Element -> UI ()
-clearChildren (Element _ el _) = liftJSWindow $ \w -> do
+clearChildren (Element el _ _) = liftJSWindow $ \w -> do
     Foreign.withRemotePtr el $ \_ _ -> do
         Foreign.clearReachable el
         JS.runFunction w $ ffi "$(%1).contents().detach()" el
 
 -- | Append a child element.
 appendChild :: Element -> Element -> UI ()
-appendChild (Element _ eParent _) (Element _ eChild _) = liftJSWindow $ \w -> do
+appendChild (Element eParent _ _) (Element eChild _ _) = liftJSWindow $ \w -> do
     -- FIXME: We have to stop the child being reachable from its
     -- /previous/ parent.
     Foreign.addReachable eParent eChild

@@ -178,6 +178,8 @@ getElementsByTagName _ tag =
     mapM fromJSObject =<< callFunction (ffi "document.getElementsByTagName(%1)" tag)
 
 -- | Get an element by a particular ID.
+--
+-- FIXME: Misleading type, throws a JavaScript exception when element not found.
 getElementById
     :: Window              -- ^ Browser window
     -> String              -- ^ The ID string.
