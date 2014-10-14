@@ -93,13 +93,6 @@ if you don't access each window in a single-threaded fashion.
 
 -}
 
--- | Start server for GUI sessions.
-startGUI
-    :: Config               -- ^ Server configuration.
-    -> (Window -> UI ())    -- ^ Action to run whenever a client browser connects.
-    -> IO ()
-startGUI config handler = JS.serve config (\w -> runUI w $ handler w)
-
 -- | Make a local file available as a relative URI.
 --
 -- FIXME: Not implemented!
@@ -267,14 +260,6 @@ grid mrows = do
 {-----------------------------------------------------------------------------
     Events
 ------------------------------------------------------------------------------}
--- | Event that occurs whenever the client has disconnected,
--- be it by closing the browser window or by exception.
---
--- Note: DOM Elements in the browser window that has been closed
--- can no longer be manipulated.
-disconnect :: Window -> Event ()
-disconnect = undefined -- FIXME: Implement  disconnect
-
 -- | Convenience function to register 'Event's for 'Element's.
 --
 -- Example usage.

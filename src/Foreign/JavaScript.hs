@@ -10,7 +10,7 @@ module Foreign.JavaScript (
     -- * JavaScript FFI
     FFI, ToJS(..), JSFunction, JSObject,
     ffi, runFunction, callFunction,
-    HsEvent, exportHandler,
+    HsEvent, exportHandler, onDisconnect,
     debug,
     ) where
 

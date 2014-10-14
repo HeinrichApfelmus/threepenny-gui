@@ -2,7 +2,7 @@
 {-# LANGUAGE RecursiveDo #-}
 module Foreign.JavaScript.EventLoop (
     eventLoop,
-    runEval, callEval, debug,
+    runEval, callEval, debug, onDisconnect,
     exportHandler, fromJSStablePtr,
     ) where
 
@@ -42,7 +42,7 @@ handleEvent w@(Window{..}) (name, args, consistency) = do
 -- Supports concurrent invocations of `runEval` and `callEval`.
 eventLoop :: (Window -> IO void) -> (Comm -> IO ())
 eventLoop init comm = mdo
-    -- To support concurrency, we make three threads.
+    -- To support concurrent FFI calls, we make three threads.
     -- The thread `multiplexer` reads from the client and 
     --   sorts the messages into the appropriate queue.
     events      <- newTQueueIO
@@ -60,7 +60,7 @@ eventLoop init comm = mdo
     handling    <- newTVarIO False
     calling     <- newTVarIO False
 
-    
+    -- FFI calls are made by writing to the `calls` queue.
     w0 <- newPartialWindow
     let runEval s = do
             atomically $ writeTQueue calls (Nothing , RunEval s)
@@ -70,23 +70,40 @@ eventLoop init comm = mdo
             atomically $ takeTMVar ref
         debug    s = do
             atomically $ writeServer comm $ Debug s
-    let w = w0 { runEval = runEval, callEval = callEval, debug = debug }
+    
+    
+    -- We also send a separate event when the client disconnects.
+    disconnect <- newTVarIO $ return ()
+    let onDisconnect m = atomically $ writeTVar disconnect m
+    
+    
+    let w = w0 { runEval      = runEval
+               , callEval     = callEval
+               , debug        = debug
+               , onDisconnect = onDisconnect
+               }
 
-
-    let fork m  = forkFinally m (const killall)
+    let fork         m = forkFinally m (const killall)
+        untilResultM m = m >>= \x -> case x of
+            Nothing -> untilResultM m
+            Just a  -> return a
 
     -- Read client messages and send them to the
     -- thread that handles events or the thread that handles FFI calls.
-    multiplexer <- fork $ forever $ do
-        atomically $ do
+    multiplexer <- fork $ do
+        m <- untilResultM $ atomically $ do
             msg <- readClient comm
             case msg of
                 Event x y -> do
                     b <- (||) <$> readTVar handling <*> readTVar calling
                     let c = if b then Inconsistent else Consistent
                     writeTQueue events (x,y,c)
-                Quit      -> writeTQueue events quit
-                Result x  -> writeTQueue results x
+                    return Nothing
+                Result x  -> do
+                    writeTQueue results x
+                    return Nothing
+                Quit      -> Just <$> readTVar disconnect
+        m
 
     -- Send FFI calls to client and collect results
     handleCalls <- fork $ forever $ do
@@ -117,7 +134,7 @@ eventLoop init comm = mdo
                 rebug
                 atomically $ writeTVar handling False
 
-    let killall = mapM_ killThread [multiplexer, handleCalls, handleEvents]
+    let killall = mapM_ killThread [handleCalls, handleEvents, multiplexer]
     return ()
 
 {-----------------------------------------------------------------------------
