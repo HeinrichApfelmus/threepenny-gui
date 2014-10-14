@@ -6,7 +6,6 @@ module Graphics.UI.Threepenny.Core (
     -- * Server
     -- $server
     Config(..), defaultConfig, startGUI,
-    loadFile, loadDirectory,
     
     -- * UI monad
     -- $ui
@@ -92,21 +91,6 @@ i.e. you could run an element search and get a click event as a result
 if you don't access each window in a single-threaded fashion.
 
 -}
-
--- | Make a local file available as a relative URI.
---
--- FIXME: Not implemented!
-loadFile
-    :: String     -- ^ MIME type
-    -> FilePath   -- ^ Local path to the file
-    -> UI String  -- ^ Generated URI
-loadFile mime path = undefined
-
--- | Make a local directory available as a relative URI.
---
--- FIXME: Not implemented!
-loadDirectory :: FilePath -> UI String
-loadDirectory path = undefined
 
 {-----------------------------------------------------------------------------
     Browser window

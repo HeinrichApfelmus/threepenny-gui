@@ -1,5 +1,9 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.6.0.0** -- Snapshot release.
+
+* The functions `loadFile` and `loadDirectory` have been *removed*, as I felt that the `jsStatic` option is sufficient for most use cases.
+
 **0.5.0.0** -- Snapshot release.
 
 * Possibility to specify IP address to bind the server to.
