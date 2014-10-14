@@ -1,5 +1,5 @@
 Name:                threepenny-gui
-Version:             0.5.0.0
+Version:             0.6.0.0
 Synopsis:            GUI framework that uses the web browser as a display.
 Description:
     Threepenny-GUI is a GUI framework that uses the web browser as a display.
@@ -32,9 +32,10 @@ Cabal-version:       >=1.8
 Extra-Source-Files:  CHANGELOG.md
                     ,README.md
                     ,samples/README.md
-                    ,src/Graphics/UI/*.html
-                    ,src/Graphics/UI/*.js
-                    ,src/Graphics/UI/*.css
+                    ,js/*.html
+                    ,js/*.css
+                    ,js/*.js
+                    ,js/lib/*.js
 
 Data-dir:            .
 Data-files:          wwwroot/css/*.css
@@ -54,7 +55,8 @@ flag network-uri
 
 flag rebug
     description: The library uses some techniques that are highly
-                 non-deterministic, for example garbage collection and concurrency.
+                 non-deterministic, for example garbage collection
+                 and concurrency.
                  Bugs in these subsystems are harder to find.
                  Activating this flag will expose more of them.
     default:     False
@@ -67,10 +69,12 @@ Source-repository head
 Library
   hs-source-dirs:    src
   exposed-modules:
-                     Graphics.UI.Threepenny
+                     Foreign.JavaScript
+                    ,Foreign.RemotePtr
+                    ,Graphics.UI.Threepenny
                     ,Graphics.UI.Threepenny.Attributes
-                    ,Graphics.UI.Threepenny.Core
                     ,Graphics.UI.Threepenny.Canvas
+                    ,Graphics.UI.Threepenny.Core
                     ,Graphics.UI.Threepenny.DragNDrop
                     ,Graphics.UI.Threepenny.Elements
                     ,Graphics.UI.Threepenny.Events
@@ -81,15 +85,10 @@ Library
                     ,Graphics.UI.Threepenny.Timer
                     ,Graphics.UI.Threepenny.Widgets
                     ,Reactive.Threepenny
-                    ,Foreign.Coupon
   other-modules:
                      Control.Concurrent.Chan.Extra
                     ,Control.Concurrent.Delay
-                    ,Graphics.UI.Threepenny.Internal.Driver
-                    ,Graphics.UI.Threepenny.Internal.FFI
-                    ,Graphics.UI.Threepenny.Internal.Include
-                    ,Graphics.UI.Threepenny.Internal.Resources
-                    ,Graphics.UI.Threepenny.Internal.Types
+                    ,Graphics.UI.Threepenny.Internal.Core
                     ,Reactive.Threepenny.Memo
                     ,Reactive.Threepenny.Monads
                     ,Reactive.Threepenny.PulseLatch
@@ -116,7 +115,7 @@ Library
                     ,stm                    >= 2.3    && < 2.5
                     ,template-haskell       >= 2.7.0  && < 2.10
                     ,text                   >= 0.11   && < 1.3
-                    ,time                   == 1.4.*
+                    ,time                   >= 1.4    && < 1.6
                     ,transformers           >= 0.3.0  && < 0.5
                     ,unordered-containers   == 0.2.*
                     ,utf8-string            == 0.3.*

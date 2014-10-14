@@ -1,7 +1,10 @@
 {-# LANGUAGE RecordWildCards #-}
 module Foreign.JavaScript (
     -- * Synopsis
-    -- | Communicate with a web browser and execute JavaScript code.
+    -- | A JavaScript foreign function interface (FFI).
+    --
+    -- This module implements a web server that communicates with
+    -- a web browser and allows you to execute arbitrary JavaScript code on it.
 
     -- * Server
     serve, Config(..), defaultConfig,

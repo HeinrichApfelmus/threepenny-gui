@@ -79,16 +79,12 @@ import Reactive.Threepenny                  hiding (onChange)
 {- $server
 
 To display the user interface, you have to start a server using 'startGUI'.
-Then, visit the URL <http://localhost:10000/> in your browser
-(assuming that you have set the port number to @jsPort=10000@
-in the server configuration).
+Then, visit the URL <http://localhost:8023/> in your browser
+(assuming that you use the default server configuration 'defaultConfig',
+or have set the port number to @jsPort=8023@.)
 
-The server is multithreaded,
-a separate thread is used to communicate with a single browser 'Window'.
-However, each window should only be accessed from a single thread,
-otherwise the behavior will be undefined,
-i.e. you could run an element search and get a click event as a result
-if you don't access each window in a single-threaded fashion.
+The server is multithreaded.
+FFI calls can be made concurrently, but events are handled sequentially.
 
 -}
 
