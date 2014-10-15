@@ -27,7 +27,7 @@ setup w = do
     -- functionality
     let
         displayTotal = void $ do
-            xs <- getValuesList =<< liftIO (readIORef inputs)
+            xs <- mapM (get value) =<< liftIO (readIORef inputs)
             element elResult # set text (showNumber . sum $ map readNumber xs)
         
         redoLayout :: UI ()

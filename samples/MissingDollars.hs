@@ -90,7 +90,7 @@ mkMissingDollarRiddle headerMe = do
     -- calculate button
     calculate <- UI.button #+ [string "Calculate"]
     on UI.click calculate $ \_ -> do
-        result <- mapM readMay `liftM` getValuesList [hotelOut,hotelCost,hotelHold]
+        result <- mapM readMay `liftM` mapM (get value) [hotelOut,hotelCost,hotelHold]
         case result of
             Just [getout,getcost,gethold] -> updateDisplay getout getcost gethold
             _ -> return ()

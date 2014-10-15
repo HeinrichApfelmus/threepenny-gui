@@ -14,7 +14,7 @@ module Graphics.UI.Threepenny.Core (
     module Control.Monad.Fix,
     
     -- * Browser Window
-    Window, title, cookies, getRequestLocation,
+    Window, title,
     
     -- * DOM elements
     -- | Create and manipulate DOM elements.
@@ -22,7 +22,6 @@ module Graphics.UI.Threepenny.Core (
         string,
         getHead, getBody,
         (#+), children, text, html, attr, style, value,
-    getValuesList,
     getElementsByTagName, getElementById, getElementsByClassName,
     
     -- * Layout
@@ -54,7 +53,6 @@ module Graphics.UI.Threepenny.Core (
     
     -- * Internal and oddball functions
     fromJQueryProp,
-    audioPlay, audioStop,
     
     ) where
 
@@ -95,13 +93,6 @@ FFI calls can be made concurrently, but events are handled sequentially.
 title :: WriteAttr Window String
 title = mkWriteAttr $ \s _ ->
     runFunction $ ffi "document.title = %1;" s
-
--- | Cookies on the client.
-cookies :: ReadAttr Window [(String,String)]
-cookies = undefined -- mkReadAttr (liftIO . Core.getRequestCookies)
-
-getRequestLocation :: Window -> IO a
-getRequestLocation = undefined
 
 {-----------------------------------------------------------------------------
     DOM Elements
@@ -144,13 +135,6 @@ value = mkReadWriteAttr get set
     where
     get   el = callFunction $ ffi "$(%1).val()" el
     set v el = runFunction  $ ffi "$(%1).val(%2)" el v
-
--- | Get values from inputs. Blocks. This is faster than many 'getValue' invocations.
-getValuesList
-    :: [Element]   -- ^ A list of elements to get the values of.
-    -> UI [String] -- ^ The list of plain text values.
-getValuesList = mapM (get value)
-    -- TODO: improve this to use Core.getValuesList
 
 -- | Text content of an element.
 text :: WriteAttr Element String
@@ -390,14 +374,3 @@ element = return . getElement
 -- | Convience synonym for 'return' to make widgets work well with 'set'.
 widget  :: Widget w => w -> UI w
 widget  = return
-
-{-----------------------------------------------------------------------------
-    Oddball
-------------------------------------------------------------------------------}
--- | Invoke the JavaScript expression @audioElement.play();@.
-audioPlay :: Element -> UI ()
-audioPlay el = runFunction $ ffi "%1.play()" el
-
--- | Invoke the JavaScript expression @audioElement.stop();@.
-audioStop :: Element -> UI ()
-audioStop el = runFunction $ ffi "prim_audio_stop(%1)" el

@@ -81,8 +81,9 @@ mkInstrument name = do
     let play box = do
             checked <- get UI.checked box
             when checked $ do
-                audioStop elAudio -- just in case the sound is already playing
-                audioPlay elAudio
+                runFunction $ ffi "%1.pause()" elAudio
+                runFunction $ ffi "%1.currentTime = 0" elAudio 
+                runFunction $ ffi "%1.play()" elAudio
         beats    = map play . concat $ elCheckboxes
         elGroups = [UI.span #. "bar" #+ map element bar | bar <- elCheckboxes]
     
