@@ -265,7 +265,7 @@ callFunction fun = liftJSWindow $ \w -> JS.callFunction w fun
 -- | Export the given Haskell function so that it can be called
 -- from JavaScript code.
 --
--- TODO: At the moment, the function is not garbage collected.
+-- FIXME: At the moment, the function is not garbage collected.
 ffiExport :: IO () -> UI HsEvent
 ffiExport fun = liftJSWindow $ \w -> do
     handlerPtr <- JS.exportHandler (const fun) w

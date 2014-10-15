@@ -12,6 +12,8 @@ The library comes with many examples, which can be found in the [samples](https:
 
 ## Technical overview
 
+A program written with Threepenny is essentially a small web server that displays the user interface as a web page to any browser that connects to it.
+
 ### Latency
 
 The frequent communication between browser and server

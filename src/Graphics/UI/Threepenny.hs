@@ -37,8 +37,6 @@ that displays the user interface as a web page to any browser that connects to i
 For an introduction, see the example below.
 The module "Graphics.UI.Threepenny.Core" contains the main functions.
 
-This project was originally called Ji.
-
 -}
 
 
@@ -98,7 +96,8 @@ When that happens, we change the text of the button.
 >     on UI.click button $ const $ do
 >         element button # set UI.text "I have been clicked!"
 
-That's it for a first example!
+That's it! Now, run the program and visit the URL <http://localhost:8023/>
+in your browser to interact with the user interface.
 
 The libary comes with a
 <https://github.com/HeinrichApfelmus/threepenny-gui/tree/master/samples#readme plethora of additional example code>.
