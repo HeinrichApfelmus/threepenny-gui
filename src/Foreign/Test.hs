@@ -28,10 +28,15 @@ test2 = withPreventGC $ \ref -> serve defaultConfig $ \w -> do
     runFunction w $ ffi "$(%1).text('Click me!')" button
     let handler _ = do
             msg <- newElement "div" w
-            runFunction w $ ffi "$(%1).text('I have been clicked.')" msg
+            let s = "I have been clicked."
+            runFunction w $ ffi "$(%1).text(%2)" msg s
+            appendChild body msg w
+
+            msg <- newElement "div" w
+            runFunction w $ ffi "$(%1).text((%2).toString())" msg [1,2,3::Int]
             appendChild body msg w
     addHandler "click" handler button w
-    
+
     appendChild body button w
 
 getBody :: Window -> IO Element

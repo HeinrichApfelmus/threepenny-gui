@@ -8,7 +8,8 @@ import           Data.Aeson             as JSON
 import qualified Data.Aeson.Encode
 import qualified Data.Aeson.Types       as JSON
 import           Data.Functor                     ((<$>))
-import           Data.Text              as T
+import           Data.List                        (intercalate)
+import qualified Data.Text              as T
 import qualified Data.Text.Lazy
 import qualified Data.Text.Lazy.Builder
 import qualified Data.Vector            as Vector
@@ -27,20 +28,29 @@ newtype JSCode = JSCode { unJSCode :: String }
 
 -- | Helper class for rendering Haskell values as JavaScript expressions.
 class ToJS a where
-    render :: a -> JSCode
+    render     :: a -> JSCode
+    renderList :: [a] -> JSCode
 
-instance ToJS String     where render   = render . JSON.String . T.pack
-instance ToJS Text       where render   = render . JSON.String
+    renderList xs = JSCode $ "[" ++ intercalate "," ys ++ "]"
+        where ys = map (unJSCode . render) xs
+
 instance ToJS Float      where render   = render . JSON.toJSON
 instance ToJS Double     where render   = render . JSON.toJSON
 instance ToJS Int        where render   = JSCode . show
 instance ToJS Bool       where render b = JSCode $ if b then "true" else "false"
 instance ToJS JSON.Value where render   = JSCode . showJSON
+instance ToJS T.Text     where render   = render . JSON.String
+instance ToJS Char       where
+    render x   = renderList [x]
+    renderList = render . JSON.String . T.pack
+
+instance ToJS a => ToJS [a] where
+    render = renderList
 
 instance ToJS HsEvent    where
-    render x = apply "Haskell.newEvent(%1)" [render $ unprotectedGetCoupon x]
+    render x   = apply "Haskell.newEvent(%1)" [render $ unprotectedGetCoupon x]
 instance ToJS JSObject   where
-    render x = apply "Haskell.deRefStablePtr(%1)" [render $ unprotectedGetCoupon x]
+    render x   = apply "Haskell.deRefStablePtr(%1)" [render $ unprotectedGetCoupon x]
 
 
 -- | Show a type in a JSON compatible way.
@@ -86,7 +96,7 @@ instance FFI (JSFunction ()) where
     fancy f   = JSFunction { code = f [], marshal = \_ _ -> return (JSON.Success ())}
 
 instance FFI (JSFunction String)      where fancy = mkResult "%1.toString()"
-instance FFI (JSFunction Text)        where fancy = mkResult "%1.toString()"
+instance FFI (JSFunction T.Text)      where fancy = mkResult "%1.toString()"
 instance FFI (JSFunction Double)      where fancy = mkResult "%1"
 instance FFI (JSFunction Float)       where fancy = mkResult "%1"
 instance FFI (JSFunction Int)         where fancy = mkResult "%1"

@@ -20,11 +20,11 @@ newElement tag w = callFunction w $
     ffi "document.createElement(%1)" tag
 
 -- | Add an event handler to an element.
-addHandler :: String -> (JSON.Value -> IO ()) -> Element -> Window -> IO ()
+addHandler :: String -> ([JSON.Value] -> IO ()) -> Element -> Window -> IO ()
 addHandler name handler e w = do
     handlerPtr <- exportHandler handler w
     addReachable e handlerPtr                   -- make handler reachable from element
-    runFunction w $ ffi "$(%1).on(%2,%3)" e name handlerPtr
+    runFunction w $ ffi "Haskell.bind(%1,%2,%3)" e name handlerPtr
 
 -- | Append a child element to a parent element.
 appendChild :: Element -> Element -> Window -> IO ()
