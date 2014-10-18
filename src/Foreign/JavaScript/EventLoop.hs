@@ -127,6 +127,7 @@ eventLoop init comm = do
                 rebug
                 atomically $ writeTVar handling False
 
+    -- Foreign.addFinalizer (wRoot w) $ putStrLn "wRoot garbage collected."
     Foreign.withRemotePtr (wRoot w) $ \_ _ -> do    -- keep root alive
         E.finally
             (foldr1 race_ [multiplexer, handleEvents, handleCalls])

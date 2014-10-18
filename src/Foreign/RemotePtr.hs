@@ -145,7 +145,7 @@ withRemotePtr ptr f = do
         return b
     where
     -- make sure that the pointer is alive at this point in the code
-    touch ptr = ptr `seq` return () 
+    touch ptr = void $ readIORef ptr
 
 -- | Unprotected access the 'Coupon' of a 'RemotePtr'.
 --
