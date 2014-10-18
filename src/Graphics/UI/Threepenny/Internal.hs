@@ -83,7 +83,7 @@ data Element = Element
     { toJSObject  :: JS.JSObject -- corresponding JavaScript object
     , elEvents    :: Events      -- FRP event mapping
     , elWindow    :: Window      -- Window in which the element was created
-    }
+    } deriving (Typeable)
 
 instance ToJS Element where
     render = render . toJSObject
