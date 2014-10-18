@@ -66,12 +66,10 @@ defaultConfig = Config
 ------------------------------------------------------------------------------}
 -- | Bidirectional communication channel.
 data Comm = Comm
-    { commIn  :: TQueue JSON.Value 
-    , commOut :: TQueue JSON.Value 
+    { commIn    :: TQueue JSON.Value
+    , commOut   :: TQueue JSON.Value
+    , commClose :: IO ()
     }
-
-newComm :: IO Comm
-newComm = Comm <$> STM.newTQueueIO <*> STM.newTQueueIO
 
 writeComm :: Comm -> JSON.Value -> STM ()
 writeComm c = STM.writeTQueue (commOut c)

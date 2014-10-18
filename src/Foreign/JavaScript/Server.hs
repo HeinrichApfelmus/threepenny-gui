@@ -5,6 +5,7 @@ module Foreign.JavaScript.Server (
 
 -- import general libraries
 import           Control.Concurrent
+import           Control.Concurrent.Async
 import           Control.Concurrent.STM     as STM
 import qualified Control.Exception          as E
 import           Control.Monad
@@ -59,33 +60,40 @@ routeWebsockets worker = [("websocket", response)]
 -- | Create 'Comm' channel from WebSocket request.
 communicationFromWebSocket :: WS.PendingConnection -> IO Comm
 communicationFromWebSocket request = do
-    connection    <- WS.acceptRequest request
-    communication <- newComm
+    connection <- WS.acceptRequest request
+    commIn     <- STM.newTQueueIO   -- outgoing communication
+    commOut    <- STM.newTQueueIO   -- incoming communication
 
-    -- write data (in another thread)
-    sendData <- forkIO . forever $ do
-        x <- atomically $ STM.readTQueue (commOut communication)
-        -- see note [ServerMsg strictness]
-        WS.sendTextData connection . JSON.encode $ x
+    -- write data to browser
+    let sendData = forever $ do
+            x <- atomically $ STM.readTQueue commOut
+            -- see note [ServerMsg strictness]
+            WS.sendTextData connection . JSON.encode $ x
 
-    -- read data
-    let readData = do
+    -- read data from browser
+    let readData = forever $ do
             input <- WS.receiveData connection
             case input of
                 "ping" -> WS.sendTextData connection . LBS.pack $ "pong"
                 "quit" -> E.throw WS.ConnectionClosed
                 input  -> case JSON.decode input of
-                    Just x   -> atomically $ STM.writeTQueue (commIn communication) x
+                    Just x   -> atomically $ STM.writeTQueue commIn x
                     Nothing  -> error $
                         "Foreign.JavaScript: Couldn't parse JSON input"
                         ++ show input
     
-    forkIO $ E.finally (forever readData) $ do   -- we're done here
-        killThread sendData                      -- kill sending thread
-        atomically $ STM.writeTQueue (commIn communication) $
-            JSON.object [ "tag" .= ("Quit" :: Text) ] -- write Quit event
+    let manageConnection = do
+            withAsync sendData $ \_ -> do
+            Left e <- waitCatch =<< async readData
+            atomically $ STM.writeTQueue commIn $
+                JSON.object [ "tag" .= ("Quit" :: Text) ] -- write Quit event
+            E.throw e
 
-    return communication
+    thread <- forkFinally manageConnection
+        (\_ -> WS.sendClose connection $ LBS.pack "close")
+    let commClose = killThread thread
+
+    return $ Comm {..}
 
 {-----------------------------------------------------------------------------
     Resources

@@ -8,13 +8,14 @@ module Foreign.JavaScript.EventLoop (
 
 import           Control.Applicative
 import           Control.Concurrent
-import           Control.Concurrent.STM  as STM
-import           Control.Exception               (finally)
+import           Control.Concurrent.Async
+import           Control.Concurrent.STM   as STM
+import           Control.Exception        as E    (finally)
 import           Control.Monad
-import qualified Data.Aeson              as JSON
+import qualified Data.Aeson               as JSON
 import           Data.IORef
-import qualified Data.Map                as Map
-import qualified Data.Text               as T
+import qualified Data.Map                 as Map
+import qualified Data.Text                as T
 import qualified System.Mem
 
 import Foreign.RemotePtr        as Foreign
@@ -41,7 +42,7 @@ handleEvent w@(Window{..}) (name, args, consistency) = do
 -- | Event loop for a browser window.
 -- Supports concurrent invocations of `runEval` and `callEval`.
 eventLoop :: (Window -> IO void) -> (Comm -> IO ())
-eventLoop init comm = mdo
+eventLoop init comm = do
     -- To support concurrent FFI calls, we make three threads.
     -- The thread `multiplexer` reads from the client and 
     --   sorts the messages into the appropriate queue.
@@ -70,12 +71,10 @@ eventLoop init comm = mdo
             atomically $ takeTMVar ref
         debug    s = do
             atomically $ writeServer comm $ Debug s
-    
-    
+
     -- We also send a separate event when the client disconnects.
     disconnect <- newTVarIO $ return ()
     let onDisconnect m = atomically $ writeTVar disconnect m
-    
     
     let w = w0 { runEval      = runEval
                , callEval     = callEval
@@ -83,48 +82,42 @@ eventLoop init comm = mdo
                , onDisconnect = onDisconnect
                }
 
-    let fork         m = forkFinally m (const killall)
-        untilResultM m = m >>= \x -> case x of
-            Nothing -> untilResultM m
-            Just a  -> return a
-
+    -- The individual threads are as follows:
+    --
     -- Read client messages and send them to the
     -- thread that handles events or the thread that handles FFI calls.
-    multiplexer <- fork $ do
-        m <- untilResultM $ atomically $ do
-            msg <- readClient comm
-            case msg of
-                Event x y -> do
-                    b <- (||) <$> readTVar handling <*> readTVar calling
-                    let c = if b then Inconsistent else Consistent
-                    writeTQueue events (x,y,c)
-                    return Nothing
-                Result x  -> do
-                    writeTQueue results x
-                    return Nothing
-                Quit      -> Just <$> readTVar disconnect
-        m
-
+    let multiplexer = do
+            m <- untilJustM $ atomically $ do
+                msg <- readClient comm
+                case msg of
+                    Event x y -> do
+                        b <- (||) <$> readTVar handling <*> readTVar calling
+                        let c = if b then Inconsistent else Consistent
+                        writeTQueue events (x,y,c)
+                        return Nothing
+                    Result x  -> do
+                        writeTQueue results x
+                        return Nothing
+                    Quit      -> Just <$> readTVar disconnect
+            m
+        
     -- Send FFI calls to client and collect results
-    handleCalls <- fork $ forever $ do
-        ref <- atomically $ do
-            (ref, msg) <- readTQueue calls
-            writeTVar calling True
-            writeServer comm msg
-            return ref
-        atomically $ do
-            writeTVar calling False
-            case ref of
-                Just ref -> do
-                    result <- readTQueue results
-                    putTMVar ref result
-                Nothing  -> return ()
+    let handleCalls = forever $ do
+            ref <- atomically $ do
+                (ref, msg) <- readTQueue calls
+                writeTVar calling True
+                writeServer comm msg
+                return ref
+            atomically $ do
+                writeTVar calling False
+                case ref of
+                    Just ref -> do
+                        result <- readTQueue results
+                        putTMVar ref result
+                    Nothing  -> return ()
     
     -- Receive events from client and handle them in order.
-    -- Also ensure that root is alive
-    handleEvents <- myThreadId
-    flip finally killall $
-        Foreign.withRemotePtr (wRoot w) $ \_ _ -> do
+    let handleEvents = do
             init w
             forever $ do
                 e <- atomically $ do
@@ -134,8 +127,18 @@ eventLoop init comm = mdo
                 rebug
                 atomically $ writeTVar handling False
 
-    let killall = mapM_ killThread [handleCalls, handleEvents, multiplexer]
+    Foreign.withRemotePtr (wRoot w) $ \_ _ -> do    -- keep root alive
+        E.finally
+            (foldr1 race_ [multiplexer, handleEvents, handleCalls])
+            (commClose comm)
+
     return ()
+
+-- | Repeat an action until it returns 'Just'. Similar to 'forever'.
+untilJustM :: Monad m => m (Maybe a) -> m a
+untilJustM m = m >>= \x -> case x of
+    Nothing -> untilJustM m
+    Just a  -> return a
 
 {-----------------------------------------------------------------------------
     Exports, Imports and garbage collection
