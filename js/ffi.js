@@ -62,12 +62,12 @@ Haskell.initFFI = function () {
   
   // An event is a function on the server side that can be called anytime,
   // but whose execution will be queued.
-  Haskell.newEvent = function (name) {
+  Haskell.newEvent = function (name, args) {
     var that = function () {
       reply({
         tag       : "Event",
         name      : name,
-        arguments : arguments
+        arguments : args ? eval(args) : arguments
       });
     };
     return that;

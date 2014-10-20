@@ -49,7 +49,7 @@ module Graphics.UI.Threepenny.Core (
     debug,
     ToJS, FFI,
     JSFunction, ffi, runFunction, callFunction,
-    HsEvent, ffiExport,
+    ffiExport,
     
     -- * Internal and oddball functions
     fromJQueryProp,

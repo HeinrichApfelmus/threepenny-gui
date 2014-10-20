@@ -1,7 +1,8 @@
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, ScopedTypeVariables #-}
 module Foreign.JavaScript.Marshal (
-    FFI, ToJS(..),
-    JSFunction, toCode, marshalResult, ffi,
+    ToJS(..), FromJS,
+    FFI, JSFunction, toCode, marshalResult, ffi,
+    IsHandler, convertArguments, handle,
     ) where
 
 import           Data.Aeson             as JSON
@@ -48,7 +49,7 @@ instance ToJS a => ToJS [a] where
     render = renderList
 
 instance ToJS HsEvent    where
-    render x   = apply "Haskell.newEvent(%1)" [render $ unprotectedGetCoupon x]
+    render x   = apply "%1" [render $ unprotectedGetCoupon x]
 instance ToJS JSObject   where
     render x   = apply "Haskell.deRefStablePtr(%1)" [render $ unprotectedGetCoupon x]
 
@@ -63,27 +64,65 @@ showJSON
 {-----------------------------------------------------------------------------
     Convert JavaScript values to Haskell values
 ------------------------------------------------------------------------------}
+data FromJS' a = FromJS'
+    { wrapCode :: (JSCode -> JSCode)
+    , marshal  :: Window -> JSON.Value -> IO a
+    }
+
+-- | Helper class for converting JavaScript values to Haskell values.
+class FromJS a where
+    fromJS   :: FromJS' a
+
+-- | Marshal a simple type to Haskell.
+simple :: FromJSON a => (JSCode -> JSCode) -> FromJS' a
+simple f =
+    FromJS' { wrapCode = f , marshal = \_ -> fromSuccessIO . JSON.fromJSON }
+    where
+    fromSuccessIO (JSON.Success a) = return a
+
+instance FromJS String     where fromJS = simple $ apply1 "%1.toString()"
+instance FromJS T.Text     where fromJS = simple $ apply1 "%1.toString()"
+instance FromJS Int        where fromJS = simple id
+instance FromJS Double     where fromJS = simple id
+instance FromJS Float      where fromJS = simple id
+instance FromJS JSON.Value where fromJS = simple id
+
+instance FromJS ()         where
+    fromJS = FromJS' { wrapCode = id, marshal = \_ _ -> return () }
+
+instance FromJS JSObject   where
+    fromJS = FromJS'
+        { wrapCode = apply1 "Haskell.getStablePtr(%1)"
+        , marshal  = \w v -> fromJSStablePtr v w
+        }
+
+-- FIXME: Not sure whether this instance is really a good idea.
+instance FromJS [JSObject] where
+    fromJS = FromJS'
+        { wrapCode = apply1 "Haskell.map(Haskell.getStablePtr, %1)"
+        , marshal  = \w (JSON.Array vs) -> do
+            mapM (\v -> fromJSStablePtr v w) (Vector.toList vs)
+        }
+
+{-----------------------------------------------------------------------------
+    Variable argument JavaScript functions
+------------------------------------------------------------------------------}
 -- | A JavaScript function with a given output type @a@.
 data JSFunction a = JSFunction
-    { code    :: JSCode
-      -- ^ code snippet
-    , marshal :: Window -> JSON.Value -> IO (JSON.Result a)
-      -- ^ conversion to Haskell value
+    { code          :: JSCode
+      -- ^ Code snippet that implements the function.
+    , marshalResult :: Window -> JSON.Value -> IO a
+      -- ^ Marshal the function result to a Haskell value.
     }
+
+-- | Change the output type of a 'JSFunction'.
+instance Functor JSFunction where
+    fmap f (JSFunction c m) = JSFunction c (\w v -> fmap f $ m w v)
 
 -- | Render function to a textual representation using JavaScript syntax.
 toCode :: JSFunction a -> String
 toCode = unJSCode . code
 
--- | Marshal a function result to a Haskell value.
-marshalResult :: JSFunction a -> JSON.Value -> Window -> IO a
-marshalResult f v w = do
-    JSON.Success a <- marshal f w v
-    return a
-
--- | Change the output type of a 'JSFunction'.
-instance Functor JSFunction where
-    fmap f (JSFunction c m) = JSFunction c (\w v -> fmap (fmap f) $ m w v)
 
 -- | Helper class for making 'ffi' a variable argument function.
 class FFI a where
@@ -91,36 +130,12 @@ class FFI a where
 
 instance (ToJS a, FFI b) => FFI (a -> b) where
     fancy f a = fancy $ f . (render a:)
-
-instance FFI (JSFunction ()) where
-    fancy f   = JSFunction { code = f [], marshal = \_ _ -> return (JSON.Success ())}
-
-instance FFI (JSFunction String)      where fancy = mkResult "%1.toString()"
-instance FFI (JSFunction T.Text)      where fancy = mkResult "%1.toString()"
-instance FFI (JSFunction Double)      where fancy = mkResult "%1"
-instance FFI (JSFunction Float)       where fancy = mkResult "%1"
-instance FFI (JSFunction Int)         where fancy = mkResult "%1"
-instance FFI (JSFunction JSON.Value)  where fancy = mkResult "%1"
-
-mkResult :: FromJSON a => String -> ([JSCode] -> JSCode) -> JSFunction a
-mkResult client f = JSFunction
-    { code    = apply client [f []]
-    , marshal = \w -> return . JSON.fromJSON
-    }
-
-instance FFI (JSFunction JSObject) where
-    fancy f = JSFunction
-        { code    = apply "Haskell.getStablePtr(%1)" [f []]
-        , marshal = \w v -> JSON.Success <$> fromJSStablePtr v w
+instance FromJS b        => FFI (JSFunction b) where
+    fancy f   = JSFunction
+        { code          = wrapCode b $ f []
+        , marshalResult = marshal b
         }
-
--- FIXME: Not sure whether this instance is really a good idea.
-instance FFI (JSFunction [JSObject]) where
-    fancy f = JSFunction
-        { code    = apply "Haskell.map(Haskell.getStablePtr, %1)" [f []]
-        , marshal = \w (JSON.Array vs) -> do
-            JSON.Success <$> mapM (\v -> fromJSStablePtr v w) (Vector.toList vs)
-        }
+        where b = fromJS
 
 -- | Simple JavaScript FFI with string substitution.
 --
@@ -145,6 +160,37 @@ testFFI :: String -> Int -> JSFunction String
 testFFI = ffi "$(%1).prop('checked',%2)"
 
 {-----------------------------------------------------------------------------
+    Type classes
+------------------------------------------------------------------------------}
+-- | Helper class for making event handlers 'HsEvent' with variable arguments.
+class IsHandler a where
+    convertArgs :: a -> Int -> [JSCode]
+    handle      :: a -> Window -> [JSON.Value] -> IO ()
+
+instance (FromJS a, IsHandler b) => IsHandler (a -> b) where
+    convertArgs = convertArgs'
+    handle f = \w (a:as) -> do
+        x <- marshal fromJS w a
+        handle (f x) w as
+
+convertArgs' :: forall a b. (FromJS a, IsHandler b) => (a -> b) -> Int -> [JSCode]
+convertArgs' f n = wrap arg : convertArgs (f x) (n+1)
+    where
+    x    = undefined :: a
+    wrap = wrapCode (fromJS :: FromJS' a)
+    arg  = JSCode $ "arguments[" ++ show n ++ "]"
+
+instance IsHandler (IO ()) where
+    convertArgs _ _ = []
+    handle      m   = \_ _ -> m
+
+-- | Code needed to preconvert arguments on the JavaScript side.
+convertArguments :: IsHandler a => a -> String
+convertArguments f =
+    "[" ++ intercalate "," (map unJSCode $ convertArgs f 0) ++ "]"
+
+
+{-----------------------------------------------------------------------------
     String utilities
 ------------------------------------------------------------------------------}
 -- | String substitution.
@@ -163,3 +209,7 @@ apply code args = JSCode $ go code
     go ('%':c:cs) = argument index ++ go cs
         where index = fromEnum c - fromEnum '1'
     go (c:cs)     = c : go cs
+
+-- | Apply string substitution that expects a single argument.
+apply1 :: String -> JSCode -> JSCode
+apply1 s x = apply s [x]

@@ -12,7 +12,6 @@ module Graphics.UI.Threepenny.Internal (
     
     FFI, ToJS, JSFunction, JSObject, ffi,
     runFunction, callFunction, ffiExport, debug,
-    HsEvent,
     
     Element, fromJSObject, getWindow,
     mkElementNamespace, mkElement, delete, appendChild, clearChildren,
@@ -108,7 +107,7 @@ addEvents :: JS.JSObject -> Window -> IO Events
 addEvents el Window{ jsWindow = w, wEvents = wEvents } = do
     -- Lazily create FRP events whenever they are needed.
     let initializeEvent (name,_,handler) = do
-            handlerPtr <- JS.exportHandler handler w
+            handlerPtr <- JS.exportHandler' w handler
             -- make handler reachable from element
             Foreign.addReachable el handlerPtr
             JS.runFunction w $
@@ -266,9 +265,9 @@ callFunction fun = liftJSWindow $ \w -> JS.callFunction w fun
 -- from JavaScript code.
 --
 -- FIXME: At the moment, the function is not garbage collected.
-ffiExport :: IO () -> UI HsEvent
+ffiExport :: JS.IsHandler a => a -> UI JSObject
 ffiExport fun = liftJSWindow $ \w -> do
-    handlerPtr <- JS.exportHandler (const fun) w
+    handlerPtr <- JS.exportHandler w fun
     Foreign.addReachable (JS.root w) handlerPtr
     return handlerPtr
 

@@ -3,7 +3,7 @@
 module Foreign.JavaScript.EventLoop (
     eventLoop,
     runEval, callEval, debug, onDisconnect,
-    exportHandler, fromJSStablePtr,
+    newHandler, fromJSStablePtr,
     ) where
 
 import           Control.Applicative
@@ -144,18 +144,9 @@ untilJustM m = m >>= \x -> case x of
 {-----------------------------------------------------------------------------
     Exports, Imports and garbage collection
 ------------------------------------------------------------------------------}
--- | Export a Haskell function as an event handler.
---
--- WARNING: The event handler will be garbage collected unless you
--- keep a reference to it /on the Haskell side/!
--- Registering it with a JavaScript function will generally /not/
--- keep it alive.
---
--- Note: The input to the handler is a list of JavaScript arguments.
---
--- FIXME: Support marshalled arguments.
-exportHandler :: ([JSON.Value] -> IO ()) -> Window -> IO HsEvent
-exportHandler handler w@(Window{..}) = do
+-- | Turn a Haskell function into an event handler.
+newHandler :: Window -> ([JSON.Value] -> IO ()) -> IO HsEvent
+newHandler w@(Window{..}) handler = do
     coupon <- newCoupon wEventHandlers
     newRemotePtr coupon (handler . parseArgs) wEventHandlers
     where
