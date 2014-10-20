@@ -145,6 +145,8 @@ is thrown before handing the message over to another thread.
 ------------------------------------------------------------------------------}
 data Consistency  = Consistent | Inconsistent
 type Event        = (Coupon, JSON.Value, Consistency)
+
+-- | An event handler that can be passed to the JavaScript client.
 type HsEvent      = RemotePtr (JSON.Value -> IO ())
 
 quit :: Event
@@ -155,7 +157,9 @@ data Window = Window
     { runEval        :: String -> IO ()
     , callEval       :: String -> IO JSON.Value
     , debug          :: String -> IO ()
+    -- ^ Send a debug message to the JavaScript console.
     , onDisconnect   :: IO () -> IO ()
+    -- ^ Register an action to be performed when the client disconnects.
     , wRoot          :: RemotePtr ()
     , wEventHandlers :: Vendor (JSON.Value -> IO ())
     , wJSObjects     :: Vendor JSPtr
@@ -177,5 +181,7 @@ root = wRoot
     Marshalling
 ------------------------------------------------------------------------------}
 newtype JSPtr = JSPtr { unsJSPtr :: Coupon }
+
+-- | A mutable JavaScript object.
 type JSObject = RemotePtr JSPtr
 
