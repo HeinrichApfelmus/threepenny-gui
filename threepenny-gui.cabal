@@ -232,6 +232,20 @@ Executable threepenny-examples-missing-dollars
     other-modules:     Paths_threepenny_gui, Paths
     hs-source-dirs:    samples
 
+Executable threepenny-examples-tictactoe
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,filepath
+                          ,threepenny-gui
+                          ,array
+                          ,split
+    else
+        buildable: False
+    main-is:           TicTacToe.hs
+    other-modules:     Paths_threepenny_gui, Paths
+    hs-source-dirs:    samples
+
 Executable threepenny-examples-use-words
     if flag(buildExamples)
         cpp-options:       -DCABAL

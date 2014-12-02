@@ -1,0 +1,34 @@
+body {
+    background: #333;
+    color: white;
+    font-family: ubuntu, sans-serif;
+    font-size: 14px;
+    background: url(stripes-bg.png);
+    padding-top: 1em;
+    text-shadow: #000 3px 1px 3px;
+}
+
+button {
+    width: 100px;
+    height: 100px;
+    color: darkgray;
+    background-color: darkgray;
+    font: bold 85px Arial;
+    text-align: center;
+}
+
+h1 {
+    font-size: 4em;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+
+h2 {
+    font-size: 2em;
+    color: lightblue;
+    margin-top: 0.75em;
+    margin-bottom: 0.75em;
+    padding-bottom: 0em;
+    text-align: center;
+}
