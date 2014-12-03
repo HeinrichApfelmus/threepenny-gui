@@ -5,6 +5,7 @@ body {
     font-size: 14px;
     background: url(stripes-bg.png);
     padding-top: 1em;
+    padding-left: 3em;
     text-shadow: #000 3px 1px 3px;
 }
 
