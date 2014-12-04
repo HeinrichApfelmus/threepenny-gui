@@ -15,13 +15,28 @@ import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 
 {-----------------------------------------------------------------------------
-    Main
+    Gui
 ------------------------------------------------------------------------------}
 
 main :: IO ()
 main = do
   static <- getStaticDir
   startGUI defaultConfig { jsStatic = Just static } setup
+
+data Gui = Gui
+  { token  :: String
+  , reveal :: [(String, String)]
+  , diable :: Bool
+  , winner :: String
+  }
+
+gui :: Game -> Gui
+gui g = Gui t r d w
+  where
+    t = show . player $ g
+    r = const [("color", "navy")] g
+    d = const False g
+    w = maybe "" (\x -> show x ++ " Wins!") . isGameEnd . board $ g
 
 setup :: Window -> UI ()
 setup w = void $ do
@@ -56,24 +71,20 @@ setup w = void $ do
   
   -- events and behaviors
   eState <- accumE newGame moves
-  bState <- stepper newGame eState
-  bEnd   <- stepper Nothing (isGameEnd . board <$> eState)
+  bState <- accumB newGame moves
 
-  let bPlayer  = (show . player) <$> bState
-      bReveal  = const [("color", "navy")] <$> bState 
-      bDisable = const False <$> bState
-      bWinner  = maybe "" (\x -> show x ++ " Wins!") <$> bEnd
+  let bGui = gui <$> bState
 
-  tokens   <- mapM (\e -> stepper "X"  (bPlayer  <@ e)) events
-  revealed <- mapM (\e -> stepper []   (bReveal  <@ e)) events
-  disabled <- mapM (\e -> stepper True (bDisable <@ e)) events
+  tokens   <- mapM (\e -> stepper "X"  (token <$> bGui <@ e)) events
+  revealed <- mapM (\e -> stepper []   (reveal <$> bGui  <@ e)) events
+  disabled <- mapM (\e -> stepper True (diable <$> bGui <@ e)) events
 
   zipWithM_ (\b e -> sink UI.text b e)    tokens   uiCells
   zipWithM_ (\b e -> sink UI.style b e)   revealed uiCells
   zipWithM_ (\b e -> sink UI.enabled b e) disabled uiCells 
   
-  sink UI.text ((++ " to move") <$> bPlayer) $ element turn
-  sink UI.text bWinner $ element victory
+  sink UI.text ((++ " to move") <$> (token <$> bGui)) $ element turn
+  sink UI.text (winner <$> bGui) $ element victory
 
   onEvent (isGameEnd . board <$> eState) $ \t -> do
     case  t of
