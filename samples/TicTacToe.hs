@@ -6,6 +6,7 @@
     Based on the reactive-banana version,
     see https://www.haskell.org/haskellwiki/Reactive-banana/Examples.
 ------------------------------------------------------------------------------}
+
 import           Paths
 
 import           Control.Monad
@@ -14,29 +15,25 @@ import           Data.List.Split (chunksOf)
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 
-{-----------------------------------------------------------------------------
-    Gui
-------------------------------------------------------------------------------}
-
 main :: IO ()
 main = do
   static <- getStaticDir
   startGUI defaultConfig { jsStatic = Just static } setup
 
 data Gui = Gui
-  { token  :: String
-  , reveal :: [(String, String)]
-  , diable :: Bool
-  , winner :: String
+  { token   :: String
+  , reveal  :: [(String, String)]
+  , enable :: Bool
+  , winner  :: String
   }
 
 gui :: Game -> Gui
-gui g = Gui t r d w
+gui = Gui <$> t <*> r <*> d <*> w
   where
-    t = show . player $ g
-    r = const [("color", "navy")] g
-    d = const False g
-    w = maybe "" (\x -> show x ++ " Wins!") . isGameEnd . board $ g
+    t = show . player
+    r = const [("color", "navy")]
+    d = const False
+    w = maybe "" (\x -> show x ++ " Wins!") . isGameEnd . board
 
 setup :: Window -> UI ()
 setup w = void $ do
@@ -73,15 +70,14 @@ setup w = void $ do
   eState <- accumE newGame moves
   bState <- accumB newGame moves
 
-  let bGui = gui <$> bState
+  let bGui :: Behavior Gui
+      bGui = gui <$> bState
 
-  tokens   <- mapM (\e -> stepper "X"  (token <$> bGui <@ e)) events
-  revealed <- mapM (\e -> stepper []   (reveal <$> bGui  <@ e)) events
-  disabled <- mapM (\e -> stepper True (diable <$> bGui <@ e)) events
-
-  zipWithM_ (\b e -> sink UI.text b e)    tokens   uiCells
-  zipWithM_ (\b e -> sink UI.style b e)   revealed uiCells
-  zipWithM_ (\b e -> sink UI.enabled b e) disabled uiCells 
+  ux <- mapM (\e -> stepper (Gui "X" [] True "") (bGui <@ e)) events
+  
+  zipWithM_ (\b e -> sink UI.text    (token  <$> b) e) ux uiCells
+  zipWithM_ (\b e -> sink UI.style   (reveal <$> b) e) ux uiCells
+  zipWithM_ (\b e -> sink UI.enabled (enable <$> b) e) ux uiCells
   
   sink UI.text ((++ " to move") <$> (token <$> bGui)) $ element turn
   sink UI.text (winner <$> bGui) $ element victory
