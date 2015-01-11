@@ -10,7 +10,7 @@ module Graphics.UI.Threepenny.Internal (
     
     UI, runUI, liftIOLater, askWindow,
     
-    FFI, ToJS, JSFunction, JSObject, ffi,
+    FFI, FromJS, ToJS, JSFunction, JSObject, ffi,
     runFunction, callFunction, ffiExport, debug,
     
     Element, fromJSObject, getWindow,
