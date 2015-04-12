@@ -2,7 +2,7 @@
 
 Threepenny-gui is a GUI framework written in Haskell that uses the web browser as a display. It's very easy to install. See the
 
-  [**Project homepage**](http://www.haskell.org/haskellwiki/Threepenny-gui)
+  [**Project homepage**](http://wiki.haskell.org/Threepenny-gui)
 
 for more information on what it does and can do for you as a library user.
 

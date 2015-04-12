@@ -3,6 +3,7 @@
 **0.6.0.1** -- Maintenance release.
 
 * The `ADDR` environment variable is now parsed correctly.
+* Now builds on GHC 7.8 and GHC 7.10
 
 **0.6.0.0** -- Snapshot release.
 

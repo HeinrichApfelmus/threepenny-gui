@@ -23,7 +23,7 @@ License:             BSD3
 License-file:        LICENSE
 Author:              Heinrich Apfelmus
 Maintainer:          Heinrich Apfelmus <apfelmus at quantentunnel dot de>
-Homepage:            http://www.haskell.org/haskellwiki/Threepenny-gui
+Homepage:            http://wiki.haskell.org/Threepenny-gui
 bug-reports:         https://github.com/HeinrichApfelmus/threepenny-gui/issues
 Category:            Web, GUI
 Build-type:          Simple
