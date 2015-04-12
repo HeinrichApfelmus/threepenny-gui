@@ -345,7 +345,7 @@ fromJQueryProp name from to = mkReadWriteAttr get set
     get   el = fmap from $ callFunction $ ffi "$(%1).prop(%2)" el name
 
 -- | Turn a JavaScript object property @.prop = ...@ into an attribute.
-fromObjectProperty :: (ToJS a, FFI (JSFunction a)) => String -> Attr Element a
+fromObjectProperty :: (FromJS a, ToJS a, FFI (JSFunction a)) => String -> Attr Element a
 fromObjectProperty name = mkReadWriteAttr get set
     where
     set v el = runFunction  $ ffi ("%1." ++ name ++ " = %2") el v    
