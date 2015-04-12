@@ -1,5 +1,9 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.6.0.1** -- Maintenance release.
+
+* The `ADDR` environment variable is now parsed correctly.
+
 **0.6.0.0** -- Snapshot release.
 
 * The internals of the JavaScript FFI has been reimplemented completely. A new module `Foreign.JavaScript` exports a bare JavaScript FFI in case you want to write a custom GUI framework. However, the module `Graphics.UI.Threepenny` is *not* compatible with it, even though it builds on top of it.

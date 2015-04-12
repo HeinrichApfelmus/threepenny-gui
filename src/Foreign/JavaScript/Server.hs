@@ -10,6 +10,7 @@ import           Control.Concurrent.STM     as STM
 import qualified Control.Exception          as E
 import           Control.Monad
 import           Data.ByteString                    (ByteString)
+import qualified Data.ByteString.Char8      as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Text
 import qualified Safe                       as Safe
@@ -37,7 +38,7 @@ httpComm :: Config -> (Comm -> IO ()) -> IO ()
 httpComm Config{..} worker = do
     env <- getEnvironment
     let portEnv = Safe.readMay =<< Prelude.lookup "PORT" env
-    let addrEnv = Safe.readMay =<< Prelude.lookup "ADDR" env
+    let addrEnv = fmap BS.pack $ Prelude.lookup "ADDR" env
     
     let config = Snap.setPort      (maybe defaultPort id (jsPort `mplus` portEnv))
                $ Snap.setBind      (maybe defaultAddr id (jsAddr `mplus` addrEnv))
