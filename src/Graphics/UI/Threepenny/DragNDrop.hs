@@ -70,8 +70,7 @@ droppable = mkWriteAttr enable
 -- Change this to 'Maybe String' instead.
 type DragData = String
 
-
-withDragData = fmap extract
+withDragData = fmap (extract . unsafeFromJSON)
     where
     extract [s] = s
     extract _   = ""

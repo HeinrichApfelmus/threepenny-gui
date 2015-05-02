@@ -64,11 +64,22 @@ Haskell.initFFI = function () {
   // but whose execution will be queued.
   Haskell.newEvent = function (name, args) {
     var that = function () {
+      var theargs = [];
+      if (args) {
+        theargs = eval(args);
+      } else {
+        for (var i=0; i<arguments.length; i++) {
+          theargs[i] = arguments[i];
+        }
+      }
+
       reply({
         tag       : "Event",
         name      : name,
-        arguments : args ? eval(args) : arguments
+        arguments : theargs
       });
+      // 'args' is a string that contains the name 'arguments'
+      // Evaluating it will perform appropriate marshalling.
     };
     return that;
   };  

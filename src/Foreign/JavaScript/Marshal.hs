@@ -162,7 +162,8 @@ testFFI = ffi "$(%1).prop('checked',%2)"
 {-----------------------------------------------------------------------------
     Type classes
 ------------------------------------------------------------------------------}
--- | Helper class for making event handlers 'HsEvent' with variable arguments.
+-- | Helper class for exporting Haskell functions to JavaScript
+-- as event handlers.
 class IsHandler a where
     convertArgs :: a -> Int -> [JSCode]
     handle      :: a -> Window -> [JSON.Value] -> IO ()

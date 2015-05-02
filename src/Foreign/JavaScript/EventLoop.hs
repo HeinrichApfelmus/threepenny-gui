@@ -151,7 +151,10 @@ newHandler w@(Window{..}) handler = do
     newRemotePtr coupon (handler . parseArgs) wEventHandlers
     where
     fromSuccess (JSON.Success x) = x
-    parseArgs x = Map.elems (fromSuccess (JSON.fromJSON x) :: Map.Map String JSON.Value)
+    -- parse a genuine JavaScript array
+    parseArgs x = fromSuccess (JSON.fromJSON x) :: [JSON.Value]
+    -- parse a JavaScript arguments object
+    -- parseArgs x = Map.elems (fromSuccess (JSON.fromJSON x) :: Map.Map String JSON.Value)
 
 
 -- | Convert a stable pointer from JavaScript into a 'JSObject'.

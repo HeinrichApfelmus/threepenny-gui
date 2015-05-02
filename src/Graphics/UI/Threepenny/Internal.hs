@@ -16,7 +16,7 @@ module Graphics.UI.Threepenny.Internal (
     Element, fromJSObject, getWindow,
     mkElementNamespace, mkElement, delete, appendChild, clearChildren,
     
-    EventData, domEvent,
+    EventData, domEvent, unsafeFromJSON,
     ) where
 
 import           Control.Applicative                   (Applicative)
@@ -76,7 +76,7 @@ disconnect = eDisconnect
 {-----------------------------------------------------------------------------
     Elements
 ------------------------------------------------------------------------------}
-type Events = String -> E.Event [JSON.Value]
+type Events = String -> E.Event JSON.Value
 
 data Element = Element
     { toJSObject  :: JS.JSObject -- corresponding JavaScript object
@@ -107,7 +107,7 @@ addEvents :: JS.JSObject -> Window -> IO Events
 addEvents el Window{ jsWindow = w, wEvents = wEvents } = do
     -- Lazily create FRP events whenever they are needed.
     let initializeEvent (name,_,handler) = do
-            handlerPtr <- JS.exportHandler' w handler
+            handlerPtr <- JS.exportHandler w handler
             -- make handler reachable from element
             Foreign.addReachable el handlerPtr
             JS.runFunction w $
@@ -131,7 +131,14 @@ getEvents el window@Window{ wEvents = wEvents } = do
             Nothing -> addEvents el window
             Just p  -> Foreign.withRemotePtr p $ \_ -> return
 
-type EventData = [String]
+-- | Events may carry data. At the moment, they may return
+-- a single JSON value, as defined in the "Data.Aeson" module.
+type EventData = JSON.Value
+
+-- | Convert event data to a Haskell value.
+-- Throws an exception when the data cannot be converted.
+unsafeFromJSON :: JSON.FromJSON a => EventData -> a
+unsafeFromJSON x = let JSON.Success y = JSON.fromJSON x in y
 
 -- | Obtain DOM event for a given element.
 domEvent
@@ -142,9 +149,7 @@ domEvent
         --   the name is @click@ and so on.
     -> Element          -- ^ Element where the event is to occur.
     -> E.Event EventData
-domEvent name el = fmap (fromSuccess . JSON.fromJSON . head) $ elEvents el name
-    where
-    fromSuccess (JSON.Success x) = x
+domEvent name el = elEvents el name
 
 -- | Make a new DOM element with a given tag name.
 mkElement :: String -> UI Element

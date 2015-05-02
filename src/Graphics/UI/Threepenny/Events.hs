@@ -57,7 +57,8 @@ mousemove :: Element -> Event (Int,Int)
 mousemove = fmap readCoordinates . domEvent "mousemove"
 
 readCoordinates :: EventData -> (Int,Int)
-readCoordinates (x:y:_) = (read x, read y)
+readCoordinates json = (x,y)
+    where [x,y] = unsafeFromJSON json
 
 -- | Mouse down event.
 -- The mouse coordinates are relative to the element. 
@@ -86,10 +87,8 @@ type KeyCode = Int
 
 -- | Key pressed while element has focus.
 keydown :: Element -> Event KeyCode
-keydown = fmap read1  . domEvent "keydown"
+keydown = fmap unsafeFromJSON . domEvent "keydown"
 
 -- | Key released while element has focus.
 keyup :: Element -> Event KeyCode
-keyup   = fmap read1 . domEvent "keyup"
-
-read1 (s:_) = read s
+keyup   = fmap unsafeFromJSON . domEvent "keyup"

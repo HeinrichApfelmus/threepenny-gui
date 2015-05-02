@@ -31,7 +31,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * Events
     -- | For a list of predefined events, see "Graphics.UI.Threepenny.Events".
-    EventData, domEvent, disconnect, on, onEvent, onChanges,
+    EventData, domEvent, unsafeFromJSON, disconnect, on, onEvent, onChanges,
     module Reactive.Threepenny,
     
     -- * Attributes

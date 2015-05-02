@@ -18,7 +18,7 @@ module Foreign.JavaScript (
     -- * JavaScript FFI
     ToJS(..), FromJS, JSFunction, JSObject,
     FFI, ffi, runFunction, callFunction,
-    IsHandler, exportHandler, exportHandler', onDisconnect,
+    IsHandler, exportHandler, onDisconnect,
     debug,
     ) where
 
@@ -54,6 +54,13 @@ callFunction w f = do
 
 -- | Export a Haskell function as an event handler.
 --
+-- The result is a JavaScript @Function@ object that can be called
+-- from JavaScript like a regular function. However,
+-- the corresponding Haskell function will /not/ be run immediately,
+-- rather it will be added to the event queue and processed
+-- like an event. In other words, this the Haskell code is only called
+-- asynchronously.
+--
 -- WARNING: The event handler will be garbage collected unless you
 -- keep a reference to it /on the Haskell side/!
 -- Registering it with a JavaScript function will generally /not/
@@ -65,16 +72,3 @@ exportHandler w f = do
         ffi "Haskell.newEvent(%1,%2)" g (convertArguments f)
     Foreign.addReachable h g
     return h
-
--- | Export a Haskell function as an event handler.
--- Does not do marshalling.
---
--- FIXME: Remove this version!
-exportHandler' :: Window -> ([JSON.Value] -> IO ()) -> IO JSObject
-exportHandler' w f = do
-    g <- newHandler w f
-    h <- callFunction w $
-        ffi "Haskell.newEvent(%1)" g
-    Foreign.addReachable h g
-    return h
-

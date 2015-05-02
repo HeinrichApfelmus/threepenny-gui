@@ -26,7 +26,7 @@ Haskell.bind = function (el, eventType, fun) {
     });
   } else if(eventType === 'sendvalue') {
     $(el).sendvalue(function(x){
-      fun([ x ]);
+      fun(x.toString());
     });
   } else if (eventType.match('dragstart|dragenter|dragover|dragleave|drag|drop|dragend')) {
     $(el).bind(eventType, function(e) {
@@ -39,11 +39,11 @@ Haskell.bind = function (el, eventType, fun) {
       var offset = $(this).offset();
       var x      = e.pageX - offset.left;
       var y      = e.pageY - offset.top;
-      fun([x.toString(), y.toString()]);
+      fun([x, y]);
     });
   } else if(eventType.match('keydown|keyup')) {
     $(el).bind(eventType, function(e) {
-      fun([e.keyCode.toString()]);
+      fun(e.keyCode);
       return true;
     });
   } else {
