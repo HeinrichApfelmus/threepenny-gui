@@ -1,7 +1,13 @@
+{-----------------------------------------------------------------------------
+    threepenny-gui
+    
+    This module is for quick testing of the Foreign.JavaScript code.
+------------------------------------------------------------------------------}
+
 import Data.Aeson as JSON
 import Data.IORef
 import Foreign.JavaScript
-import Foreign.JavaScript.DOM
+import Foreign.RemotePtr
 
 main = test2
 
@@ -26,7 +32,7 @@ test2 = withPreventGC $ \ref -> serve defaultConfig $ \w -> do
 
     button <- newElement "button" w
     runFunction w $ ffi "$(%1).text('Click me!')" button
-    let handler _ = do
+    let handler = do
             msg <- newElement "div" w
             let s = "I have been clicked."
             runFunction w $ ffi "$(%1).text(%2)" msg s
@@ -49,4 +55,29 @@ withPreventGC f = do
     x  <- readIORef ref
     x `seq` return ()
 
+
+{-----------------------------------------------------------------------------
+    DOM Manipulation
+------------------------------------------------------------------------------}
+type Element = JSObject
+
+-- | Create a new element of the given tag name.
+newElement :: String -> Window -> IO Element
+newElement tag w = callFunction w $
+    ffi "document.createElement(%1)" tag
+
+-- | Add an event handler to an element.
+addHandler :: IsHandler a => String -> a -> Element -> Window -> IO ()
+addHandler name handler e w = do
+    handlerPtr <- exportHandler w handler
+    addReachable e handlerPtr                   -- make handler reachable from element
+    runFunction w $ ffi "Haskell.bind(%1,%2,%3)" e name handlerPtr
+
+-- | Append a child element to a parent element.
+appendChild :: Element -> Element -> Window -> IO ()
+appendChild eParent eChild w = do
+    -- FIXME: We have to stop the child being reachable from its
+    -- /previous/ parent.
+    addReachable eParent eChild
+    runFunction w $ ffi "$(%1).append($(%2))" eParent eChild
 
