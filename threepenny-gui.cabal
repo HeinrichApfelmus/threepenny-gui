@@ -86,9 +86,7 @@ Library
                     ,Graphics.UI.Threepenny.Widgets
                     ,Reactive.Threepenny
   other-modules:
-                     Control.Concurrent.Chan.Extra
-                    ,Control.Concurrent.Delay
-                    ,Foreign.JavaScript.EventLoop
+                     Foreign.JavaScript.EventLoop
                     ,Foreign.JavaScript.Include
                     ,Foreign.JavaScript.Marshal
                     ,Foreign.JavaScript.Resources
@@ -114,7 +112,7 @@ Library
                     ,data-default           == 0.5.*
                     ,deepseq                >= 1.3.0 && < 1.5
                     ,filepath               >= 1.3.0 && < 1.5.0
-                    ,hashable               >= 1.1.0  && < 1.3
+                    ,hashable               >= 1.1.0 && < 1.3
                     ,MonadCatchIO-transformers == 0.3.*
                     ,safe                   == 0.3.*
                     ,snap-server            == 0.9.*
