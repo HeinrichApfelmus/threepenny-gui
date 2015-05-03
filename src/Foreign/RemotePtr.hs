@@ -152,8 +152,12 @@ withRemotePtr ptr f = do
 -- Note: There is no guarantee that the 'RemotePtr' is alive
 -- after this operation and that the 'Coupon' can be redeemed at a 'Vendor'.
 -- Most of the time, you should use 'withRemotePtr' instead.
-unprotectedGetCoupon :: RemotePtr a -> Coupon
-unprotectedGetCoupon ptr = unsafePerformIO $ coupon <$> readIORef ptr
+--
+-- Note: In particular, if you use this with @unsafePerformIO@,
+-- the risk is high that you only refer to the 'RemotePtr' argument via
+-- the result just obtained, and the pointer will be garbage collected.
+unprotectedGetCoupon :: RemotePtr a -> IO Coupon
+unprotectedGetCoupon ptr = coupon <$> readIORef ptr
 
 
 -- | Add a finalizer that is run when the 'RemotePtr' is garbage collected.

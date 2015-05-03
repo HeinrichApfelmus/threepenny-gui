@@ -29,17 +29,20 @@ newtype JSCode = JSCode { unJSCode :: String }
 
 -- | Helper class for rendering Haskell values as JavaScript expressions.
 class ToJS a where
-    render     :: a -> JSCode
-    renderList :: [a] -> JSCode
+    render     :: a   -> IO JSCode
+    renderList :: [a] -> IO JSCode
 
-    renderList xs = JSCode $ "[" ++ intercalate "," ys ++ "]"
-        where ys = map (unJSCode . render) xs
+    renderList xs = do
+        ys <- mapM render xs
+        jsCode $ "[" ++ intercalate "," (map unJSCode ys) ++ "]"
+
+jsCode = return . JSCode
 
 instance ToJS Float      where render   = render . JSON.toJSON
 instance ToJS Double     where render   = render . JSON.toJSON
-instance ToJS Int        where render   = JSCode . show
-instance ToJS Bool       where render b = JSCode $ if b then "true" else "false"
-instance ToJS JSON.Value where render   = JSCode . showJSON
+instance ToJS Int        where render   = jsCode . show
+instance ToJS Bool       where render b = jsCode $ if b then "true" else "false"
+instance ToJS JSON.Value where render   = jsCode . showJSON
 instance ToJS T.Text     where render   = render . JSON.String
 instance ToJS Char       where
     render x   = renderList [x]
@@ -49,10 +52,10 @@ instance ToJS a => ToJS [a] where
     render = renderList
 
 instance ToJS HsEvent    where
-    render x   = apply "%1" [render $ unprotectedGetCoupon x]
+    render x   = render =<< unprotectedGetCoupon x
 instance ToJS JSObject   where
-    render x   = apply "Haskell.deRefStablePtr(%1)" [render $ unprotectedGetCoupon x]
-
+    render x   = apply1 "Haskell.deRefStablePtr(%1)"
+                 <$> (render =<< unprotectedGetCoupon x)
 
 -- | Show a type in a JSON compatible way.
 showJSON :: ToJSON a => a -> String
@@ -109,7 +112,7 @@ instance FromJS [JSObject] where
 ------------------------------------------------------------------------------}
 -- | A JavaScript function with a given output type @a@.
 data JSFunction a = JSFunction
-    { code          :: JSCode
+    { code          :: IO JSCode
       -- ^ Code snippet that implements the function.
     , marshalResult :: Window -> JSON.Value -> IO a
       -- ^ Marshal the function result to a Haskell value.
@@ -120,19 +123,22 @@ instance Functor JSFunction where
     fmap f (JSFunction c m) = JSFunction c (\w v -> fmap f $ m w v)
 
 -- | Render function to a textual representation using JavaScript syntax.
-toCode :: JSFunction a -> String
-toCode = unJSCode . code
+toCode :: JSFunction a -> IO String
+toCode = fmap unJSCode . code
 
 
 -- | Helper class for making 'ffi' a variable argument function.
 class FFI a where
-    fancy :: ([JSCode] -> JSCode) -> a
+    fancy :: ([JSCode] -> IO JSCode) -> a
 
 instance (ToJS a, FFI b) => FFI (a -> b) where
-    fancy f a = fancy $ f . (render a:)
+    fancy f a = fancy $ \xs -> do
+        x <- render a
+        f (x:xs)
+
 instance FromJS b        => FFI (JSFunction b) where
     fancy f   = JSFunction
-        { code          = wrapCode b $ f []
+        { code          = wrapCode b <$> f []
         , marshalResult = marshal b
         }
         where b = fromJS
@@ -154,7 +160,7 @@ instance FromJS b        => FFI (JSFunction b) where
 -- The class instances for the 'FFI' class show which conversions are supported.
 --
 ffi :: FFI a => String -> a
-ffi macro = fancy (apply macro)
+ffi macro = fancy (return . apply macro)
 
 testFFI :: String -> Int -> JSFunction String
 testFFI = ffi "$(%1).prop('checked',%2)"
