@@ -42,7 +42,6 @@ Data-files:          samples/static/css/*.css
                     ,samples/static/css/*.png
                     ,samples/static/*.html
                     ,samples/static/*.png
-                    ,samples/static/*.txt
                     ,samples/static/*.wav
 
 
