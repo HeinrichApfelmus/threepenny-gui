@@ -22,7 +22,6 @@ Here a description of the currently maintained examples. The others are probably
 * [DragNDropExample.hs](DragNDropExample.hs) — Simple drag'N'drop demo.
 * [DrumMachine.hs](DrumMachine.hs) — Specify rhythm by activating and deactivating checkboxes.
 * [FadeInFadeOut.hs](FadeInFadeOut.hs) — Calling Haskell functions from the browser.
-* [MissingDollars.hs](MissingDollars.hs) — Text with configurable values.
+* [GetElementsBy.hs](GetElementsBy.hs) — Get elements by tag name or ID.
 * [Mouse.hs](Mouse.hs) — Test of the `mousemove` event.
 * [Svg.hs](Svg.hs) — Test of the SVG elements.
-* [UseWords.hs](UseWords.hs)  — Text with configurable words. (Apologies for the male-centric story.)
