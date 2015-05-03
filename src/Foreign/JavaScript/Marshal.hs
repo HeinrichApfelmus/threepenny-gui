@@ -59,7 +59,7 @@ showJSON :: ToJSON a => a -> String
 showJSON
     = Data.Text.Lazy.unpack
     . Data.Text.Lazy.Builder.toLazyText
-    . Data.Aeson.Encode.fromValue . JSON.toJSON
+    . Data.Aeson.Encode.encodeToTextBuilder . JSON.toJSON
 
 {-----------------------------------------------------------------------------
     Convert JavaScript values to Haskell values
