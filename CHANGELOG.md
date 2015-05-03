@@ -4,6 +4,7 @@
 
 * The `ADDR` environment variable is now parsed correctly.
 * Now builds on GHC 7.8 and GHC 7.10
+* The example source code in the `samples` folder has been reorganized and consolidated.
 
 **0.6.0.0** -- Snapshot release.
 
