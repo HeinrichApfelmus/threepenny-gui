@@ -15,6 +15,7 @@ Here a description of the currently maintained examples. The others are probably
 
 * [BarTab.hs](BarTab.hs) — Dynamic creation of widgets.
 * [Buttons.hs](Buttons.hs) — Simple buttons to click on.
+* [Canvas.hs](Canvas.hs) — Graphics using the HTML 5 canvas element.
 * [Chat.hs](Chat.hs) — Multi-user chat.
 * [CRUD.hs](CRUD.hs) — A CRUD example showcasing functional reactice programming (FRP).
 * [CurrencyConverter.hs](CurrencyConverter.hs) — Simple demonstration of two reactive input elements.
@@ -23,6 +24,5 @@ Here a description of the currently maintained examples. The others are probably
 * [FadeInFadeOut.hs](FadeInFadeOut.hs) — Calling Haskell functions from the browser.
 * [MissingDollars.hs](MissingDollars.hs) — Text with configurable values.
 * [Mouse.hs](Mouse.hs) — Test of the `mousemove` event.
-* [Pie.hs](Pie.hs) — Draws a pie chart using the HTML 5 canvas element.
 * [Svg.hs](Svg.hs) — Test of the SVG elements.
 * [UseWords.hs](UseWords.hs)  — Text with configurable words. (Apologies for the male-centric story.)
