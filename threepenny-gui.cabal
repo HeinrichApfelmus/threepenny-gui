@@ -37,12 +37,13 @@ Extra-Source-Files:  CHANGELOG.md
                     ,js/*.js
                     ,js/lib/*.js
 
-Data-dir:            .
-Data-files:          wwwroot/css/*.css
-                    ,wwwroot/css/*.png
-                    ,wwwroot/*.html
-                    ,wwwroot/*.txt
-                    ,wwwroot/*.wav
+Data-dir:           .
+Data-files:          samples/static/css/*.css
+                    ,samples/static/css/*.png
+                    ,samples/static/*.html
+                    ,samples/static/*.png
+                    ,samples/static/*.txt
+                    ,samples/static/*.wav
 
 
 flag buildExamples

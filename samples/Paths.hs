@@ -9,18 +9,18 @@ import System.FilePath
 import qualified Paths_threepenny_gui (getDataDir)
 
 getStaticDir :: IO FilePath
-getStaticDir = (</> "wwwroot") `liftM` Paths_threepenny_gui.getDataDir
+getStaticDir = (</> "samples/static") `liftM` Paths_threepenny_gui.getDataDir
 
 #elif defined(FPCOMPLETE)
 
 getStaticDir :: IO FilePath
-getStaticDir = return "wwwroot"
+getStaticDir = return "samples/static"
 
 #else
 -- using GHCi
 
 getStaticDir :: IO FilePath
-getStaticDir = return "../wwwroot/"
+getStaticDir = return "static"
 
 #endif
 
