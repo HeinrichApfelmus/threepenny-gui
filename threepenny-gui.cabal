@@ -158,6 +158,17 @@ Executable threepenny-examples-buttons
     other-modules:     Paths_threepenny_gui, Paths
     hs-source-dirs:    samples
 
+Executable threepenny-examples-canvas
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,filepath
+                          ,threepenny-gui
+    else
+        buildable: False
+    main-is:           Canvas.hs
+    hs-source-dirs:    samples
+
 Executable threepenny-examples-chat
     if flag(buildExamples)
         cpp-options:       -DCABAL
