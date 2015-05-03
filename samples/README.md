@@ -1,13 +1,15 @@
 ## Examples
 
-This folder contains the code examples for the Threepenny-GUI library.
+This folder contains the code examples for the Threepenny GUI library.
 
-Run run the examples, use the provided `runhaskell` and `ghci` scripts:
+To run the examples, you can (but don't have to) use the provided `runhaskell` and `ghci` scripts:
 
     cd samples
     ./runhaskell Chat.hs
 
-The scripts take care of setting up the necessary paths. However, they assume that you have set up a *[cabal sandbox][] in the project root folder*.
+(The scripts check whether there is a [cabal sandbox][] in the parent directory and uses this instead of the global package database; this is very useful for me as a library author)
+
+After you have started an example in this way, open your web browser and point it to the address [http://localhost:8023](http://localhost:8023). Enjoy!
 
   [cabal sandbox]: http://coldwa.st/e/blog/2013-08-20-Cabal-sandbox.html
 
