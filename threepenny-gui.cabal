@@ -1,5 +1,5 @@
 Name:                threepenny-gui
-Version:             0.6.0.1
+Version:             0.6.0.2
 Synopsis:            GUI framework that uses the web browser as a display.
 Description:
     Threepenny-GUI is a GUI framework that uses the web browser as a display.
@@ -112,17 +112,14 @@ Library
                     ,deepseq                >= 1.3.0 && < 1.5
                     ,filepath               >= 1.3.0 && < 1.5.0
                     ,hashable               >= 1.1.0 && < 1.3
-                    ,MonadCatchIO-transformers == 0.3.*
                     ,safe                   == 0.3.*
                     ,snap-server            == 0.9.*
                     ,snap-core              == 0.9.*
                     ,stm                    >= 2.2    && < 2.5
                     ,template-haskell       >= 2.7.0  && < 2.11
                     ,text                   >= 0.11   && < 1.3
-                    ,time                   >= 1.4    && < 1.6
                     ,transformers           >= 0.3.0  && < 0.5
                     ,unordered-containers   == 0.2.*
-                    ,utf8-string            == 0.3.*
                     ,websockets             >= 0.8    && < 0.10
                     ,websockets-snap        >= 0.8    && < 0.10
                     ,vault                  == 0.3.*

@@ -1,5 +1,13 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.6.0.2** -- Maintenance release.
+
+* Remove unused direct dependencies, in particular
+** attoparsec-enumerator
+** utf8-string
+** MonadCatchIO-transformers
+** time
+
 **0.6.0.1** -- Maintenance release.
 
 * The `ADDR` environment variable is now parsed correctly.
