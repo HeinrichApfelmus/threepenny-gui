@@ -1,5 +1,9 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.6.0.3** -- Maintenance release.
+
+* Temporary fix for #109, which was causing event handlers to be discarded.
+
 **0.6.0.2** -- Maintenance release.
 
 * Remove unused direct dependencies, in particular

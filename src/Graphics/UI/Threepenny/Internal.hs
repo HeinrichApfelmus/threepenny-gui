@@ -179,7 +179,6 @@ delete el = liftJSWindow $ \w -> do
 clearChildren :: Element -> UI ()
 clearChildren (Element el _ _) = liftJSWindow $ \w -> do
     Foreign.withRemotePtr el $ \_ _ -> do
-        Foreign.clearReachable el
         JS.runFunction w $ ffi "$(%1).contents().detach()" el
 
 -- | Append a child element.
