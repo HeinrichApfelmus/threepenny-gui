@@ -179,6 +179,10 @@ delete el = liftJSWindow $ \w -> do
 clearChildren :: Element -> UI ()
 clearChildren (Element el _ _) = liftJSWindow $ \w -> do
     Foreign.withRemotePtr el $ \_ _ -> do
+        -- FIXME: Not all reachable foreign pointers are actually elements!
+        --        Some may also be event handlers and so on!
+        --        Temporarily disable garbage collection.
+        -- Foreign.clearReachable el
         JS.runFunction w $ ffi "$(%1).contents().detach()" el
 
 -- | Append a child element.

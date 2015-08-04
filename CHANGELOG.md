@@ -2,7 +2,7 @@
 
 **0.6.0.3** -- Maintenance release.
 
-* Temporary fix for #109, which was causing event handlers to be discarded.
+* Temporary fix for #109, which was causing event handlers to be discarded. Unfortunately, this means that elements are currently not garbage collected after they have been removed from the DOM tree.
 
 **0.6.0.2** -- Maintenance release.
 
