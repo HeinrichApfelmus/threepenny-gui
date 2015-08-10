@@ -3,19 +3,19 @@ module Graphics.UI.Threepenny.Internal (
     -- * Synopsis
     -- | Internal core:
     -- 'UI' monad, integrating FRP and JavaScript FFI. garbage collection
-   
+
     -- * Documentation
     Window, disconnect,
     startGUI,
-    
+
     UI, runUI, liftIOLater, askWindow,
-    
+
     FFI, FromJS, ToJS, JSFunction, JSObject, ffi,
     runFunction, callFunction, ffiExport, debug,
-    
+
     Element, fromJSObject, getWindow,
     mkElementNamespace, mkElement, delete, appendChild, clearChildren,
-    
+
     EventData, domEvent, unsafeFromJSON,
     ) where
 
@@ -155,7 +155,7 @@ addEvents el Window{ jsWindow = w, wEvents = wEvents } = do
 
     return events
 
--- | Lookup or create lazy events for an a JavaScript object.
+-- | Lookup or create lazy events for a JavaScript object.
 getEvents :: JS.JSObject -> Window -> IO Events
 getEvents el window@Window{ wEvents = wEvents } = do
     Foreign.withRemotePtr el $ \coupon _ -> do
@@ -267,7 +267,7 @@ instance MonadIO UI where
     liftIO = UI . liftIO
 
 instance MonadFix UI where
-    mfix f = UI $ mfix (unUI . f)  
+    mfix f = UI $ mfix (unUI . f)
 
 -- | Execute an 'UI' action in a particular browser window.
 -- Also runs all scheduled 'IO' actions.

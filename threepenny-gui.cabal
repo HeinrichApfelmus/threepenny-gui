@@ -81,7 +81,7 @@ Library
                     ,Graphics.UI.Threepenny.JQuery
                     ,Graphics.UI.Threepenny.SVG
                     ,Graphics.UI.Threepenny.SVG.Attributes
-                    ,Graphics.UI.Threepenny.SVG.Elements 
+                    ,Graphics.UI.Threepenny.SVG.Elements
                     ,Graphics.UI.Threepenny.Timer
                     ,Graphics.UI.Threepenny.Widgets
                     ,Reactive.Threepenny
@@ -128,7 +128,7 @@ Library
       build-depends: network-uri            >= 2.6    && < 2.7
   else
       build-depends: network                >= 2.3.0  && < 2.6
-                    
+
 Executable threepenny-examples-bartab
     if flag(buildExamples)
         cpp-options:       -DCABAL

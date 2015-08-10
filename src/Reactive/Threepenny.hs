@@ -2,23 +2,23 @@
 module Reactive.Threepenny (
     -- * Synopsis
     -- | Functional reactive programming.
-    
+
     -- * Types
     -- $intro
     Event, Behavior,
-    
+
     -- * IO
     -- | Functions to connect events to the outside world.
     Handler, newEvent, register,
     currentValue,
-    
+
     -- * Core Combinators
     -- | Minimal set of combinators for programming with 'Event' and 'Behavior'.
     module Control.Applicative,
     never, filterJust, unionWith,
     accumE, apply, stepper,
     -- $classes
-    
+
     -- * Derived Combinators
     -- | Additional combinators that make programming
     -- with 'Event' and 'Behavior' convenient.
@@ -34,10 +34,10 @@ module Reactive.Threepenny (
 
     -- * Additional Notes
     -- $recursion
-    
+
     -- * Tidings
     Tidings, tidings, facts, rumors,
-    
+
     -- * Internal
     -- | Functions reserved for special circumstances.
     -- Do not use unless you know what you're doing.
@@ -119,10 +119,10 @@ newEventsNamed init = do
 
 -- | Register an event 'Handler' for an 'Event'.
 -- All registered handlers will be called whenever the event occurs.
--- 
+--
 -- When registering an event handler, you will also be given an action
 -- that unregisters this handler again.
--- 
+--
 -- > do unregisterMyHandler <- register event myHandler
 --
 -- FIXME: Unregistering event handlers does not work yet.
@@ -134,7 +134,7 @@ register e h = do
 
 -- | Register an event 'Handler' for a 'Behavior'.
 -- All registered handlers will be called whenever the behavior changes.
--- 
+--
 -- However, note that this is only an approximation,
 -- as behaviors may change continuously.
 -- Consequently, handlers should be idempotent.
@@ -164,7 +164,7 @@ never = E $ fromPure Prim.neverP
 
 -- | Return all event occurrences that are 'Just' values, discard the rest.
 -- Think of it as
--- 
+--
 -- > filterJust es = [(time,a) | (time,Just a) <- es]
 filterJust e = E $ liftMemo1 Prim.filterJustP (unE e)
 
@@ -182,7 +182,7 @@ unionWith f e1 e2 = E $ liftMemo2 (Prim.unionWithP f) (unE e1) (unE e2)
 
 -- | Apply a time-varying function to a stream of events.
 -- Think of it as
--- 
+--
 -- > apply bf ex = [(time, bf time x) | (time, x) <- ex]
 apply :: Behavior (a -> b) -> Event a -> Event b
 apply  f x        = E $ liftMemo1 (\p -> Prim.applyP (latch f) p) (unE x)
@@ -203,7 +203,7 @@ b <@ e = (const <$> b) <@> e
 --
 -- > accumB "x" [(time1,(++"y")),(time2,(++"z"))]
 -- >    = stepper "x" [(time1,"xy"),(time2,"xyz")]
--- 
+--
 -- Note that the value of the behavior changes \"slightly after\"
 -- the events occur. This allows for recursive definitions.
 accumB :: MonadIO m => a -> Event (a -> a) -> m (Behavior a)
@@ -213,13 +213,13 @@ accumB a e = liftIO $ do
     return $ B l1 (E $ fromPure p2)
 
 
--- | Construct a time-varying function from an initial value and 
+-- | Construct a time-varying function from an initial value and
 -- a stream of new values. Think of it as
 --
 -- > stepper x0 ex = return $ \time ->
 -- >     last (x0 : [x | (timex,x) <- ex, timex < time])
--- 
--- Note that the smaller-than-sign in the comparision @timex < time@ means 
+--
+-- Note that the smaller-than-sign in the comparision @timex < time@ means
 -- that the value of the behavior changes \"slightly after\"
 -- the event occurrences. This allows for recursive definitions.
 stepper :: MonadIO m => a -> Event a -> m (Behavior a)
@@ -278,7 +278,7 @@ Good:
 >     b <- accumB $ (+1) <$ e2
 
 Bad:
- 
+
 > mdo
 >     b <- accumB $ (+1) <$ e2          -- actions executed here could depend ...
 >     let e2 = apply (const <$> b) e1   -- ... on this value
@@ -320,7 +320,7 @@ unions = foldr (unionWith (++)) never . map (fmap (:[]))
 -- | Apply a list of functions in succession.
 -- Useful in conjunction with 'unions'.
 --
--- > concatenate [f,g,h] = f . g . h 
+-- > concatenate [f,g,h] = f . g . h
 concatenate :: [a -> a] -> (a -> a)
 concatenate = foldr (.) id
 
@@ -380,9 +380,9 @@ test = do
     (e1,fire) <- newEvent
     e2 <- accumE 0 $ (+) <$> e1
     _  <- register e2 print
-    
+
     return fire
-    
+
 test_recursion1 :: IO (IO ())
 test_recursion1 = mdo
     (e1, fire) <- newEvent
@@ -390,7 +390,7 @@ test_recursion1 = mdo
         e2 = apply (const <$> b) e1
     b  <- accumB 0 $ (+1) <$ e2
     _  <- register e2 print
-    
+
     return $ fire ()
 
 
