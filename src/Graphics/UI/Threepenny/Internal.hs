@@ -41,7 +41,10 @@ import Foreign.JavaScript hiding (runFunction, callFunction, debug, Window)
 data Window = Window
     { jsWindow    :: JS.Window  -- JavaScript window
     , eDisconnect :: E.Event () -- event that happens when client disconnects
-    , wEvents     :: Foreign.Vendor Events -- events associated to 'Element's
+    , wEvents     :: Foreign.Vendor Events
+                     -- events associated to 'Element's
+    , wChildren   :: Foreign.Vendor ()
+                     -- children reachable from 'Element's
     }
 
 -- | Start server for GUI sessions.
@@ -55,11 +58,13 @@ startGUI config init = JS.serve config $ \w -> do
     JS.onDisconnect w $ handleDisconnect ()
 
     -- make window
-    wEvents <- Foreign.newVendor
+    wEvents   <- Foreign.newVendor
+    wChildren <- Foreign.newVendor
     let window = Window
             { jsWindow    = w
             , eDisconnect = eDisconnect
             , wEvents     = wEvents
+            , wChildren   = wChildren
             }
 
     -- run initialization
@@ -78,9 +83,14 @@ disconnect = eDisconnect
 ------------------------------------------------------------------------------}
 type Events = String -> E.Event JSON.Value
 
+-- Reachability information for children of an 'Element'.
+-- The children of an element are always reachable from this RemotePtr.
+type Children = Foreign.RemotePtr ()
+
 data Element = Element
     { toJSObject  :: JS.JSObject -- corresponding JavaScript object
     , elEvents    :: Events      -- FRP event mapping
+    , elChildren  :: Children    -- The children of this element
     , elWindow    :: Window      -- Window in which the element was created
     } deriving (Typeable)
 
@@ -89,6 +99,30 @@ instance ToJS Element where
 
 getWindow :: Element -> IO Window
 getWindow = return . elWindow
+
+-- | Lookup or create reachability information for the children of
+-- an element that is represented by a JavaScript object.
+getChildren :: JS.JSObject -> Window -> IO Children
+getChildren el window@Window{ wChildren = wChildren } =
+    Foreign.withRemotePtr el $ \coupon _ -> do
+        mptr <- Foreign.lookup coupon wChildren
+        case mptr of
+            Nothing -> do
+                -- Create new pointer for reachability information.
+                ptr <- Foreign.newRemotePtr coupon () wChildren
+                Foreign.addReachable el ptr
+                return ptr
+            Just p  ->
+                -- Return existing information
+                return p
+
+-- | Convert JavaScript object into an Element by attaching relevant information.
+-- The JavaScript object may still be subject to garbage collection.
+fromJSObject0 :: JS.JSObject -> Window -> IO Element
+fromJSObject0 el window = do
+    events   <- getEvents   el window
+    children <- getChildren el window
+    return $ Element el events children window
 
 -- | Convert JavaScript object into an element.
 --
@@ -99,8 +133,7 @@ fromJSObject el = do
     window <- askWindow
     liftIO $ do
         Foreign.addReachable (JS.root $ jsWindow window) el
-        events <- getEvents el window
-        return $ Element el events window
+        fromJSObject0 el window
 
 -- | Add lazy FRP events to a JavaScript object.
 addEvents :: JS.JSObject -> Window -> IO Events
@@ -166,8 +199,7 @@ mkElementNamespace namespace tag = do
         el <- JS.callFunction w $ case namespace of
             Nothing -> ffi "document.createElement(%1)" tag
             Just ns -> ffi "document.createElementNS(%1,%2)" ns tag
-        events <- getEvents el window
-        return $ Element el events window
+        fromJSObject0 el window
 
 -- | Delete the given element.
 delete :: Element -> UI ()
@@ -177,21 +209,20 @@ delete el = liftJSWindow $ \w -> do
 
 -- | Remove all child elements.
 clearChildren :: Element -> UI ()
-clearChildren (Element el _ _) = liftJSWindow $ \w -> do
+clearChildren element = liftJSWindow $ \w -> do
+    let el = toJSObject element
     Foreign.withRemotePtr el $ \_ _ -> do
-        -- FIXME: Not all reachable foreign pointers are actually elements!
-        --        Some may also be event handlers and so on!
-        --        Temporarily disable garbage collection.
-        -- Foreign.clearReachable el
+        -- Previous children are no longer reachable from this element
         JS.runFunction w $ ffi "$(%1).contents().detach()" el
+        Foreign.clearReachable (elChildren element)
 
 -- | Append a child element.
 appendChild :: Element -> Element -> UI ()
-appendChild (Element eParent _ _) (Element eChild _ _) = liftJSWindow $ \w -> do
+appendChild parent child = liftJSWindow $ \w -> do
     -- FIXME: We have to stop the child being reachable from its
     -- /previous/ parent.
-    Foreign.addReachable eParent eChild
-    JS.runFunction w $ ffi "$(%1).append($(%2))" eParent eChild
+    Foreign.addReachable (elChildren parent) (toJSObject child)
+    JS.runFunction w $ ffi "$(%1).append($(%2))" (toJSObject parent) (toJSObject child)
 
 
 {-----------------------------------------------------------------------------

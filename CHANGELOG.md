@@ -1,5 +1,12 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.6.0.4** -- Maintenance release.
+
+* Elements that have become unreachable, for instance because they have been removed from the DOM and are no longer reachable in the Haskell code, will be garbage collected again. Fix [#109][], [#113][].
+
+  [#113]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/113
+  [#109]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/109
+
 **0.6.0.3** -- Maintenance release.
 
 * Temporary fix for #109, which was causing event handlers to be discarded. Unfortunately, this means that elements are currently not garbage collected after they have been removed from the DOM tree.
