@@ -12,6 +12,7 @@ import           Control.Monad
 import           Data.ByteString                    (ByteString)
 import qualified Data.ByteString.Char8      as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.ByteString.UTF8       as BU8  (fromString)
 import           Data.Text
 import qualified Safe                       as Safe
 import           System.Environment
@@ -46,7 +47,7 @@ httpComm Config{..} worker = do
                $ Snap.setAccessLog (Snap.ConfigIoLog jsLog)
                $ Snap.defaultConfig
     Snap.httpServe config . route $
-        routeResources jsCustomHTML jsStatic
+        routeResources jsCustomHTML jsStatic jsExtraDirs
         ++ routeWebsockets worker
 
 -- | Route the communication between JavaScript and the server
@@ -101,14 +102,15 @@ communicationFromWebSocket request = do
 ------------------------------------------------------------------------------}
 type Routes = [(ByteString, Snap ())]
 
-routeResources :: Maybe FilePath -> Maybe FilePath -> Routes
-routeResources customHTML staticDir =
+routeResources :: Maybe FilePath -> Maybe FilePath -> [(String, FilePath)] -> Routes
+routeResources customHTML staticDir extraDirs =
     fixHandlers noCache $
         static ++
         [("/"            , root)
         ,("/haskell.js"  , writeTextMime jsDriverCode  "application/javascript")
         ,("/haskell.css" , writeTextMime cssDriverCode "text/css")
         ]
+        ++ fmap routeFromDirPath extraDirs
     where
     fixHandlers f routes = [(a,f b) | (a,b) <- routes]
     noCache h = modifyResponse (setHeader "Cache-Control" "no-cache") >> h
@@ -120,6 +122,9 @@ routeResources customHTML staticDir =
             Just dir -> serveFile (dir </> file)
             Nothing  -> logError "Foreign.JavaScript: Cannot use jsCustomHTML file without jsStatic"
         Nothing   -> writeTextMime defaultHtmlFile "text/html"
+    
+    routeFromDirPath (alias, path) =
+        (BU8.fromString ("/dir/" ++ alias), serveDirectory path)
 
 writeTextMime text mime = do
     modifyResponse (setHeader "Content-type" mime)
