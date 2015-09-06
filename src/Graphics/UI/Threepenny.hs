@@ -60,7 +60,7 @@ Additional static content is served from the @../wwwroot@ directory.
 > main :: IO ()
 > main = do
 >     startGUI defaultConfig
->         { jsPort       = 8023
+>         { jsPort       = Just 8023
 >         , jsStatic     = Just "../wwwroot"
 >         } setup
 
@@ -104,4 +104,3 @@ The libary comes with a
 
 
 -}
-
