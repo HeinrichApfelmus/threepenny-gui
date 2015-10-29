@@ -361,7 +361,7 @@ class Widget w where
 instance Widget Element where
     getElement = id
 
--- | Convience synonym for 'return' to make elements work well with 'set'.
+-- | Convenience synonym for 'return' to make elements work well with 'set'.
 -- Also works on 'Widget's.
 --
 -- Example usage.
@@ -371,6 +371,6 @@ instance Widget Element where
 element :: MonadIO m => Widget w => w -> m Element
 element = return . getElement
 
--- | Convience synonym for 'return' to make widgets work well with 'set'.
+-- | Convenience synonym for 'return' to make widgets work well with 'set'.
 widget  :: Widget w => w -> UI w
 widget  = return
