@@ -232,16 +232,16 @@ grid mrows = do
 --
 -- > on click element $ \_ -> ...
 on :: (element -> Event a) -> element -> (a -> UI void) -> UI ()
-on f x = onEvent (f x)
+on f x = void . onEvent (f x)
 
 -- | Register an 'UI' action to be executed whenever the 'Event' happens.
 -- 
 -- FIXME: Should be unified with 'on'?
-onEvent :: Event a -> (a -> UI void) -> UI ()
+onEvent :: Event a -> (a -> UI void) -> UI (UI ())
 onEvent e h = do
     window <- askWindow
-    liftIO $ register e (void . runUI window . h)
-    return ()
+    unregister <- liftIO $ register e (void . runUI window . h)
+    return (liftIO unregister)
 
 -- | Execute a 'UI' action whenever a 'Behavior' changes.
 -- Use sparingly, it is recommended that you use 'sink' instead.
