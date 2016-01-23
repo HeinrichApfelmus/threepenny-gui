@@ -3,6 +3,7 @@
 **0.6.0.5** -- Maintenance release
 
 * Bump `async` dependency to allow 2.1
+* Bump `transformers` dependency to allow 0.5
 
 **0.6.0.4** -- Maintenance release.
 
