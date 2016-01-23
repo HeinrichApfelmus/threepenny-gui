@@ -1,5 +1,9 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.6.0.5** -- Maintenance release
+
+* Bump `async` dependency to allow 2.1
+
 **0.6.0.4** -- Maintenance release.
 
 * Elements that have become unreachable, for instance because they have been removed from the DOM and are no longer reachable in the Haskell code, will be garbage collected again. Fix [#109][], [#113][].
