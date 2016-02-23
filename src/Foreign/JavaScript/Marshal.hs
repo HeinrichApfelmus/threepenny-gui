@@ -145,7 +145,7 @@ instance FromJS b        => FFI (JSFunction b) where
 
 -- | Simple JavaScript FFI with string substitution.
 --
--- Inspired by the Fay language. <http://fay-lang.org/>
+-- Inspired by the Fay language. <https://github.com/faylang/fay/wiki>
 --
 -- > example :: String -> Int -> JSFunction String
 -- > example = ffi "$(%1).prop('checked',%2)"
