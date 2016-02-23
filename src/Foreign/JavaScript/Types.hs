@@ -110,6 +110,7 @@ data ServerMsg
     = RunEval  String
     | CallEval String
     | Debug    String
+    | Timestamp
     deriving (Eq,Show)
 
 instance NFData ServerMsg where
