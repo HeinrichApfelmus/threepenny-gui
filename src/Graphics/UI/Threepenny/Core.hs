@@ -46,7 +46,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * JavaScript FFI
     -- | Direct interface to JavaScript in the browser window.
-    debug,
+    debug, timestamp,
     ToJS, FFI,
     JSFunction, ffi, runFunction, callFunction,
     ffiExport,

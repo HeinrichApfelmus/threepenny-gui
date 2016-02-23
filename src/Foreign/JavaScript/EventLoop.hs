@@ -63,11 +63,11 @@ eventLoop init comm = do
 
     -- FFI calls are made by writing to the `calls` queue.
     w0 <- newPartialWindow
-    let runEval s = do
-            atomically $ writeTQueue calls (Nothing , RunEval s)
-        callEval s = do
+    let run msg = do
+            atomically $ writeTQueue calls (Nothing , msg)
+        call msg = do
             ref <- newEmptyTMVarIO
-            atomically $ writeTQueue calls (Just ref, CallEval s)
+            atomically $ writeTQueue calls (Just ref, msg)
             atomically $ takeTMVar ref
         debug    s = do
             atomically $ writeServer comm $ Debug s
@@ -76,9 +76,10 @@ eventLoop init comm = do
     disconnect <- newTVarIO $ return ()
     let onDisconnect m = atomically $ writeTVar disconnect m
     
-    let w = w0 { runEval      = runEval
-               , callEval     = callEval
+    let w = w0 { runEval        = run  . RunEval
+               , callEval       = call . CallEval
                , debug        = debug
+               , timestamp    = run Timestamp
                , onDisconnect = onDisconnect
                }
 

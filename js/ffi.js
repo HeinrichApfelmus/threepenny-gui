@@ -51,6 +51,13 @@ Haskell.initFFI = function () {
         reply();
         break;
       }
+      case "Timestamp": {
+        Haskell.log("Timestamp: %f ms", Haskell.performance.now());
+        Haskell.log("Elapsed since last timestamp: %f ms",
+          Haskell.performance.diff());
+        reply();
+        break;
+      }
     }
   };
   
