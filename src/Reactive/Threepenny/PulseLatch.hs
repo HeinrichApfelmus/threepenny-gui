@@ -161,7 +161,7 @@ accumL a p1 = do
     -- register handler to update latch
     uid <- newUnique
     let handler = whenPulse p2 $ (writeIORef latch $!)
-    addHandlerP p2 ((uid, DoLatch), handler)
+    void $ addHandlerP p2 ((uid, DoLatch), handler)
     
     return (l1,p2)
 
@@ -191,7 +191,7 @@ test = do
     (l1,_) <- accumL 0 p2
     let l2 =  mapL const l1
     p3     <- applyP l2 p1
-    addHandler p3 print
+    void $ addHandler p3 print
     return fire
 
 test_recursion1 :: IO (IO ())
@@ -201,5 +201,5 @@ test_recursion1 = mdo
     p3      <- mapP (const (+1)) p2
     ~(l1,_) <- accumL (0::Int) p3
     let l2  =  mapL const l1
-    addHandler p2 print
+    void $ addHandler p2 print
     return $ fire ()
