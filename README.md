@@ -23,7 +23,7 @@ The communication is done over a persistent connection using WebSockets.
 
 If you want to reduce latency, the best option is to generate JavaScript
 code and run it on the client. Consider this approach similar to [a
-shading language.](http://en.wikipedia.org/wiki/Shading_language). Some means of producing JavaScript from Haskell might be:
+shading language](http://en.wikipedia.org/wiki/Shading_language). Some means of producing JavaScript from Haskell might be:
 
 * Fay
 * HJScript
