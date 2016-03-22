@@ -57,7 +57,7 @@ setup w = void $ do
         bpm <- read <$> get value elBpm
         return timer # set UI.interval (bpm2ms bpm)
     
-    -- star the timer
+    -- start the timer
     UI.start timer
 
 

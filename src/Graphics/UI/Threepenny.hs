@@ -60,7 +60,7 @@ Additional static content is served from the @../wwwroot@ directory.
 > main :: IO ()
 > main = do
 >     startGUI defaultConfig
->         { jsPort       = 8023
+>         { jsPort       = Just 8023
 >         , jsStatic     = Just "../wwwroot"
 >         } setup
 
@@ -99,7 +99,7 @@ When that happens, we change the text of the button.
 That's it! Now, run the program and visit the URL <http://localhost:8023/>
 in your browser to interact with the user interface.
 
-The libary comes with a
+The library comes with a
 <https://github.com/HeinrichApfelmus/threepenny-gui/tree/master/samples#readme plethora of additional example code>.
 
 
