@@ -79,7 +79,7 @@ import Reactive.Threepenny                  hiding (onChange)
 To display the user interface, you have to start a server using 'startGUI'.
 Then, visit the URL <http://localhost:8023/> in your browser
 (assuming that you use the default server configuration 'defaultConfig',
-or have set the port number to @jsPort=8023@.)
+or have set the port number to @jsPort=Just 8023@.)
 
 The server is multithreaded.
 FFI calls can be made concurrently, but events are handled sequentially.
