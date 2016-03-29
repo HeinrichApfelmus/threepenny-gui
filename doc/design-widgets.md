@@ -146,14 +146,14 @@ Each widget should have a separate **type**. After all, we are programming in Ha
 
 For instance, the validated input widget mentioned previously would be represented by a type `ValidatedInput a` where the type variable `a` is the type of the value being stored.
 
-A widget will typically consist of one or more HTML elements (or even widges) and additional properties. It is convenient to put this data into a record.
+A widget will typically consist of one or more HTML elements (or even widgets) and additional properties. It is convenient to put this data into a record.
 
     data ValidatedInput a = ValidatedInput
         { vInput :: Element
         , ...
         }
 
-Of course, the widget is abstract, the individual record elements are not exportet. Note that the `RecordWildCards` language extension is very handy for avoiding boilerplate while programming with Haskell records.
+Of course, the widget is abstract, the individual record elements are not exported. Note that the `RecordWildCards` language extension is very handy for avoiding boilerplate while programming with Haskell records.
 
 Next, we need a function to **create the widget**. Traditionally, it has the same name as the widget type, but in lowercase letters.
 
@@ -168,7 +168,7 @@ Then, we need to obtain a **visual representation** of the widget. Typically, th
     instance Visual (ValidatedInput a) where
         getElement = vInput
 
-Last but not least, we need to an API for the new functionality of our widget. We will discuss this in the next section.
+Last but not least, we need to adhere to an API for the new functionality of our widget. We will discuss this in the next section.
 
 *FIXME: destroying widgets, garbage collection?*
 
