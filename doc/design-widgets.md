@@ -177,7 +177,7 @@ Connect to a Model
 ------------------
 
     value     :: WriteAttr (ValidatedInput a) a
-    userInput :: ValidaatedInput a -> Event a
+    userInput :: ValidatedInput a -> Event a
 
 
 Visual Styling
