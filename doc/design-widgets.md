@@ -62,7 +62,7 @@ A Behavior is simply a *value that varies in time*. You can think of it as a fun
 
     type Behavior a = Time -> a
 
-An Event is a sequence of *event occurrences*. Think of it as an (infinite) list of occurrences, which are pairs: the first component indicates when the occurrences happens and the second component is a value tagged to this occurrence.
+An Event is a sequence of *event occurrences*. Think of it as an (infinite) list of occurrences, which are pairs: the first component indicates when the occurrences happen and the second component is a value tagged to this occurrence.
 
     type Event    a = [(Time,a)]
 
