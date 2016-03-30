@@ -159,13 +159,13 @@ Next, we need a function to **create the widget**. Traditionally, it has the sam
 
     validatedInput :: IO (ValidatedInput a)
 
-Then, we need to obtain a **visual representation** of the widget. Typically, the widget is visualized by a single DOM element. Hence, you should make the widget a member of the `Visual` type class, which offers a uniform interface for manipulating the visual representation.
+Then, we need to obtain a **visual representation** of the widget. Typically, the widget is visualized by a single DOM element. Hence, you should make the widget a member of the `Widget` type class, which offers a uniform interface for manipulating the visual representation.
 
-    class Visual w where
+    class Widget w where
         getElement :: w -> Element
         ..
     
-    instance Visual (ValidatedInput a) where
+    instance Widget (ValidatedInput a) where
         getElement = vInput
 
 Last but not least, we need to adhere to an API for the new functionality of our widget. We will discuss this in the next section.
