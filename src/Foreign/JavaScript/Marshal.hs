@@ -154,6 +154,7 @@ instance FromJS b        => FFI (JSFunction b) where
 -- code to be executed on the client.
 -- Occurrences of the substrings @%1@ to @%9@ will be replaced by
 -- subequent arguments.
+-- The substring @%%@ in the original will be replaced by @%@ (character escape).
 --
 -- Note: Always specify a type signature! The types automate
 -- how values are marshalled between Haskell and JavaScript.
@@ -212,10 +213,11 @@ apply code args = JSCode $ go code
     err     = "Graphics.UI.Threepenny.FFI: Too few arguments in FFI call!"
     argument i = unJSCode (args `at` i)
     
-    go []         = []
-    go ('%':c:cs) = argument index ++ go cs
+    go []           = []
+    go ('%':'%':cs) = '%' : go cs
+    go ('%':c  :cs) = argument index ++ go cs
         where index = fromEnum c - fromEnum '1'
-    go (c:cs)     = c : go cs
+    go (c:cs)       = c : go cs
 
 -- | Apply string substitution that expects a single argument.
 apply1 :: String -> JSCode -> JSCode
