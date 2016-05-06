@@ -196,7 +196,7 @@ mkElementNamespace namespace tag = do
     window <- askWindow
     let w = jsWindow window
     liftIO $ do
-        el <- JS.callFunction w $ case namespace of
+        el <- JS.unsafeCreateJSObject w $ case namespace of
             Nothing -> ffi "document.createElement(%1)" tag
             Just ns -> ffi "document.createElementNS(%1,%2)" ns tag
         fromJSObject0 el window

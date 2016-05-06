@@ -1,8 +1,11 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards #-}
 module Foreign.JavaScript.Marshal (
     ToJS(..), FromJS,
     FFI, JSFunction, toCode, marshalResult, ffi,
     IsHandler, convertArguments, handle,
+
+    NewJSObject, wrapImposeStablePtr,
     ) where
 
 import           Data.Aeson             as JSON
@@ -107,6 +110,19 @@ instance FromJS [JSObject] where
             mapM (\v -> fromJSStablePtr v w) (Vector.toList vs)
         }
 
+instance FromJS NewJSObject where
+    fromJS = FromJS' { wrapCode = id, marshal = \_ _ -> return NewJSObject }
+
+wrapImposeStablePtr :: Window -> JSFunction NewJSObject -> IO (JSFunction JSObject)
+wrapImposeStablePtr w@(Window{..}) f = do
+    coupon  <- newCoupon wJSObjects
+    rcoupon <- render coupon
+    rcode   <- code f
+    return $ JSFunction
+        { code = return $ apply "Haskell.imposeStablePtr(%1,%2)" [rcode, rcoupon]
+        , marshalResult = \w _ -> newRemotePtr coupon (JSPtr coupon) wJSObjects
+        }
+
 {-----------------------------------------------------------------------------
     Variable argument JavaScript functions
 ------------------------------------------------------------------------------}
@@ -204,7 +220,7 @@ convertArguments f =
 -- | String substitution.
 -- Substitute occurences of %1, %2 up to %9 with the argument strings.
 -- The types ensure that the % character has no meaning in the generated output.
--- 
+--
 -- > apply "%1 and %2" [x,y] = x ++ " and " ++ y
 apply :: String -> [JSCode] -> JSCode
 apply code args = JSCode $ go code
@@ -212,7 +228,7 @@ apply code args = JSCode $ go code
     at xs i = maybe (error err) id $ atMay xs i
     err     = "Graphics.UI.Threepenny.FFI: Too few arguments in FFI call!"
     argument i = unJSCode (args `at` i)
-    
+
     go []           = []
     go ('%':'%':cs) = '%' : go cs
     go ('%':c  :cs) = argument index ++ go cs

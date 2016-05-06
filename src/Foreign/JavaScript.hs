@@ -14,10 +14,10 @@ module Foreign.JavaScript (
     -- * Server
     serve, Config(..), defaultConfig,
     Window, root,
-    
+
     -- * JavaScript FFI
     ToJS(..), FromJS, JSFunction, JSObject,
-    FFI, ffi, runFunction, callFunction,
+    FFI, ffi, runFunction, callFunction, NewJSObject, unsafeCreateJSObject,
     IsHandler, exportHandler, onDisconnect,
     debug, timestamp,
     ) where
@@ -45,6 +45,18 @@ serve config init = httpComm config (eventLoop init)
 -- | Run a JavaScript function, but do not wait for a result.
 runFunction :: Window -> JSFunction () -> IO ()
 runFunction w f = runEval w =<< toCode f
+
+-- | Run a JavaScript function that creates a new object.
+-- Return a corresponding 'JSObject' without waiting for the browser
+-- to send a result.
+--
+-- WARNING: This function assumes that the supplied JavaScript code does,
+-- in fact, create an object that is new.
+unsafeCreateJSObject :: Window -> JSFunction NewJSObject -> IO JSObject
+unsafeCreateJSObject w f = do
+    g <- wrapImposeStablePtr w f
+    runEval w =<< toCode g
+    marshalResult g w JSON.Null
 
 -- | Call a JavaScript function and wait for the result.
 callFunction :: Window -> JSFunction a -> IO a

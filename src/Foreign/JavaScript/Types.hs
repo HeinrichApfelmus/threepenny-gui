@@ -191,3 +191,6 @@ newtype JSPtr = JSPtr { unsJSPtr :: Coupon }
 -- | A mutable JavaScript object.
 type JSObject = RemotePtr JSPtr
 
+-- | A mutable JavaScript object that has just been created.
+-- This a dummy type used for additional type safety.
+data NewJSObject = NewJSObject
