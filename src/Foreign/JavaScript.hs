@@ -80,7 +80,7 @@ callFunction w f = do
 exportHandler :: IsHandler a => Window -> a -> IO JSObject
 exportHandler w f = do
     g <- newHandler w (handle f w)
-    h <- callFunction w $
+    h <- unsafeCreateJSObject w $
         ffi "Haskell.newEvent(%1,%2)" g (convertArguments f)
     Foreign.addReachable h g
     return h
