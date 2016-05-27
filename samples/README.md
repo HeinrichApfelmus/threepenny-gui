@@ -9,7 +9,17 @@ To run the examples, you can (but don't have to) use the provided `runhaskell` a
 
 (The scripts check whether there is a [cabal sandbox][] in the parent directory and uses this instead of the global package database; this is very useful for me as a library author)
 
-After you have started an example in this way, open your web browser and point it to the address [http://localhost:8023](http://localhost:8023). Enjoy!
+To run the examples with `stack` do the following:
+
+    git clone https://github.com/HeinrichApfelmus/threepenny-gui.git
+    cd threepenny-gui/
+    stack init
+    stack setup
+    stack build
+    cd samples
+    stack Mouse.hs
+
+After you have started an example either way, open your web browser and point it to the address [http://localhost:8023](http://localhost:8023). Enjoy!
 
   [cabal sandbox]: http://coldwa.st/e/blog/2013-08-20-Cabal-sandbox.html
 
