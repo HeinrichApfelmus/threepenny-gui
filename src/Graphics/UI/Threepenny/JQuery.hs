@@ -30,7 +30,7 @@ fadeOut el duration easing complete = do
     runFunction $ ffi "$(%1).animate({opacity: 0}, %2 * 1, %3, %4)"
         el duration (map toLower (show easing)) callback
 
--- | The 'sendValue' event happens whenver the return key is pressed
+-- | The 'sendValue' event happens whenever the return key is pressed
 -- while the element has focus. Its data is the event value.
 sendValue :: Element -> Event String
 sendValue = fmap unsafeFromJSON . domEvent "sendvalue"

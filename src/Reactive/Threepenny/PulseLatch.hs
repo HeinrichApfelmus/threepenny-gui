@@ -35,7 +35,7 @@ cacheEval :: EvalP (Maybe a) -> Build (Pulse a)
 cacheEval e = do
     key <- Vault.newKey
     return $ Pulse
-        { addHandlerP = \_ -> return ()
+        { addHandlerP = \_ -> return (return ())
         , evalP       = do
             vault <- Monad.get
             case Vault.lookup key vault of
@@ -48,7 +48,7 @@ cacheEval e = do
 
 -- Add a dependency to a pulse, for the sake of keeping track of dependencies.
 dependOn :: Pulse a -> Pulse b -> Pulse a
-dependOn p q = p { addHandlerP = \h -> addHandlerP p h >> addHandlerP q h }
+dependOn p q = p { addHandlerP = \h -> (>>) <$> addHandlerP p h <*> addHandlerP q h }
 
 -- Execute an action when the pulse occurs
 whenPulse :: Pulse a -> (a -> IO ()) -> Handler
@@ -69,12 +69,10 @@ newPulse = do
     
     let
         -- add handler to map
-        addHandlerP :: ((Unique, Priority), Handler) -> Build ()
+        addHandlerP :: ((Unique, Priority), Handler) -> Build (IO ())
         addHandlerP (uid,m) = do
-            handlers <- readIORef handlersRef
-            case Map.lookup uid handlers of
-                Just _  -> return ()
-                Nothing -> writeIORef handlersRef $ Map.insert uid m handlers
+            modifyIORef' handlersRef (Map.insert uid m)
+            return $ modifyIORef' handlersRef (Map.delete uid)
         
         -- evaluate all handlers attached to this input pulse
         fireP a = do
@@ -90,9 +88,7 @@ newPulse = do
     return (Pulse {..}, fireP)
 
 -- | Register a handler to be executed whenever a pulse occurs.
---
--- FIXME: Cannot unregister a handler again.
-addHandler :: Pulse a -> (a -> IO ()) -> Build ()
+addHandler :: Pulse a -> (a -> IO ()) -> Build (IO ())
 addHandler p f = do
     uid <- newUnique
     addHandlerP p ((uid, DoIO), whenPulse p f)
@@ -108,7 +104,7 @@ readLatch = readL
 -- | Create a new pulse that never occurs.
 neverP :: Pulse a
 neverP = Pulse
-    { addHandlerP = const $ return ()
+    { addHandlerP = const $ return (return ())
     , evalP       = return Nothing
     }
 
@@ -165,7 +161,7 @@ accumL a p1 = do
     -- register handler to update latch
     uid <- newUnique
     let handler = whenPulse p2 $ (writeIORef latch $!)
-    addHandlerP p2 ((uid, DoLatch), handler)
+    void $ addHandlerP p2 ((uid, DoLatch), handler)
     
     return (l1,p2)
 
@@ -195,7 +191,7 @@ test = do
     (l1,_) <- accumL 0 p2
     let l2 =  mapL const l1
     p3     <- applyP l2 p1
-    addHandler p3 print
+    void $ addHandler p3 print
     return fire
 
 test_recursion1 :: IO (IO ())
@@ -205,5 +201,5 @@ test_recursion1 = mdo
     p3      <- mapP (const (+1)) p2
     ~(l1,_) <- accumL (0::Int) p3
     let l2  =  mapL const l1
-    addHandler p2 print
+    void $ addHandler p2 print
     return $ fire ()

@@ -130,7 +130,6 @@ register :: Event a -> Handler a -> IO (IO ())
 register e h = do
     p <- at (unE e)     -- evaluate the memoized action
     Prim.addHandler p h
-    return $ return ()  -- FIXME
 
 -- | Register an event 'Handler' for a 'Behavior'.
 -- All registered handlers will be called whenever the behavior changes.

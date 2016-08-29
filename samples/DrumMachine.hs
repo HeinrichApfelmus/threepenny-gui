@@ -46,7 +46,7 @@ setup w = void $ do
     timer <- UI.timer # set UI.interval (bpm2ms defaultBpm)
     eBeat <- accumE (0::Int) $
         (\beat -> (beat + 1) `mod` (beats * bars)) <$ UI.tick timer
-    onEvent eBeat $ \beat -> do
+    void . onEvent eBeat $ \beat -> do
         -- display beat count
         element elTick # set text (show $ beat + 1)
         -- play corresponding sounds
@@ -57,7 +57,7 @@ setup w = void $ do
         bpm <- read <$> get value elBpm
         return timer # set UI.interval (bpm2ms bpm)
     
-    -- star the timer
+    -- start the timer
     UI.start timer
 
 

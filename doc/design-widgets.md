@@ -43,7 +43,7 @@ Here is how the MVC paradigm works: The whole purpose of a user interface is to 
 
 Note that controller and view are often closely linked together; the most pleasant user experiences are those where the user can interact directly with the visual representation, where he can almost "touch" it. **Widgets** embody this combination of controller and view. Of course, there are widgets that consist only of view (for example a status text) or only of controller (for example a clickable button), but these should be used in supporting roles only, because they lead to a separation between "thing I see" and "thing I touch", which results in a clumsy user experience.
 
-From an implementation point of view, the concepts of model, controller and view are *relative* notions, they depend on your level of abstraction. For instance, a city map with scrollbars will be perceived mainly as a view by the user, but it actually consists of a model (rectangle displayed), a controller (scrollbars) and a view (showing the partial map). In turn, the scrollbar itself consists of a model (position), a controller (responds to mous drags) and a view (position indicator). In other words, the MVC concepts can be nested arbitrarily. Moving up and down the abstraction ladder, we can easily create rich widgets by combining simple ones. The figure illustrates nesting:
+From an implementation point of view, the concepts of model, controller and view are *relative* notions, they depend on your level of abstraction. For instance, a city map with scrollbars will be perceived mainly as a view by the user, but it actually consists of a model (rectangle displayed), a controller (scrollbars) and a view (showing the partial map). In turn, the scrollbar itself consists of a model (position), a controller (responds to mouse drags) and a view (position indicator). In other words, the MVC concepts can be nested arbitrarily. Moving up and down the abstraction ladder, we can easily create rich widgets by combining simple ones. The figure illustrates nesting:
 
 ![](mvc-nested.png)
 
@@ -62,7 +62,7 @@ A Behavior is simply a *value that varies in time*. You can think of it as a fun
 
     type Behavior a = Time -> a
 
-An Event is a sequence of *event occurrences*. Think of it as an (infinite) list of occurrences, which are pairs: the first component indicates when the occurrences happens and the second component is a value tagged to this occurrence.
+An Event is a sequence of *event occurrences*. Think of it as an (infinite) list of occurrences, which are pairs: the first component indicates when the occurrences happen and the second component is a value tagged to this occurrence.
 
     type Event    a = [(Time,a)]
 
@@ -146,29 +146,29 @@ Each widget should have a separate **type**. After all, we are programming in Ha
 
 For instance, the validated input widget mentioned previously would be represented by a type `ValidatedInput a` where the type variable `a` is the type of the value being stored.
 
-A widget will typically consist of one or more HTML elements (or even widges) and additional properties. It is convenient to put this data into a record.
+A widget will typically consist of one or more HTML elements (or even widgets) and additional properties. It is convenient to put this data into a record.
 
     data ValidatedInput a = ValidatedInput
         { vInput :: Element
         , ...
         }
 
-Of course, the widget is abstract, the individual record elements are not exportet. Note that the `RecordWildCards` language extension is very handy for avoiding boilerplate while programming with Haskell records.
+Of course, the widget is abstract, the individual record elements are not exported. Note that the `RecordWildCards` language extension is very handy for avoiding boilerplate while programming with Haskell records.
 
 Next, we need a function to **create the widget**. Traditionally, it has the same name as the widget type, but in lowercase letters.
 
     validatedInput :: IO (ValidatedInput a)
 
-Then, we need to obtain a **visual representation** of the widget. Typically, the widget is visualized by a single DOM element. Hence, you should make the widget a member of the `Visual` type class, which offers a uniform interface for manipulating the visual representation.
+Then, we need to obtain a **visual representation** of the widget. Typically, the widget is visualized by a single DOM element. Hence, you should make the widget a member of the `Widget` type class, which offers a uniform interface for manipulating the visual representation.
 
-    class Visual w where
+    class Widget w where
         getElement :: w -> Element
         ..
     
-    instance Visual (ValidatedInput a) where
+    instance Widget (ValidatedInput a) where
         getElement = vInput
 
-Last but not least, we need to an API for the new functionality of our widget. We will discuss this in the next section.
+Last but not least, we need to adhere to an API for the new functionality of our widget. We will discuss this in the next section.
 
 *FIXME: destroying widgets, garbage collection?*
 
@@ -177,7 +177,7 @@ Connect to a Model
 ------------------
 
     value     :: WriteAttr (ValidatedInput a) a
-    userInput :: ValidaatedInput a -> Event a
+    userInput :: ValidatedInput a -> Event a
 
 
 Visual Styling

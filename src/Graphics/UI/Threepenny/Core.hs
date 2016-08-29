@@ -46,7 +46,7 @@ module Graphics.UI.Threepenny.Core (
     
     -- * JavaScript FFI
     -- | Direct interface to JavaScript in the browser window.
-    debug,
+    debug, timestamp,
     ToJS, FFI,
     JSFunction, ffi, runFunction, callFunction,
     ffiExport,
@@ -79,7 +79,7 @@ import Reactive.Threepenny                  hiding (onChange)
 To display the user interface, you have to start a server using 'startGUI'.
 Then, visit the URL <http://localhost:8023/> in your browser
 (assuming that you use the default server configuration 'defaultConfig',
-or have set the port number to @jsPort=8023@.)
+or have set the port number to @jsPort=Just 8023@.)
 
 The server is multithreaded.
 FFI calls can be made concurrently, but events are handled sequentially.
@@ -232,16 +232,16 @@ grid mrows = do
 --
 -- > on click element $ \_ -> ...
 on :: (element -> Event a) -> element -> (a -> UI void) -> UI ()
-on f x = onEvent (f x)
+on f x = void . onEvent (f x)
 
 -- | Register an 'UI' action to be executed whenever the 'Event' happens.
 -- 
 -- FIXME: Should be unified with 'on'?
-onEvent :: Event a -> (a -> UI void) -> UI ()
+onEvent :: Event a -> (a -> UI void) -> UI (UI ())
 onEvent e h = do
     window <- askWindow
-    liftIO $ register e (void . runUI window . h)
-    return ()
+    unregister <- liftIO $ register e (void . runUI window . h)
+    return (liftIO unregister)
 
 -- | Execute a 'UI' action whenever a 'Behavior' changes.
 -- Use sparingly, it is recommended that you use 'sink' instead.
@@ -361,7 +361,7 @@ class Widget w where
 instance Widget Element where
     getElement = id
 
--- | Convience synonym for 'return' to make elements work well with 'set'.
+-- | Convenience synonym for 'return' to make elements work well with 'set'.
 -- Also works on 'Widget's.
 --
 -- Example usage.
@@ -371,6 +371,6 @@ instance Widget Element where
 element :: MonadIO m => Widget w => w -> m Element
 element = return . getElement
 
--- | Convience synonym for 'return' to make widgets work well with 'set'.
+-- | Convenience synonym for 'return' to make widgets work well with 'set'.
 widget  :: Widget w => w -> UI w
 widget  = return

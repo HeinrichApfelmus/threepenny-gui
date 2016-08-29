@@ -16,7 +16,7 @@ type Handler  = EvalP (IO ())
 data Priority = DoLatch | DoIO deriving (Eq,Show,Ord,Enum)
 
 data Pulse a = Pulse
-    { addHandlerP :: ((Unique, Priority), Handler) -> Build ()
+    { addHandlerP :: ((Unique, Priority), Handler) -> Build (IO ())
     , evalP       :: EvalP (Maybe a)
     }
 

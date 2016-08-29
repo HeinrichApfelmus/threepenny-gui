@@ -11,7 +11,7 @@ module Graphics.UI.Threepenny.Internal (
     UI, runUI, liftIOLater, askWindow,
 
     FFI, FromJS, ToJS, JSFunction, JSObject, ffi,
-    runFunction, callFunction, ffiExport, debug,
+    runFunction, callFunction, ffiExport, debug, timestamp,
 
     Element, fromJSObject, getWindow,
     mkElementNamespace, mkElement, delete, appendChild, clearChildren,
@@ -32,7 +32,7 @@ import qualified Foreign.RemotePtr       as Foreign
 
 import qualified Reactive.Threepenny     as E
 
-import Foreign.JavaScript hiding (runFunction, callFunction, debug, Window)
+import Foreign.JavaScript hiding (runFunction, callFunction, debug, timestamp, Window)
 
 {-----------------------------------------------------------------------------
     Custom Window type
@@ -196,7 +196,7 @@ mkElementNamespace namespace tag = do
     window <- askWindow
     let w = jsWindow window
     liftIO $ do
-        el <- JS.callFunction w $ case namespace of
+        el <- JS.unsafeCreateJSObject w $ case namespace of
             Nothing -> ffi "document.createElement(%1)" tag
             Just ns -> ffi "document.createElementNS(%1,%2)" ns tag
         fromJSObject0 el window
@@ -313,3 +313,9 @@ ffiExport fun = liftJSWindow $ \w -> do
 -- | Print a message on the client console if the client has debugging enabled.
 debug :: String -> UI ()
 debug s = liftJSWindow $ \w -> JS.debug w s
+
+-- | Print a timestamp and the difference to the previous timestamp
+-- on the client console if the client has debugging enabled.
+timestamp :: UI ()
+timestamp = liftJSWindow JS.timestamp
+

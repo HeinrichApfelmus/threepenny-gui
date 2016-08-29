@@ -115,15 +115,18 @@ data ServerMsg
     = RunEval  String
     | CallEval String
     | Debug    String
+    | Timestamp
     deriving (Eq,Show)
 
 instance NFData ServerMsg where
     rnf (RunEval   x) = rnf x
     rnf (CallEval  x) = rnf x
     rnf (Debug     x) = rnf x
+    rnf (Timestamp  ) = ()
 
 instance ToJSON ServerMsg where
     toJSON (Debug    x) = object [ "tag" .= t "Debug"   , "contents" .= toJSON x]
+    toJSON (Timestamp ) = object [ "tag" .= t "Timestamp" ]
     toJSON (RunEval  x) = object [ "tag" .= t "RunEval" , "contents" .= toJSON x]
     toJSON (CallEval x) = object [ "tag" .= t "CallEval", "contents" .= toJSON x]
 
@@ -161,6 +164,9 @@ quit = ("quit", JSON.Null, Consistent)
 data Window = Window
     { runEval        :: String -> IO ()
     , callEval       :: String -> IO JSON.Value
+    , timestamp      :: IO ()
+    -- ^ Print a timestamp and the time difference to the previous one
+    -- in the JavaScript console.
     , debug          :: String -> IO ()
     -- ^ Send a debug message to the JavaScript console.
     , onDisconnect   :: IO () -> IO ()
@@ -174,7 +180,7 @@ newPartialWindow :: IO Window
 newPartialWindow = do
     ptr <- newRemotePtr "" () =<< newVendor
     let nop = const $ return ()
-    Window nop undefined nop nop ptr <$> newVendor <*> newVendor
+    Window nop undefined (return ()) nop nop ptr <$> newVendor <*> newVendor
 
 -- | For the purpose of controlling garbage collection,
 -- every 'Window' as an associated 'RemotePtr' that is alive
@@ -190,3 +196,6 @@ newtype JSPtr = JSPtr { unsJSPtr :: Coupon }
 -- | A mutable JavaScript object.
 type JSObject = RemotePtr JSPtr
 
+-- | A mutable JavaScript object that has just been created.
+-- This a dummy type used for additional type safety.
+data NewJSObject = NewJSObject

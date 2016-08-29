@@ -1,11 +1,19 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.6.0.5** -- Maintenance release
+
+* Bump `async` dependency to allow 2.1
+* Bump `transformers` dependency to allow 0.5
+
 **0.6.0.4** -- Maintenance release.
 
 * Elements that have become unreachable, for instance because they have been removed from the DOM and are no longer reachable in the Haskell code, will be garbage collected again. Fix [#109][], [#113][].
+* Adjust dependencies.
+* Add `<meta>` tag to indicate UTF8 encoding in html file. [#116][]
 
   [#113]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/113
   [#109]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/109
+  [#116]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/116
 
 **0.6.0.3** -- Maintenance release.
 

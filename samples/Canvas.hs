@@ -70,10 +70,13 @@ setup window = do
                 , (20, "#8c564b")
                 ]
 
+        UI.timestamp -- measure drawing performance for fun
         foldM (\start (delta, col) -> do
             let end = start+delta
             drawSlice (radian start) (radian end) col
             return end) 0 pieData
+        UI.timestamp
+
 
     -- draw some rectangles
     on UI.click drawRects $ const $ do
