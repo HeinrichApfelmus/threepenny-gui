@@ -1,5 +1,25 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.7.0.0** -- Maintenance and snapshot release
+
+* Reduce browser->server communication when creating `Element`s.
+    New function `unsafeCreateJSObject` to create JavaScript objects without
+    waiting for a client response. [#131][]
+* Implement escape sequence '%%' for JavaScript FFI. [#132][].
+* Change type of `onEvent` function to allow unregistering events.
+* Add function `timestamp` for simple performance measurements.
+* Update JavaScript dependencies to jQuery 2.2.3
+* Bump `data-default` dependency to allow `0.7`
+* Bump `template-haskell` dependency to allow `2.11`
+
+  [#131]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
+  [#132]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/132
+
+**0.6.0.6** -- Maintenance release
+
+* Bump `base`  dependency to allow `4.9`
+* Bump `aeson` dependency to allow `0.11`
+
 **0.6.0.5** -- Maintenance release
 
 * Bump `async` dependency to allow 2.1
