@@ -26,13 +26,13 @@ cache:
 # build matrix
 matrix:
   include:
-    - env: CABALVER=1.16 GHCVER=7.6.3
+    - env: CABALVER=1.16 GHCVER=7.6.3 CONSTRAINT=--constraint='websockets-snap==0.9.*'
       addons: { apt: { packages: [cabal-install-1.16, ghc-7.6.3], sources: [hvr-ghc] } }
-    - env: CABALVER=1.18 GHCVER=7.8.4
+    - env: CABALVER=1.18 GHCVER=7.8.4 CONSTRAINT=
       addons: { apt: { packages: [cabal-install-1.18, ghc-7.8.4], sources: [hvr-ghc] } }
-    - env: CABALVER=1.22 GHCVER=7.10.1
+    - env: CABALVER=1.22 GHCVER=7.10.1 CONSTRAINT=
       addons: { apt: { packages: [cabal-install-1.22, ghc-7.10.1], sources: [hvr-ghc] } }
-    - env: CABALVER=1.24 GHCVER=8.0.1
+    - env: CABALVER=1.24 GHCVER=8.0.1 CONSTRAINT=
       addons: { apt: { packages: [cabal-install-1.24, ghc-8.0.1], sources: [hvr-ghc] } }
 
 before_install:
@@ -43,14 +43,14 @@ install:
   - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
   - travis_retry cabal update
   - sed -i 's/^jobs:/-- jobs:/' ${HOME}/.cabal/config
-  - cabal install --only-dependencies
+  - cabal install $CONSTRAINT --only-dependencies
 
 before_script:
-  - cabal configure
+  - cabal configure $CONSTRAINT
   - cabal sdist
   - cd ..
   - tar -xf $PKGNAME/dist/$PKGNAME*.tar.gz
   - cd $PKGNAME*
 
 script:
-  - cabal configure -fbuildExamples --enable-tests && cabal build && cabal test
+  - cabal configure $CONSTRAINT -fbuildExamples --enable-tests && cabal build && cabal test
