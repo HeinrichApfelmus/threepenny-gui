@@ -7,9 +7,9 @@ To run the examples, you can (but don't have to) use the provided `runhaskell` a
     cd samples
     ./runhaskell Chat.hs
 
-(The scripts check whether there is a [cabal sandbox][] in the parent directory and uses this instead of the global package database; this is very useful for me as a library author)
+These scripts check whether you have set up a [cabal sandbox][] or, alternatively, the [stack utility][stack] for use with this library, and uses these instead of the global package database; this is very useful for me as a library author.
 
-To run the examples with `stack` do the following:
+(To set up the examples with `stack`, do the following
 
     git clone https://github.com/HeinrichApfelmus/threepenny-gui.git
     cd threepenny-gui/
@@ -17,10 +17,13 @@ To run the examples with `stack` do the following:
     stack setup
     stack build
     cd samples
-    stack Mouse.hs
+    ./runhaskell Mouse.hs
 
-After you have started an example either way, open your web browser and point it to the address [http://localhost:8023](http://localhost:8023). Enjoy!
+)
 
+After you have started an example, open your web browser and point it to the address [http://localhost:8023](http://localhost:8023). Enjoy!
+
+  [stack]: http://haskellstack.org
   [cabal sandbox]: http://coldwa.st/e/blog/2013-08-20-Cabal-sandbox.html
 
 Here a description of the currently maintained examples. The others are probably experimental or bitrotted.

@@ -4,6 +4,8 @@ if [ -d "../.cabal-sandbox" ]; then
     -no-user-package-db \
     -package-db ../.cabal-sandbox/*-packages.conf.d \
     -DSAMPLES -DREBUG "$@"
+elif [ -e "../stack.yaml" ]; then
+  stack --stack-yaml "../stack.yaml" exec ghci -- -DREBUG "$@"
 else
-  ghci "$@"
+  ghci -DREBUG "$@"
 fi
