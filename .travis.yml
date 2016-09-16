@@ -1,31 +1,39 @@
-# I do not wish to receive email notifications
-notifications:
-  email: false
-
-
-# Use a custom build infrastructure
-# See  https://github.com/hvr/multi-ghc-travis
-language: c
-
-# explicitly request container-based infrastructure
-sudo: false
+# TRAVIS CI configuration
+#   using Cabal for resolving dependencies
+#   see also  https://github.com/hvr/multi-ghc-travis
 
 # convenient abbreviation
 env:
   global:
     - PKGNAME=threepenny-gui
 
+# I do not wish to receive email notifications
+notifications:
+  email: false
+
+# request container-based infracstructure (needed for caching)
+sudo: false
+
+# choose a lightweight base image; we provide our own build tools.
+language: c
+
+# caching so the next build will be fast too.
+cache:
+  directories:
+  - $HOME/.ghc
+  - $HOME/.cabal
+
 # build matrix
 matrix:
   include:
     - env: CABALVER=1.16 GHCVER=7.6.3
-      addons: {apt: {packages: [cabal-install-1.16,ghc-7.6.3],  sources: [hvr-ghc]}}
+      addons: { apt: { packages: [cabal-install-1.16, ghc-7.6.3], sources: [hvr-ghc] } }
     - env: CABALVER=1.18 GHCVER=7.8.4
-      addons: {apt: {packages: [cabal-install-1.18,ghc-7.8.4],  sources: [hvr-ghc]}}
+      addons: { apt: { packages: [cabal-install-1.18, ghc-7.8.4], sources: [hvr-ghc] } }
     - env: CABALVER=1.22 GHCVER=7.10.1
-      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.1], sources: [hvr-ghc]}}
+      addons: { apt: { packages: [cabal-install-1.22, ghc-7.10.1], sources: [hvr-ghc] } }
     - env: CABALVER=1.24 GHCVER=8.0.1
-      addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.1],  sources: [hvr-ghc]}}
+      addons: { apt: { packages: [cabal-install-1.24, ghc-8.0.1], sources: [hvr-ghc] } }
 
 before_install:
   - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
