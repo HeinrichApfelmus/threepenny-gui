@@ -9,13 +9,15 @@
 * Change type of `onEvent` function to allow unregistering events.
 * Add function `timestamp` for simple performance measurements.
 * Update JavaScript dependencies to jQuery 2.2.3
+* Adapt to GHC 8.0.1 [#138][]
 * Bump `data-default` dependency to allow `0.7`
 * Bump `template-haskell` dependency to allow `2.11`
-
 * Bump `snap-core` and `snape-server` dependencies to allow `1.0`
 * Bump `websockest-snap` dependency to allow `0.10`
+
   [#131]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
   [#132]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/132
+  [#138]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/138
 
 **0.6.0.6** -- Maintenance release
 
