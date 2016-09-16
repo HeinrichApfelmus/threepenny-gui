@@ -10,6 +10,7 @@
 * Add function `timestamp` for simple performance measurements.
 * Update JavaScript dependencies to jQuery 2.2.3
 * Adapt to GHC 8.0.1 [#138][]
+* Bump `aeson` dependency to allow `1.0`
 * Bump `data-default` dependency to allow `0.7`
 * Bump `template-haskell` dependency to allow `2.11`
 * Bump `snap-core` and `snape-server` dependencies to allow `1.0`
