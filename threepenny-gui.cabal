@@ -113,15 +113,15 @@ Library
                     ,filepath               >= 1.3.0 && < 1.5.0
                     ,hashable               >= 1.1.0 && < 1.3
                     ,safe                   == 0.3.*
-                    ,snap-server            == 0.9.*
-                    ,snap-core              == 0.9.*
+                    ,snap-server            >= 0.9.0 && < 1.1
+                    ,snap-core              >= 0.9.0 && < 1.1
                     ,stm                    >= 2.2    && < 2.5
                     ,template-haskell       >= 2.7.0  && < 2.12
                     ,text                   >= 0.11   && < 1.3
                     ,transformers           >= 0.3.0  && < 0.6
                     ,unordered-containers   == 0.2.*
                     ,websockets             >= 0.8    && < 0.10
-                    ,websockets-snap        >= 0.8    && < 0.10
+                    ,websockets-snap        >= 0.8    && < 0.11
                     ,vault                  == 0.3.*
                     ,vector                 >= 0.10   && < 0.12
   if flag(network-uri)

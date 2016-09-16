@@ -12,6 +12,8 @@
 * Bump `data-default` dependency to allow `0.7`
 * Bump `template-haskell` dependency to allow `2.11`
 
+* Bump `snap-core` and `snape-server` dependencies to allow `1.0`
+* Bump `websockest-snap` dependency to allow `0.10`
   [#131]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
   [#132]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/132
 
