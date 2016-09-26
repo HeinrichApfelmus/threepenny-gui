@@ -1,9 +1,34 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.7.0.0** -- Maintenance and snapshot release
+
+* Reduce communication from browser to server when creating `Element`s.
+    New function `unsafeCreateJSObject` to create JavaScript objects without
+    waiting for a client response. [#131][]
+* Implement escape sequence '%%' for JavaScript FFI. [#132][].
+* Change type of `onEvent` function to allow unregistering events.
+* Add function `timestamp` for simple performance measurements.
+* Update JavaScript dependencies to jQuery 2.2.3
+* Adapt to GHC 8.0.1. [#138][]
+* Bump dependencies to allow `aeson` 1.0
+* Bump dependencies to allow `data-default` 0.7
+* Bump dependencies to allow `snap-core` 1.0 and `snap-server` 1.0
+* Bump dependencies to allow `template-haskell` 2.11
+* Bump dependencies to allow `websockest-snap` 0.10
+
+  [#131]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
+  [#132]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/132
+  [#138]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/138
+
+**0.6.0.6** -- Maintenance release
+
+* Bump dependencies to allow `base` 4.9
+* Bump dependencies to allow `aeson` 0.11
+
 **0.6.0.5** -- Maintenance release
 
-* Bump `async` dependency to allow 2.1
-* Bump `transformers` dependency to allow 0.5
+* Bump dependencies to allow `async` 2.1
+* Bump dependencies to allow `transformers` 0.5
 
 **0.6.0.4** -- Maintenance release.
 
@@ -74,9 +99,11 @@
 **0.4.0.0** -- Snapshot release.
 
 * New `UI` monad for easier JavaScript FFI and recursion in FRP.
-* Garbage collection for DOM elements. (Unfortunately, this doesn't support using custom HTML files anymore, see [issue #60][60].)
+* Garbage collection for DOM elements. (Unfortunately, this doesn't support using custom HTML files anymore, see [issue #60][#60].)
 * First stab at widgets.
-* Update dependency to `websockets-0.8`.
+* Bump dependencies to allow `websockets` 0.8
+
+  [#60]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/60
 
 **0.3.0.0** -- Snapshot release.
 
@@ -92,5 +119,3 @@
 * Initial release.
 
 
-
-  [60]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/60

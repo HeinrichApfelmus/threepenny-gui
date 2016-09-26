@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, ScopedTypeVariables #-}
 {-# LANGUAGE RecordWildCards #-}
 module Foreign.JavaScript.Marshal (
@@ -9,7 +10,11 @@ module Foreign.JavaScript.Marshal (
     ) where
 
 import           Data.Aeson             as JSON
-import qualified Data.Aeson.Encode
+#if MIN_VERSION_aeson(1,0,0)
+import qualified Data.Aeson.Text        as JSON   (encodeToTextBuilder)
+#else
+import qualified Data.Aeson.Encode      as JSON   (encodeToTextBuilder)
+#endif
 import qualified Data.Aeson.Types       as JSON
 import           Data.Functor                     ((<$>))
 import           Data.List                        (intercalate)
@@ -65,7 +70,7 @@ showJSON :: ToJSON a => a -> String
 showJSON
     = Data.Text.Lazy.unpack
     . Data.Text.Lazy.Builder.toLazyText
-    . Data.Aeson.Encode.encodeToTextBuilder . JSON.toJSON
+    . JSON.encodeToTextBuilder . JSON.toJSON
 
 {-----------------------------------------------------------------------------
     Convert JavaScript values to Haskell values
