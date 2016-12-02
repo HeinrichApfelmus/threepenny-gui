@@ -26,7 +26,7 @@ After you have started an example, open your web browser and point it to the add
   [stack]: http://haskellstack.org
   [cabal sandbox]: http://coldwa.st/e/blog/2013-08-20-Cabal-sandbox.html
 
-Here a description of the currently maintained examples. The others are probably experimental or bitrotted.
+Here a description of the currently maintained examples.
 
 * [BarTab.hs](BarTab.hs) — Dynamic creation of widgets.
 * [Buttons.hs](Buttons.hs) — Simple buttons to click on.
@@ -40,3 +40,8 @@ Here a description of the currently maintained examples. The others are probably
 * [GetElementsBy.hs](GetElementsBy.hs) — Get elements by tag name or ID.
 * [Mouse.hs](Mouse.hs) — Test of the `mousemove` event.
 * [Svg.hs](Svg.hs) — Test of the SVG elements.
+
+There are also a few other examples that are used for testing or that demonstrate library internals. They won't be maintained.
+
+* [WorkaroundFastEvent.hs](WorkaroundFastEvent.hs) — Demonstrates how to register an event handler without requiring a response from the browser window.
+
