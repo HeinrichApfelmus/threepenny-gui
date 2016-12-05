@@ -37,6 +37,10 @@ data Config = Config
         -- ^ Custom HTML file to replace the default one.
     , jsStatic     :: Maybe FilePath
         -- ^ Directory that is served under @/static@.
+    , jsExtraDirs  :: [(String, FilePath)]
+        -- ^ Extra directories served under @/dir@.
+        -- An @("example", "/var/tmp/example")@ entry will lead to the
+        -- @/var/tmp/example@ directory being served under @/dir/example@.
     , jsLog        :: ByteString -> IO ()
         -- ^ Print a single log message.
     }
@@ -58,6 +62,7 @@ defaultConfig = Config
     , jsAddr       = Nothing
     , jsCustomHTML = Nothing
     , jsStatic     = Nothing
+    , jsExtraDirs  = []
     , jsLog        = BS.hPutStrLn stderr
     }
 
