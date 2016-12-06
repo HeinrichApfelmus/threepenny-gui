@@ -64,6 +64,7 @@ communicationFromWebSocket request = do
     connection <- WS.acceptRequest request
     commIn     <- STM.newTQueueIO   -- outgoing communication
     commOut    <- STM.newTQueueIO   -- incoming communication
+    commOpen   <- STM.newTVarIO True
 
     -- write data to browser
     let sendData = forever $ do
@@ -82,16 +83,18 @@ communicationFromWebSocket request = do
                     Nothing  -> error $
                         "Foreign.JavaScript: Couldn't parse JSON input"
                         ++ show input
-    
-    let manageConnection = do
-            withAsync sendData $ \_ -> do
-            Left e <- waitCatch =<< async readData
-            atomically $ STM.writeTQueue commIn $
-                JSON.object [ "tag" .= ("Quit" :: Text) ] -- write Quit event
-            E.throw e
 
-    thread <- forkFinally manageConnection
-        (\_ -> WS.sendClose connection $ LBS.pack "close")
+    -- read/write data until an exception occurs
+    thread <- forkFinally (race readData sendData) $ \_ -> do
+        -- close websocket if still necessary/possible
+        WS.sendClose connection $ LBS.pack "close"
+        -- close the communication channel
+        atomically $ do
+            STM.writeTVar   commOpen False
+            STM.writeTQueue commIn $
+                JSON.object [ "tag" .= ("Quit" :: Text) ] -- write Quit event
+        -- there is no point in rethrowing the exception, this thread is dead
+
     let commClose = killThread thread
 
     return $ Comm {..}

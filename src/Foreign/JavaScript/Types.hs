@@ -66,9 +66,10 @@ defaultConfig = Config
 ------------------------------------------------------------------------------}
 -- | Bidirectional communication channel.
 data Comm = Comm
-    { commIn    :: TQueue JSON.Value
-    , commOut   :: TQueue JSON.Value
-    , commClose :: IO ()
+    { commIn    :: TQueue JSON.Value    -- ^ Read from channel.
+    , commOut   :: TQueue JSON.Value    -- ^ Write into channel.
+    , commOpen  :: TVar   Bool          -- ^ Indicate whether the channel is still open.
+    , commClose :: IO ()                -- ^ Close the channel.
     }
 
 writeComm :: Comm -> JSON.Value -> STM ()
