@@ -27,7 +27,7 @@
 	<key>CreationDate</key>
 	<string>2013-09-13 11:06:39 +0200</string>
 	<key>Creator</key>
-	<string>hgz</string>
+	<string></string>
 	<key>DisplayScale</key>
 	<string>1 cm = 1 cm</string>
 	<key>FileType</key>
@@ -815,7 +815,7 @@
 	<key>ModificationDate</key>
 	<string>2013-09-13 14:21:44 +0200</string>
 	<key>Modifier</key>
-	<string>hgz</string>
+	<string></string>
 	<key>NotesVisible</key>
 	<string>NO</string>
 	<key>Orientation</key>

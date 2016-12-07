@@ -10,7 +10,7 @@ import           Control.Applicative
 import           Control.Concurrent
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM   as STM
-import           Control.Exception        as E    (finally)
+import           Control.Exception        as E
 import           Control.Monad
 import qualified Data.Aeson               as JSON
 import           Data.IORef
@@ -39,6 +39,8 @@ handleEvent w@(Window{..}) (name, args, consistency) = do
         Just f  -> withRemotePtr f (\_ f -> f args)
 
 
+type Result = Either String JSON.Value
+
 -- | Event loop for a browser window.
 -- Supports concurrent invocations of `runEval` and `callEval`.
 eventLoop :: (Window -> IO void) -> (Comm -> IO ())
@@ -47,11 +49,11 @@ eventLoop init comm = do
     -- The thread `multiplexer` reads from the client and 
     --   sorts the messages into the appropriate queue.
     events      <- newTQueueIO
-    results     <- newTQueueIO :: IO (TQueue JSON.Value)
+    results     <- newTQueueIO :: IO (TQueue Result)
     -- The thread `handleCalls` executes FFI calls
     --    from the Haskell side in order.
     -- The corresponding queue records `TMVar`s in which to put the results.
-    calls       <- newTQueueIO :: IO (TQueue (Maybe (TMVar JSON.Value), ServerMsg))
+    calls       <- newTQueueIO :: IO (TQueue (Maybe (TMVar Result), ServerMsg))
     -- The thread `handleEvents` handles client Events in order.
 
     -- Events will be queued (and labelled `Inconsistent`) whenever
@@ -61,23 +63,36 @@ eventLoop init comm = do
     handling    <- newTVarIO False
     calling     <- newTVarIO False
 
+    -- We only want to make an FFI call when the connection browser<->server is open
+    -- Otherwise, throw an exception.
+    let atomicallyIfOpen stm = do
+            r <- atomically $ do
+                b <- readTVar (commOpen comm)
+                if b then fmap Right stm else return (Left ())
+            case r of
+                Right a -> return a
+                Left  _ -> error "Foreign.JavaScript: Browser <-> Server communication broken."
+
     -- FFI calls are made by writing to the `calls` queue.
-    w0 <- newPartialWindow
     let run msg = do
-            atomically $ writeTQueue calls (Nothing , msg)
+            atomicallyIfOpen $ writeTQueue calls (Nothing , msg)
         call msg = do
             ref <- newEmptyTMVarIO
-            atomically $ writeTQueue calls (Just ref, msg)
-            atomically $ takeTMVar ref
+            atomicallyIfOpen $ writeTQueue calls (Just ref, msg)
+            er  <- atomicallyIfOpen $ takeTMVar ref
+            case er of
+                Left  e -> E.throwIO $ JavaScriptException e
+                Right x -> return x
         debug    s = do
-            atomically $ writeServer comm $ Debug s
+            atomicallyIfOpen $ writeServer comm $ Debug s
 
     -- We also send a separate event when the client disconnects.
     disconnect <- newTVarIO $ return ()
     let onDisconnect m = atomically $ writeTVar disconnect m
-    
-    let w = w0 { runEval        = run  . RunEval
-               , callEval       = call . CallEval
+
+    w0 <- newPartialWindow
+    let w = w0 { runEval      = run  . RunEval
+               , callEval     = call . CallEval
                , debug        = debug
                , timestamp    = run Timestamp
                , onDisconnect = onDisconnect
@@ -87,21 +102,21 @@ eventLoop init comm = do
     --
     -- Read client messages and send them to the
     -- thread that handles events or the thread that handles FFI calls.
-    let multiplexer = do
-            m <- untilJustM $ atomically $ do
+    let multiplexer = void $ untilJustM $ do
+            atomically $ do
                 msg <- readClient comm
                 case msg of
-                    Event x y -> do
+                    Event x y   -> do
                         b <- (||) <$> readTVar handling <*> readTVar calling
                         let c = if b then Inconsistent else Consistent
                         writeTQueue events (x,y,c)
-                        return Nothing
-                    Result x  -> do
-                        writeTQueue results x
-                        return Nothing
-                    Quit      -> Just <$> readTVar disconnect
-            m
-        
+                    Result x    -> writeTQueue results (Right x)
+                    Exception e -> writeTQueue results (Left  e)
+                    _           -> return ()
+                return $ case msg of
+                    Quit -> Just ()     -- we are done here
+                    _    -> Nothing
+
     -- Send FFI calls to client and collect results
     let handleCalls = forever $ do
             ref <- atomically $ do
@@ -116,7 +131,7 @@ eventLoop init comm = do
                         result <- readTQueue results
                         putTMVar ref result
                     Nothing  -> return ()
-    
+
     -- Receive events from client and handle them in order.
     let handleEvents = do
             init w
@@ -128,13 +143,25 @@ eventLoop init comm = do
                 rebug
                 atomically $ writeTVar handling False
 
-    -- Foreign.addFinalizer (wRoot w) $ putStrLn "wRoot garbage collected."
-    Foreign.withRemotePtr (wRoot w) $ \_ _ -> do    -- keep root alive
-        E.finally
-            (foldr1 race_ [multiplexer, handleEvents, handleCalls])
-            (commClose comm)
-
+    -- Wrap the main loop into `withRemotePtr` in order to keep the root alive.
+    Foreign.withRemotePtr (wRoot w) $ \_ _ -> do
+        -- NOTE: Due to a bug in the `snap-server` library, we print any exceptions ourselves.
+        printException $
+            E.finally (foldr1 race_ [multiplexer, handleEvents, handleCalls]) $ do
+                putStrLn "Foreign.JavaScript: Browser window disconnected."
+                -- close communication channel if still necessary
+                commClose comm
+                -- trigger the `disconnect` event
+                m <- atomically $ readTVar disconnect
+                m
     return ()
+
+-- | Execute an IO action, but also print any exceptions that it may throw.
+-- (The exception is rethrown.)
+printException :: IO a -> IO a
+printException = E.handle $ \e -> do
+    putStrLn $ show (e :: E.SomeException)
+    E.throwIO e
 
 -- | Repeat an action until it returns 'Just'. Similar to 'forever'.
 untilJustM :: Monad m => m (Maybe a) -> m a

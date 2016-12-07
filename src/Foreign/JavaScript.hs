@@ -16,7 +16,7 @@ module Foreign.JavaScript (
     Window, root,
 
     -- * JavaScript FFI
-    ToJS(..), FromJS, JSFunction, JSObject,
+    ToJS(..), FromJS, JSFunction, JSObject, JavaScriptException,
     FFI, ffi, runFunction, callFunction, NewJSObject, unsafeCreateJSObject,
     IsHandler, exportHandler, onDisconnect,
     debug, timestamp,

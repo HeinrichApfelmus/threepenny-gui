@@ -26,7 +26,7 @@ cache:
 # build matrix
 matrix:
   include:
-    - env: CABALVER=1.16 GHCVER=7.6.3 CONSTRAINT="--constraint=websockets-snap==0.9.*"
+    - env: CABALVER=1.16 GHCVER=7.6.3 CONSTRAINT="--constraint=websockets-snap==0.9.* --constraint=safe<0.3.10"
       addons: { apt: { packages: [cabal-install-1.16, ghc-7.6.3], sources: [hvr-ghc] } }
     - env: CABALVER=1.18 GHCVER=7.8.4 CONSTRAINT=
       addons: { apt: { packages: [cabal-install-1.18, ghc-7.8.4], sources: [hvr-ghc] } }

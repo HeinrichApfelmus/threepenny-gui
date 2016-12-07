@@ -1,7 +1,8 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 module Foreign.JavaScript.Types where
 
 import           Control.Applicative
+import qualified Control.Exception       as E
 import           Control.Concurrent.STM  as STM
 import           Control.Concurrent.Chan as Chan
 import           Control.Concurrent.MVar
@@ -13,6 +14,7 @@ import           Data.IORef
 import           Data.Map                as Map
 import           Data.String
 import           Data.Text
+import           Data.Typeable
 import           System.IO                       (stderr)
 
 import Foreign.RemotePtr
@@ -66,9 +68,10 @@ defaultConfig = Config
 ------------------------------------------------------------------------------}
 -- | Bidirectional communication channel.
 data Comm = Comm
-    { commIn    :: TQueue JSON.Value
-    , commOut   :: TQueue JSON.Value
-    , commClose :: IO ()
+    { commIn    :: TQueue JSON.Value    -- ^ Read from channel.
+    , commOut   :: TQueue JSON.Value    -- ^ Write into channel.
+    , commOpen  :: TVar   Bool          -- ^ Indicate whether the channel is still open.
+    , commClose :: IO ()                -- ^ Close the channel.
     }
 
 writeComm :: Comm -> JSON.Value -> STM ()
@@ -84,6 +87,7 @@ readComm c = STM.readTQueue (commIn c)
 data ClientMsg
     = Event Coupon JSON.Value
     | Result JSON.Value
+    | Exception String
     | Quit
     deriving (Eq, Show)
 
@@ -91,12 +95,10 @@ instance FromJSON ClientMsg where
     parseJSON (Object msg) = do
         tag <- msg .: "tag"
         case (tag :: Text) of
-            "Event" ->
-                Event  <$> (msg .: "name") <*> (msg .: "arguments")
-            "Result" ->
-                Result <$> (msg .: "contents")
-            "Quit"   ->
-                return Quit
+            "Event"     -> Event     <$> (msg .: "name") <*> (msg .: "arguments")
+            "Result"    -> Result    <$> (msg .: "contents")
+            "Exception" -> Exception <$> (msg .: "contents")
+            "Quit"      -> return Quit
 
 readClient :: Comm -> STM ClientMsg
 readClient c = do
@@ -142,6 +144,13 @@ the function `Control.DeepSeq.force` to make sure that any exception
 is thrown before handing the message over to another thread.
 
 -}
+
+data JavaScriptException = JavaScriptException String deriving Typeable
+
+instance E.Exception JavaScriptException
+
+instance Show JavaScriptException where
+    showsPrec _ (JavaScriptException err) = showString $ "JavaScript error: " ++ err
 
 {-----------------------------------------------------------------------------
     Window & Event Loop
