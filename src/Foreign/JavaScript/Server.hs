@@ -77,7 +77,7 @@ communicationFromWebSocket request = do
             input <- WS.receiveData connection
             case input of
                 "ping" -> WS.sendTextData connection . LBS.pack $ "pong"
-                "quit" -> E.throw WS.ConnectionClosed
+                "quit" -> E.throwIO WS.ConnectionClosed
                 input  -> case JSON.decode input of
                     Just x   -> atomically $ STM.writeTQueue commIn x
                     Nothing  -> error $
@@ -86,15 +86,23 @@ communicationFromWebSocket request = do
 
     -- read/write data until an exception occurs
     thread <- forkFinally (race readData sendData) $ \_ -> do
-        -- close websocket if still necessary/possible
-        WS.sendClose connection $ LBS.pack "close"
+        -- attempt to close websocket if still necessary/possible
+        -- ignore any exceptions that may happen if it's already closed
+        let all :: E.SomeException -> Maybe ()
+            all _ = Just ()
+        E.tryJust all $ WS.sendClose connection $ LBS.pack "close"
+
         -- close the communication channel
         atomically $ do
             STM.writeTVar   commOpen False
             STM.writeTQueue commIn $
                 JSON.object [ "tag" .= ("Quit" :: Text) ] -- write Quit event
+
         -- there is no point in rethrowing the exception, this thread is dead
 
+    -- FIXME: In principle, the thread could be killed *again*
+    -- while the `Comm` is being closed, preventing the `commIn` queue
+    -- from receiving the "Quit" message
     let commClose = killThread thread
 
     return $ Comm {..}
@@ -115,9 +123,9 @@ routeResources customHTML staticDir =
     where
     fixHandlers f routes = [(a,f b) | (a,b) <- routes]
     noCache h = modifyResponse (setHeader "Cache-Control" "no-cache") >> h
-    
+
     static = maybe [] (\dir -> [("/static", serveDirectory dir)]) staticDir
-    
+
     root = case customHTML of
         Just file -> case staticDir of
             Just dir -> serveFile (dir </> file)
