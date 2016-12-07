@@ -8,6 +8,7 @@ Graphics.UI.Threepenny
 
 JavaScript FFI
 
+* Clarify semantics for exceptions. See the file [`doc/javascript-ffi.md`](doc/javascript-ffi.md) for more.
     * The `UI` monad now supports exception handling by being an instance of the type classes `MonadThrow` and `MonadCatch`.
     * The function `callFunction` can now throw a `JavaScriptException` exception to the Haskell side.
     * The function `runFunction` now terminates the connection to the browser window whenever the JavaScript code within throws an exception.
