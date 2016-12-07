@@ -42,7 +42,7 @@ checkedChange el = unsafeMapUI el (const $ get checked el) (click el)
 click :: Element -> Event ()
 click = silence . domEvent "click"
 
--- | Context menu evenet.
+-- | Context menu event.
 contextmenu :: Element -> Event (Int,Int)
 contextmenu = fmap readCoordinates . domEvent "contextmenu"
 
