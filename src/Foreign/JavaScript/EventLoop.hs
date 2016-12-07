@@ -112,7 +112,7 @@ eventLoop init comm = do
                         writeTQueue events (x,y,c)
                     Result x    -> writeTQueue results (Right x)
                     Exception e -> writeTQueue results (Left  e)
-                    _         -> return ()
+                    _           -> return ()
                 return $ case msg of
                     Quit -> Just ()     -- we are done here
                     _    -> Nothing
@@ -160,7 +160,7 @@ eventLoop init comm = do
 -- (The exception is rethrown.)
 printException :: IO a -> IO a
 printException = E.handle $ \e -> do
-    putStrLn $ "Foreign.JavaScript: " ++ show (e :: E.SomeException)
+    putStrLn $ show (e :: E.SomeException)
     E.throwIO e
 
 -- | Repeat an action until it returns 'Just'. Similar to 'forever'.

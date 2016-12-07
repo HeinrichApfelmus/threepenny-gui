@@ -95,14 +95,10 @@ instance FromJSON ClientMsg where
     parseJSON (Object msg) = do
         tag <- msg .: "tag"
         case (tag :: Text) of
-            "Event" ->
-                Event  <$> (msg .: "name") <*> (msg .: "arguments")
-            "Result" ->
-                Result <$> (msg .: "contents")
-            "Exception" ->
-                Exception <$> (msg .: "contents")
-            "Quit"   ->
-                return Quit
+            "Event"     -> Event     <$> (msg .: "name") <*> (msg .: "arguments")
+            "Result"    -> Result    <$> (msg .: "contents")
+            "Exception" -> Exception <$> (msg .: "contents")
+            "Quit"      -> return Quit
 
 readClient :: Comm -> STM ClientMsg
 readClient c = do
