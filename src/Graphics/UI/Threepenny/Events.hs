@@ -1,12 +1,13 @@
 module Graphics.UI.Threepenny.Events (
     -- * Synopsis
     -- | Events on DOM elements.
-    
+
     -- * Convenience events
     valueChange, selectionChange, checkedChange,
-    
+
     -- * Standard DOM events
-    click, mousemove, mousedown, mouseup, hover, leave,
+    click, contextmenu, mousemove, mousedown, mouseup,
+    hover, leave,
     focus, blur,
     KeyCode, keyup, keydown,
     ) where
@@ -41,6 +42,10 @@ checkedChange el = unsafeMapUI el (const $ get checked el) (click el)
 click :: Element -> Event ()
 click = silence . domEvent "click"
 
+-- | Context menu evenet.
+contextmenu :: Element -> Event (Int,Int)
+contextmenu = fmap readCoordinates . domEvent "contextmenu"
+
 -- | Mouse enters an element.
 hover :: Element -> Event ()
 hover = silence . domEvent "mouseenter"
@@ -61,12 +66,12 @@ readCoordinates json = (x,y)
     where [x,y] = unsafeFromJSON json
 
 -- | Mouse down event.
--- The mouse coordinates are relative to the element. 
+-- The mouse coordinates are relative to the element.
 mousedown :: Element -> Event (Int,Int)
 mousedown = fmap readCoordinates . domEvent "mousedown"
 
 -- | Mouse up event.
--- The mouse coordinates are relative to the element. 
+-- The mouse coordinates are relative to the element.
 mouseup :: Element -> Event (Int,Int)
 mouseup = fmap readCoordinates . domEvent "mouseup"
 
