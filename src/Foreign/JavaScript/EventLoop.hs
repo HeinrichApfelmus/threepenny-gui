@@ -140,6 +140,8 @@ eventLoop init comm = do
 
     -- Wrap the main loop into `withRemotePtr` in order to keep the root alive.
     Foreign.withRemotePtr (wRoot w) $ \_ _ -> do
+        -- NOTE: Due to a bug in the `snap-server` library, we print any exceptions ourselves.
+        printException $
             E.finally (foldr1 race_ [multiplexer, handleEvents, handleCalls]) $ do
                 putStrLn "Foreign.JavaScript: Browser window disconnected."
                 -- close communication channel if still necessary
@@ -148,6 +150,13 @@ eventLoop init comm = do
                 m <- atomically $ readTVar disconnect
                 m
     return ()
+
+-- | Execute an IO action, but also print any exceptions that it may throw.
+-- (The exception is rethrown.)
+printException :: IO a -> IO a
+printException = E.handle $ \e -> do
+    putStrLn $ "Foreign.JavaScript: " ++ show (e :: E.SomeException)
+    E.throwIO e
 
 -- | Repeat an action until it returns 'Just'. Similar to 'forever'.
 untilJustM :: Monad m => m (Maybe a) -> m a
