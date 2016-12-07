@@ -39,6 +39,8 @@ handleEvent w@(Window{..}) (name, args, consistency) = do
         Just f  -> withRemotePtr f (\_ f -> f args)
 
 
+type Result = Either String JSON.Value
+
 -- | Event loop for a browser window.
 -- Supports concurrent invocations of `runEval` and `callEval`.
 eventLoop :: (Window -> IO void) -> (Comm -> IO ())
@@ -47,11 +49,11 @@ eventLoop init comm = do
     -- The thread `multiplexer` reads from the client and 
     --   sorts the messages into the appropriate queue.
     events      <- newTQueueIO
-    results     <- newTQueueIO :: IO (TQueue JSON.Value)
+    results     <- newTQueueIO :: IO (TQueue Result)
     -- The thread `handleCalls` executes FFI calls
     --    from the Haskell side in order.
     -- The corresponding queue records `TMVar`s in which to put the results.
-    calls       <- newTQueueIO :: IO (TQueue (Maybe (TMVar JSON.Value), ServerMsg))
+    calls       <- newTQueueIO :: IO (TQueue (Maybe (TMVar Result), ServerMsg))
     -- The thread `handleEvents` handles client Events in order.
 
     -- Events will be queued (and labelled `Inconsistent`) whenever
@@ -77,7 +79,10 @@ eventLoop init comm = do
         call msg = do
             ref <- newEmptyTMVarIO
             atomicallyIfOpen $ writeTQueue calls (Just ref, msg)
-            atomicallyIfOpen $ takeTMVar ref
+            er  <- atomicallyIfOpen $ takeTMVar ref
+            case er of
+                Left  e -> E.throwIO $ JavaScriptException e
+                Right x -> return x
         debug    s = do
             atomicallyIfOpen $ writeServer comm $ Debug s
 
@@ -101,16 +106,16 @@ eventLoop init comm = do
             atomically $ do
                 msg <- readClient comm
                 case msg of
-                    Event x y -> do
+                    Event x y   -> do
                         b <- (||) <$> readTVar handling <*> readTVar calling
                         let c = if b then Inconsistent else Consistent
                         writeTQueue events (x,y,c)
-                        return Nothing
-                    Result x  -> do
-                        writeTQueue results x
-                        return Nothing
-                    Quit      -> do
-                        return $ Just ()   -- we are done here 
+                    Result x    -> writeTQueue results (Right x)
+                    Exception e -> writeTQueue results (Left  e)
+                    _         -> return ()
+                return $ case msg of
+                    Quit -> Just ()     -- we are done here
+                    _    -> Nothing
 
     -- Send FFI calls to client and collect results
     let handleCalls = forever $ do

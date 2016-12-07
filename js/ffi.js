@@ -39,12 +39,13 @@ Haskell.initFFI = function () {
           break;
       }
       case "CallEval" : {
-          var result   = eval(msg.contents);
-          reply({
-            tag      : "Result",
-            contents : result
-          });
-          break;
+        try {
+          var result = eval(msg.contents);
+          reply({ tag : "Result"   , contents : result });
+        } catch (err) {
+          reply({ tag : "Exception", contents : err.toString() });
+        };
+        break;
       }
       case "Debug": {
         Haskell.log("Server debug: %o", msg.contents);

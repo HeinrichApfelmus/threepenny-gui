@@ -1,9 +1,22 @@
 ## Changelog for the `threepenny-gui` package
 
-**0.7.0.1** -- Maintenance and snapshot release
+**0.7.1.0** -- Maintenance and snapshot release
 
-* JavaScript FFI: Clarify semantics for exceptions and the `disconnect` event.
-* JavaScript FFI: Remove unnecessary client response when exporting event handlers. [#131][].
+Graphics.UI.Threepenny
+
+* Fix `getElementById` to properly return `Nothing` when no element with the given `id` attribute is present. [#129][].
+
+JavaScript FFI
+
+* Clarify semantics for exceptions.
+    * The `UI` monad now supports exception handling by being an instance of the type classes `MonadThrow` and `MonadCatch`.
+    * The function `callFunction` can now throw a `JavaScriptException` exception.
+* Clarify semantics of the `disconnect` event. It is now triggered more reliably. [#133][].
+* Remove unnecessary client response when exporting event handlers. [#131][].
+
+  [#129]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/129
+  [#133]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/129
+
 
 **0.7.0.0** -- Maintenance and snapshot release
 
