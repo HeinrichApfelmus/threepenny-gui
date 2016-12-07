@@ -25,8 +25,11 @@ Haskell.createWebSocket = function (url0, receive) {
   // Send ping message in regular intervals.
   // We expect pong messages in return to keep the connection alive.
   var ping = function () {
-    ws.send("ping");
-    window.setTimeout(ping,2000);
+    // Only send a ping when it has a chance to reach the server.
+    if (ws.readyState !== WebSocket.CLOSING && ws.readyState !== WebSocket.CLOSED) {
+      ws.send("ping");
+      window.setTimeout(ping,2000);
+    }
   };
   
   // Start communication when the WebSocket is opened.
