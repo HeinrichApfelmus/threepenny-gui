@@ -15,7 +15,7 @@
 // An optional string argument can be used to specify the server URL.
 Haskell.initFFI = function () {
   var connection;
-  var url = window.location.href.toString();
+  var url = window.location.origin.toString();
 
   if (arguments[0]) {
     url = arguments[0]; // take server url from argument
