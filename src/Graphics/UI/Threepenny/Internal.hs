@@ -11,7 +11,9 @@ module Graphics.UI.Threepenny.Internal (
     UI, runUI, liftIOLater, askWindow,
 
     FFI, FromJS, ToJS, JSFunction, JSObject, ffi,
-    runFunction, callFunction, ffiExport, debug, timestamp,
+    runFunction, callFunction,
+    CallBufferMode(..), setCallBufferMode, flushCallBuffer,
+    ffiExport, debug, timestamp,
 
     Element, fromJSObject, getWindow,
     mkElementNamespace, mkElement, delete, appendChild, clearChildren,
@@ -33,7 +35,9 @@ import qualified Foreign.RemotePtr       as Foreign
 
 import qualified Reactive.Threepenny     as RB
 
-import Foreign.JavaScript hiding (runFunction, callFunction, debug, timestamp, Window)
+import Foreign.JavaScript hiding
+    (runFunction, callFunction, setCallBufferMode, flushCallBuffer
+    ,debug, timestamp, Window)
 
 {-----------------------------------------------------------------------------
     Custom Window type
@@ -298,6 +302,10 @@ liftIOLater x = UI $ Monad.tell [x]
 -- | Run the given JavaScript function and carry on. Doesn't block.
 --
 -- The client window uses JavaScript's @eval()@ function to run the code.
+--
+-- NOTE: The JavaScript function need not be executed immediately,
+-- it can be buffered and sent to the browser window at a later time.
+-- See 'setCallBufferMode' and 'flushCallBuffer' for more.
 runFunction :: JSFunction () -> UI ()
 runFunction fun = liftJSWindow $ \w -> JS.runFunction w fun
 
@@ -306,6 +314,15 @@ runFunction fun = liftJSWindow $ \w -> JS.runFunction w fun
 -- The client window uses JavaScript's @eval()@ function to run the code.
 callFunction :: JSFunction a -> UI a
 callFunction fun = liftJSWindow $ \w -> JS.callFunction w fun
+
+-- | Set the call buffering mode for the browser window.
+setCallBufferMode :: CallBufferMode -> UI ()
+setCallBufferMode x = liftJSWindow $ \w -> JS.setCallBufferMode w x
+
+-- | Flush the call buffer,
+-- i.e. send all outstanding JavaScript to the client in one single message.
+flushCallBuffer :: UI ()
+flushCallBuffer = liftJSWindow $ \w -> JS.flushCallBuffer w
 
 -- | Export the given Haskell function so that it can be called
 -- from JavaScript code.

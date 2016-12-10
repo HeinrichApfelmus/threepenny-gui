@@ -164,10 +164,31 @@ type HsEvent      = RemotePtr (JSON.Value -> IO ())
 quit :: Event
 quit = ("quit", JSON.Null, Consistent)
 
+-- | Specification of how JavaScript functions should be called.
+--
+-- The default mode for a new browser window is 'NoBuffering'.
+-- Use 'setCallBufferMode' to change the mode at any time.
+data CallBufferMode
+    = NoBuffering
+    -- ^ When 'runFunction' is used to call a JavaScript function,
+    -- immediately send a message to the browser window to execute
+    -- said function.
+    | BufferRun
+    -- ^ When 'runFunction' is used to call a JavaScript function,
+    -- hold back any message to the server.
+    -- All JavaScript functions that are held back in this way
+    -- are combined into a single message,
+    -- which is finally sent whenever 'callFunction' or
+    -- 'flushCallBuffer' are used.
+
 -- | Representation of a browser window.
 data Window = Window
     { runEval        :: String -> IO ()
     , callEval       :: String -> IO JSON.Value
+
+    , wCallBuffer     :: TVar (String -> String)
+    , wCallBufferMode :: TVar CallBufferMode
+
     , timestamp      :: IO ()
     -- ^ Print a timestamp and the time difference to the previous one
     -- in the JavaScript console.
@@ -183,8 +204,10 @@ data Window = Window
 newPartialWindow :: IO Window
 newPartialWindow = do
     ptr <- newRemotePtr "" () =<< newVendor
+    b1  <- newTVarIO id
+    b2  <- newTVarIO BufferRun
     let nop = const $ return ()
-    Window nop undefined (return ()) nop nop ptr <$> newVendor <*> newVendor
+    Window nop undefined b1 b2 (return ()) nop nop ptr <$> newVendor <*> newVendor
 
 -- | For the purpose of controlling garbage collection,
 -- every 'Window' as an associated 'RemotePtr' that is alive

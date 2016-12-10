@@ -8,6 +8,7 @@ Graphics.UI.Threepenny
 
 JavaScript FFI
 
+* Implement batching / buffering for FFI calls. [#131][]. Several calls to the `runFunction` function may now buffer the JavaScript code and send it to the browser window in a single message at a later time. This improves performance considerably.
 * Clarify semantics for exceptions. See the file [`doc/javascript-ffi.md`](doc/javascript-ffi.md) for more.
     * The `UI` monad now supports exception handling by being an instance of the type classes `MonadThrow` and `MonadCatch`.
     * The function `callFunction` can now throw a `JavaScriptException` exception to the Haskell side.
@@ -17,6 +18,11 @@ JavaScript FFI
 
   [#129]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/129
   [#133]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/129
+
+Dependencies
+
+* Bump dependencies to allow `websockets` 0.10
+* Add dependency on `exceptions`
 
 
 **0.7.0.0** -- Maintenance and snapshot release

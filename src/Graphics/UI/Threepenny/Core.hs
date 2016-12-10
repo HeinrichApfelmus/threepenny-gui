@@ -49,6 +49,7 @@ module Graphics.UI.Threepenny.Core (
     debug, timestamp,
     ToJS, FFI,
     JSFunction, ffi, runFunction, callFunction,
+    CallBufferMode(..), setCallBufferMode, flushCallBuffer,
     ffiExport,
     
     -- * Internal and oddball functions
