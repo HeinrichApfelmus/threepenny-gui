@@ -327,7 +327,18 @@ flushCallBuffer = liftJSWindow $ \w -> JS.flushCallBuffer w
 -- | Export the given Haskell function so that it can be called
 -- from JavaScript code.
 --
--- FIXME: At the moment, the function is not garbage collected.
+-- NOTE: At the moment, the 'JSObject' representing the exported function
+-- will be referenced by the browser 'Window' in which it was created,
+-- preventing garbage collection until this browser 'Window' is disconnected.
+--
+-- This makes it possible to use it as an event handler on the JavaScript side,
+-- but it also means that the Haskell runtime has no way to detect
+-- early when it is no longer needed.
+--
+-- In contrast, if you use the function 'domEvent' to register an
+-- event handler to an 'Element',
+-- then the handler will be garbage collected
+-- as soon as the associated 'Element' is garbage collected.
 ffiExport :: JS.IsHandler a => a -> UI JSObject
 ffiExport fun = liftJSWindow $ \w -> do
     handlerPtr <- JS.exportHandler w fun
