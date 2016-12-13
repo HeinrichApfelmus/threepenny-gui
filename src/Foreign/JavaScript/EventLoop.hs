@@ -32,7 +32,7 @@ rebug = return ()
     Event Loop
 ------------------------------------------------------------------------------}
 -- | Handle a single event
-handleEvent w@(Window{..}) (name, args, consistency) = do
+handleEvent w@(Window{..}) (name, args) = do
     mhandler <- Foreign.lookup name wEventHandlers
     case mhandler of
         Nothing -> return ()
@@ -55,13 +55,6 @@ eventLoop init comm = do
     -- The corresponding queue records `TMVar`s in which to put the results.
     calls       <- newTQueueIO :: IO (TQueue (Maybe (TMVar Result), ServerMsg))
     -- The thread `handleEvents` handles client Events in order.
-
-    -- Events will be queued (and labelled `Inconsistent`) whenever
-    -- the server is
-    --    * busy handling an event
-    --    * or waiting for the result of a function call.
-    handling    <- newTVarIO False
-    calling     <- newTVarIO False
 
     -- We only want to make an FFI call when the connection browser<->server is open
     -- Otherwise, throw an exception.
@@ -106,10 +99,7 @@ eventLoop init comm = do
             atomically $ do
                 msg <- readClient comm
                 case msg of
-                    Event x y   -> do
-                        b <- (||) <$> readTVar handling <*> readTVar calling
-                        let c = if b then Inconsistent else Consistent
-                        writeTQueue events (x,y,c)
+                    Event x y   -> writeTQueue events (x,y)
                     Result x    -> writeTQueue results (Right x)
                     Exception e -> writeTQueue results (Left  e)
                     _           -> return ()
@@ -121,11 +111,9 @@ eventLoop init comm = do
     let handleCalls = forever $ do
             ref <- atomically $ do
                 (ref, msg) <- readTQueue calls
-                writeTVar calling True
                 writeServer comm msg
                 return ref
-            atomically $ do
-                writeTVar calling False
+            atomically $
                 case ref of
                     Just ref -> do
                         result <- readTQueue results
@@ -137,11 +125,9 @@ eventLoop init comm = do
             init w
             forever $ do
                 e <- atomically $ do
-                    writeTVar handling True
                     readTQueue events
                 handleEvent w e
                 rebug
-                atomically $ writeTVar handling False
 
     -- Wrap the main loop into `withRemotePtr` in order to keep the root alive.
     Foreign.withRemotePtr (wRoot w) $ \_ _ -> do
