@@ -44,7 +44,7 @@ Before the JavaScript side is able to call a Haskell function, the latter has to
 
     jsfun <- exportHandler window hsfun
 
-The result `jsfun` corresponds to a JavaScript `Function` object, which represents an exported Haskell function, and which can be called at will on the JavaScript side. Doing so will send a message to the server to execute the IO action that was supplied in the `hsfun` argument. Since the call is *asynchronous*, no result will be returned to the JavaScript side. Again, any exception will *terminate* the connection to the browser. If several exported Haskell are called, then they will be executed in calling order, though not necessarily promptly.
+The result `jsfun` corresponds to a JavaScript `Function` object, which represents an exported Haskell function, and which can be called at will on the JavaScript side. Doing so will send a message to the server to execute the IO action that was supplied in the `hsfun` argument. Since the call is *asynchronous*, no result will be returned to the JavaScript side. Again, any exception will *terminate* the connection to the browser. If several exported Haskell are called, the Haskell side will execute them sequentially, in the order that they were called, but not necessarily immediately.
 
 
 Connecting server and browser
@@ -56,7 +56,8 @@ Connecting server and browser
 Just after the browser establishes a connection to the server, an initial Haskell function will be called, namely the last argument to `serve`. From the JavaScript side, this behaves like an ordinary call to an exported Haskell function. In particular, if the function throws an exception, the connection will be terminated again.
 
 *Disconnection* —
-If, for some reason, the connection between browser and server is broken, another Haskell function will be called, the *disconnect* event handler. The rules are the same as for any ordinary "exported" Haskell function. In particular, it will be called after all other exported functions. Since the connection is already terminated, an exception in the disconnect handler will not lead to another termination; the handler is only triggered once.
+If, for some reason, the connection between browser and server is broken,
+another Haskell function will be called, the *disconnect* handler. The rules are the same as for any ordinary "exported" Haskell function. In particular, the disconnect handler will be called sequentially after any previous event handler. Disconnecting the browser window is *not* an asynchronous exception. That said, any attempt at executing JavaScript code with e.g. `runFunction` will throw a (synchronous) exception after the browser has disconnected. The disconnect handler will be trigger only once (in case the disconnect handler itself tries to call JavaScript code, which will throw an exception).
 
 
 Garbage collection

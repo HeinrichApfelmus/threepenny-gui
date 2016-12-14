@@ -44,7 +44,7 @@ type Result = Either String JSON.Value
 -- | Event loop for a browser window.
 -- Supports concurrent invocations of `runEval` and `callEval`.
 eventLoop :: (Window -> IO void) -> (Comm -> IO ())
-eventLoop init comm = do
+eventLoop init comm = void $ do
     -- To support concurrent FFI calls, we make three threads.
     -- The thread `multiplexer` reads from the client and 
     --   sorts the messages into the appropriate queue.
@@ -60,11 +60,11 @@ eventLoop init comm = do
     -- Otherwise, throw an exception.
     let atomicallyIfOpen stm = do
             r <- atomically $ do
-                b <- readTVar (commOpen comm)
+                b <- readTVar $ commOpen comm
                 if b then fmap Right stm else return (Left ())
             case r of
                 Right a -> return a
-                Left  _ -> error "Foreign.JavaScript: Browser <-> Server communication broken."
+                Left  _ -> throwIO $ ErrorCall "Foreign.JavaScript: Browser <-> Server communication broken."
 
     -- FFI calls are made by writing to the `calls` queue.
     let run msg = do
@@ -81,6 +81,7 @@ eventLoop init comm = do
 
     -- We also send a separate event when the client disconnects.
     disconnect <- newTVarIO $ return ()
+    -- FIXME: Make it possible to store *multiple* event handlers
     let onDisconnect m = atomically $ writeTVar disconnect m
 
     w0 <- newPartialWindow
@@ -95,17 +96,12 @@ eventLoop init comm = do
     --
     -- Read client messages and send them to the
     -- thread that handles events or the thread that handles FFI calls.
-    let multiplexer = void $ untilJustM $ do
-            atomically $ do
-                msg <- readClient comm
-                case msg of
-                    Event x y   -> writeTQueue events (x,y)
-                    Result x    -> writeTQueue results (Right x)
-                    Exception e -> writeTQueue results (Left  e)
-                    _           -> return ()
-                return $ case msg of
-                    Quit -> Just ()     -- we are done here
-                    _    -> Nothing
+    let multiplexer = forever $ atomically $ do
+            msg <- readClient comm
+            case msg of
+                Event x y   -> writeTQueue events (x,y)
+                Result x    -> writeTQueue results (Right x)
+                Exception e -> writeTQueue results (Left  e)
 
     -- Send FFI calls to client and collect results
     let handleCalls = forever $ do
@@ -122,25 +118,35 @@ eventLoop init comm = do
 
     -- Receive events from client and handle them in order.
     let handleEvents = do
-            init w
-            forever $ do
-                e <- atomically $ do
-                    readTQueue events
-                handleEvent w e
-                rebug
+            me <- atomically $ do
+                open <- readTVar $ commOpen comm
+                if open
+                    then Just <$> readTQueue events
+                    else return Nothing -- channel is closed
+            case me of
+                Nothing -> return ()    -- channel is closed, we're done
+                Just e  -> do
+                    handleEvent w e
+                        `E.onException` commClose comm -- close channel in case of exception
+            rebug
+            handleEvents
 
-    -- Wrap the main loop into `withRemotePtr` in order to keep the root alive.
-    Foreign.withRemotePtr (wRoot w) $ \_ _ -> do
-        -- NOTE: Due to a bug in the `snap-server` library, we print any exceptions ourselves.
-        printException $
-            E.finally (foldr1 race_ [multiplexer, handleEvents, handleCalls]) $ do
-                putStrLn "Foreign.JavaScript: Browser window disconnected."
-                -- close communication channel if still necessary
-                commClose comm
-                -- trigger the `disconnect` event
-                m <- atomically $ readTVar disconnect
-                m
-    return ()
+    -- NOTE: Due to an issue with `snap-server` library,
+    -- we print the exception ourselves.
+    printException $
+        -- Wrap the main loop into `withRemotePtr` in order to keep the root alive.
+        Foreign.withRemotePtr (wRoot w) $ \_ _ ->
+        -- run `multiplexer` and `handleCalls` concurrently
+        withAsync multiplexer $ \_ ->
+        withAsync handleCalls $ \_ ->
+        E.finally (init w >> handleEvents) $ do
+            putStrLn "Foreign.JavaScript: Browser window disconnected."
+            -- close communication channel if still necessary
+            commClose comm                
+            -- trigger the `disconnect` event
+            -- FIXME: Asynchronous exceptions should not be masked during the disconnect handler
+            m <- atomically $ readTVar disconnect
+            m
 
 -- | Execute an IO action, but also print any exceptions that it may throw.
 -- (The exception is rethrown.)
@@ -148,12 +154,6 @@ printException :: IO a -> IO a
 printException = E.handle $ \e -> do
     putStrLn $ show (e :: E.SomeException)
     E.throwIO e
-
--- | Repeat an action until it returns 'Just'. Similar to 'forever'.
-untilJustM :: Monad m => m (Maybe a) -> m a
-untilJustM m = m >>= \x -> case x of
-    Nothing -> untilJustM m
-    Just a  -> return a
 
 {-----------------------------------------------------------------------------
     Exports, Imports and garbage collection

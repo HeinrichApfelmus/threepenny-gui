@@ -84,26 +84,24 @@ communicationFromWebSocket request = do
                         "Foreign.JavaScript: Couldn't parse JSON input"
                         ++ show input
 
-    -- read/write data until an exception occurs
-    thread <- forkFinally (race readData sendData) $ \_ -> do
+    -- block until the channel is closed
+    let sentry = atomically $ do
+            open <- STM.readTVar commOpen
+            when open retry
+
+    -- explicitly close the Comm chanenl
+    let commClose = atomically $ STM.writeTVar commOpen False
+
+    -- read/write data until an exception occurs or the channel is no longer open
+    forkFinally (sendData `race_` readData `race_` sentry) $ \_ -> void $ do
+        -- close the communication channel explicitly if that didn't happen yet
+        commClose
+
         -- attempt to close websocket if still necessary/possible
         -- ignore any exceptions that may happen if it's already closed
         let all :: E.SomeException -> Maybe ()
             all _ = Just ()
         E.tryJust all $ WS.sendClose connection $ LBS.pack "close"
-
-        -- close the communication channel
-        atomically $ do
-            STM.writeTVar   commOpen False
-            STM.writeTQueue commIn $
-                JSON.object [ "tag" .= ("Quit" :: Text) ] -- write Quit event
-
-        -- there is no point in rethrowing the exception, this thread is dead
-
-    -- FIXME: In principle, the thread could be killed *again*
-    -- while the `Comm` is being closed, preventing the `commIn` queue
-    -- from receiving the "Quit" message
-    let commClose = killThread thread
 
     return $ Comm {..}
 
