@@ -23,13 +23,13 @@ setup w = do
     elResult <- UI.span
 
     inputs   <- liftIO $ newIORef []
-    
+
     -- functionality
     let
         displayTotal = void $ do
             xs <- mapM (get value) =<< liftIO (readIORef inputs)
-            element elResult # set text (showNumber . sum $ map readNumber xs)
-        
+            element elResult # set UI.text (showNumber . sum $ map readNumber xs)
+
         redoLayout :: UI ()
         redoLayout = void $ do
             layout <- mkLayout =<< liftIO (readIORef inputs)
@@ -44,16 +44,16 @@ setup w = do
             [UI.hr
             ,row [UI.span # set text "Sum: ", element elResult]
             ]
-        
+
         addInput :: UI ()
         addInput = do
             elInput <- UI.input # set value "0"
             on (domEvent "livechange") elInput $ \_ -> displayTotal
             liftIO $ modifyIORef inputs (elInput:)
-        
+
         removeInput :: UI ()
         removeInput = liftIO $ modifyIORef inputs (drop 1)
-    
+
     on UI.click elAdd    $ \_ -> addInput    >> redoLayout
     on UI.click elRemove $ \_ -> removeInput >> redoLayout
     addInput >> redoLayout
@@ -73,5 +73,5 @@ instance Num Number where
     fromInteger = pure . fromInteger
 
 readNumber :: String -> Number
-readNumber s = listToMaybe [x | (x,"") <- reads s]    
+readNumber s = listToMaybe [x | (x,"") <- reads s]
 showNumber   = maybe "--" show

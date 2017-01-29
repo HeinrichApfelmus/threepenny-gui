@@ -14,7 +14,7 @@
 ********************************************************************* */
 Haskell.createWebSocket = function (url0, receive) {
   var that = {};
-  var url  = 'ws:' + url0.slice(5) + 'websocket/';
+  var url  = 'ws:' + url0.slice(5) + '/websocket/';
   var ws   = new WebSocket(url);
   
   // Close WebSocket when the browser window is closed.
@@ -25,8 +25,11 @@ Haskell.createWebSocket = function (url0, receive) {
   // Send ping message in regular intervals.
   // We expect pong messages in return to keep the connection alive.
   var ping = function () {
-    ws.send("ping");
-    window.setTimeout(ping,2000);
+    // Only send a ping when it has a chance to reach the server.
+    if (ws.readyState !== WebSocket.CLOSING && ws.readyState !== WebSocket.CLOSED) {
+      ws.send("ping");
+      window.setTimeout(ping,2000);
+    }
   };
   
   // Start communication when the WebSocket is opened.
@@ -47,9 +50,9 @@ Haskell.createWebSocket = function (url0, receive) {
   };
   
   // Send a JSON message to the server
-  that.send = function (json) {
-    ws.send(JSON.stringify(json));
-  };
+  that.send  = function (json) { ws.send(JSON.stringify(json)); };
+  // Close the connection
+  that.close = function () { ws.send("quit"); };
   
   return that;
 };

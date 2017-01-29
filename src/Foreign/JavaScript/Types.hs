@@ -1,7 +1,8 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 module Foreign.JavaScript.Types where
 
 import           Control.Applicative
+import qualified Control.Exception       as E
 import           Control.Concurrent.STM  as STM
 import           Control.Concurrent.Chan as Chan
 import           Control.Concurrent.MVar
@@ -13,6 +14,7 @@ import           Data.IORef
 import           Data.Map                as Map
 import           Data.String
 import           Data.Text
+import           Data.Typeable
 import           System.IO                       (stderr)
 
 import Foreign.RemotePtr
@@ -66,9 +68,10 @@ defaultConfig = Config
 ------------------------------------------------------------------------------}
 -- | Bidirectional communication channel.
 data Comm = Comm
-    { commIn    :: TQueue JSON.Value
-    , commOut   :: TQueue JSON.Value
-    , commClose :: IO ()
+    { commIn    :: TQueue JSON.Value    -- ^ Read from channel.
+    , commOut   :: TQueue JSON.Value    -- ^ Write into channel.
+    , commOpen  :: TVar   Bool          -- ^ Indicate whether the channel is still open.
+    , commClose :: IO ()                -- ^ Close the channel.
     }
 
 writeComm :: Comm -> JSON.Value -> STM ()
@@ -84,6 +87,7 @@ readComm c = STM.readTQueue (commIn c)
 data ClientMsg
     = Event Coupon JSON.Value
     | Result JSON.Value
+    | Exception String
     | Quit
     deriving (Eq, Show)
 
@@ -91,12 +95,10 @@ instance FromJSON ClientMsg where
     parseJSON (Object msg) = do
         tag <- msg .: "tag"
         case (tag :: Text) of
-            "Event" ->
-                Event  <$> (msg .: "name") <*> (msg .: "arguments")
-            "Result" ->
-                Result <$> (msg .: "contents")
-            "Quit"   ->
-                return Quit
+            "Event"     -> Event     <$> (msg .: "name") <*> (msg .: "arguments")
+            "Result"    -> Result    <$> (msg .: "contents")
+            "Exception" -> Exception <$> (msg .: "contents")
+            "Quit"      -> return Quit
 
 readClient :: Comm -> STM ClientMsg
 readClient c = do
@@ -143,6 +145,13 @@ is thrown before handing the message over to another thread.
 
 -}
 
+data JavaScriptException = JavaScriptException String deriving Typeable
+
+instance E.Exception JavaScriptException
+
+instance Show JavaScriptException where
+    showsPrec _ (JavaScriptException err) = showString $ "JavaScript error: " ++ err
+
 {-----------------------------------------------------------------------------
     Window & Event Loop
 ------------------------------------------------------------------------------}
@@ -155,10 +164,31 @@ type HsEvent      = RemotePtr (JSON.Value -> IO ())
 quit :: Event
 quit = ("quit", JSON.Null, Consistent)
 
+-- | Specification of how JavaScript functions should be called.
+--
+-- The default mode for a new browser window is 'NoBuffering'.
+-- Use 'setCallBufferMode' to change the mode at any time.
+data CallBufferMode
+    = NoBuffering
+    -- ^ When 'runFunction' is used to call a JavaScript function,
+    -- immediately send a message to the browser window to execute
+    -- said function.
+    | BufferRun
+    -- ^ When 'runFunction' is used to call a JavaScript function,
+    -- hold back any message to the server.
+    -- All JavaScript functions that are held back in this way
+    -- are combined into a single message,
+    -- which is finally sent whenever 'callFunction' or
+    -- 'flushCallBuffer' are used.
+
 -- | Representation of a browser window.
 data Window = Window
     { runEval        :: String -> IO ()
     , callEval       :: String -> IO JSON.Value
+
+    , wCallBuffer     :: TVar (String -> String)
+    , wCallBufferMode :: TVar CallBufferMode
+
     , timestamp      :: IO ()
     -- ^ Print a timestamp and the time difference to the previous one
     -- in the JavaScript console.
@@ -174,8 +204,10 @@ data Window = Window
 newPartialWindow :: IO Window
 newPartialWindow = do
     ptr <- newRemotePtr "" () =<< newVendor
+    b1  <- newTVarIO id
+    b2  <- newTVarIO BufferRun
     let nop = const $ return ()
-    Window nop undefined (return ()) nop nop ptr <$> newVendor <*> newVendor
+    Window nop undefined b1 b2 (return ()) nop nop ptr <$> newVendor <*> newVendor
 
 -- | For the purpose of controlling garbage collection,
 -- every 'Window' as an associated 'RemotePtr' that is alive

@@ -10,7 +10,7 @@ import           Control.Applicative
 import           Control.Concurrent
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM   as STM
-import           Control.Exception        as E    (finally)
+import           Control.Exception        as E
 import           Control.Monad
 import qualified Data.Aeson               as JSON
 import           Data.IORef
@@ -32,52 +32,61 @@ rebug = return ()
     Event Loop
 ------------------------------------------------------------------------------}
 -- | Handle a single event
-handleEvent w@(Window{..}) (name, args, consistency) = do
+handleEvent w@(Window{..}) (name, args) = do
     mhandler <- Foreign.lookup name wEventHandlers
     case mhandler of
         Nothing -> return ()
         Just f  -> withRemotePtr f (\_ f -> f args)
 
 
+type Result = Either String JSON.Value
+
 -- | Event loop for a browser window.
 -- Supports concurrent invocations of `runEval` and `callEval`.
 eventLoop :: (Window -> IO void) -> (Comm -> IO ())
-eventLoop init comm = do
+eventLoop init comm = void $ do
     -- To support concurrent FFI calls, we make three threads.
     -- The thread `multiplexer` reads from the client and 
     --   sorts the messages into the appropriate queue.
     events      <- newTQueueIO
-    results     <- newTQueueIO :: IO (TQueue JSON.Value)
+    results     <- newTQueueIO :: IO (TQueue Result)
     -- The thread `handleCalls` executes FFI calls
     --    from the Haskell side in order.
     -- The corresponding queue records `TMVar`s in which to put the results.
-    calls       <- newTQueueIO :: IO (TQueue (Maybe (TMVar JSON.Value), ServerMsg))
+    calls       <- newTQueueIO :: IO (TQueue (Maybe (TMVar Result), ServerMsg))
     -- The thread `handleEvents` handles client Events in order.
 
-    -- Events will be queued (and labelled `Inconsistent`) whenever
-    -- the server is
-    --    * busy handling an event
-    --    * or waiting for the result of a function call.
-    handling    <- newTVarIO False
-    calling     <- newTVarIO False
+    -- We only want to make an FFI call when the connection browser<->server is open
+    -- Otherwise, throw an exception.
+    let atomicallyIfOpen stm = do
+            r <- atomically $ do
+                b <- readTVar $ commOpen comm
+                if b then fmap Right stm else return (Left ())
+            case r of
+                Right a -> return a
+                Left  _ -> throwIO $ ErrorCall "Foreign.JavaScript: Browser <-> Server communication broken."
 
     -- FFI calls are made by writing to the `calls` queue.
-    w0 <- newPartialWindow
     let run msg = do
-            atomically $ writeTQueue calls (Nothing , msg)
+            atomicallyIfOpen $ writeTQueue calls (Nothing , msg)
         call msg = do
             ref <- newEmptyTMVarIO
-            atomically $ writeTQueue calls (Just ref, msg)
-            atomically $ takeTMVar ref
+            atomicallyIfOpen $ writeTQueue calls (Just ref, msg)
+            er  <- atomicallyIfOpen $ takeTMVar ref
+            case er of
+                Left  e -> E.throwIO $ JavaScriptException e
+                Right x -> return x
         debug    s = do
-            atomically $ writeServer comm $ Debug s
+            atomicallyIfOpen $ writeServer comm $ Debug s
 
     -- We also send a separate event when the client disconnects.
     disconnect <- newTVarIO $ return ()
+    -- FIXME: Make it possible to store *multiple* event handlers
     let onDisconnect m = atomically $ writeTVar disconnect m
-    
-    let w = w0 { runEval        = run  . RunEval
-               , callEval       = call . CallEval
+
+    w0 <- newPartialWindow
+    let w = w0 { runEval      = run  . RunEval
+               , callEval     = call . CallEval
                , debug        = debug
                , timestamp    = run Timestamp
                , onDisconnect = onDisconnect
@@ -87,60 +96,64 @@ eventLoop init comm = do
     --
     -- Read client messages and send them to the
     -- thread that handles events or the thread that handles FFI calls.
-    let multiplexer = do
-            m <- untilJustM $ atomically $ do
-                msg <- readClient comm
-                case msg of
-                    Event x y -> do
-                        b <- (||) <$> readTVar handling <*> readTVar calling
-                        let c = if b then Inconsistent else Consistent
-                        writeTQueue events (x,y,c)
-                        return Nothing
-                    Result x  -> do
-                        writeTQueue results x
-                        return Nothing
-                    Quit      -> Just <$> readTVar disconnect
-            m
-        
+    let multiplexer = forever $ atomically $ do
+            msg <- readClient comm
+            case msg of
+                Event x y   -> writeTQueue events (x,y)
+                Result x    -> writeTQueue results (Right x)
+                Exception e -> writeTQueue results (Left  e)
+
     -- Send FFI calls to client and collect results
     let handleCalls = forever $ do
             ref <- atomically $ do
                 (ref, msg) <- readTQueue calls
-                writeTVar calling True
                 writeServer comm msg
                 return ref
-            atomically $ do
-                writeTVar calling False
+            atomically $
                 case ref of
                     Just ref -> do
                         result <- readTQueue results
                         putTMVar ref result
                     Nothing  -> return ()
-    
+
     -- Receive events from client and handle them in order.
     let handleEvents = do
-            init w
-            forever $ do
-                e <- atomically $ do
-                    writeTVar handling True
-                    readTQueue events
-                handleEvent w e
-                rebug
-                atomically $ writeTVar handling False
+            me <- atomically $ do
+                open <- readTVar $ commOpen comm
+                if open
+                    then Just <$> readTQueue events
+                    else return Nothing -- channel is closed
+            case me of
+                Nothing -> return ()    -- channel is closed, we're done
+                Just e  -> do
+                    handleEvent w e
+                        `E.onException` commClose comm -- close channel in case of exception
+            rebug
+            handleEvents
 
-    -- Foreign.addFinalizer (wRoot w) $ putStrLn "wRoot garbage collected."
-    Foreign.withRemotePtr (wRoot w) $ \_ _ -> do    -- keep root alive
-        E.finally
-            (foldr1 race_ [multiplexer, handleEvents, handleCalls])
-            (commClose comm)
+    -- NOTE: Due to an issue with `snap-server` library,
+    -- we print the exception ourselves.
+    printException $
+        -- Wrap the main loop into `withRemotePtr` in order to keep the root alive.
+        Foreign.withRemotePtr (wRoot w) $ \_ _ ->
+        -- run `multiplexer` and `handleCalls` concurrently
+        withAsync multiplexer $ \_ ->
+        withAsync handleCalls $ \_ ->
+        E.finally (init w >> handleEvents) $ do
+            putStrLn "Foreign.JavaScript: Browser window disconnected."
+            -- close communication channel if still necessary
+            commClose comm                
+            -- trigger the `disconnect` event
+            -- FIXME: Asynchronous exceptions should not be masked during the disconnect handler
+            m <- atomically $ readTVar disconnect
+            m
 
-    return ()
-
--- | Repeat an action until it returns 'Just'. Similar to 'forever'.
-untilJustM :: Monad m => m (Maybe a) -> m a
-untilJustM m = m >>= \x -> case x of
-    Nothing -> untilJustM m
-    Just a  -> return a
+-- | Execute an IO action, but also print any exceptions that it may throw.
+-- (The exception is rethrown.)
+printException :: IO a -> IO a
+printException = E.handle $ \e -> do
+    putStrLn $ show (e :: E.SomeException)
+    E.throwIO e
 
 {-----------------------------------------------------------------------------
     Exports, Imports and garbage collection

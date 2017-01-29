@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
 module Graphics.UI.Threepenny.Core (
     -- * Synopsis
     -- | Core functionality of the Threepenny GUI library.
@@ -49,6 +49,7 @@ module Graphics.UI.Threepenny.Core (
     debug, timestamp,
     ToJS, FFI,
     JSFunction, ffi, runFunction, callFunction,
+    CallBufferMode(..), setCallBufferMode, flushCallBuffer,
     ffiExport,
     
     -- * Internal and oddball functions
@@ -60,6 +61,7 @@ import Control.Monad          (forM_, forM, void)
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 
+import qualified Control.Monad.Catch             as E
 import qualified Data.Aeson                      as JSON
 import qualified Foreign.JavaScript              as JS
 import qualified Graphics.UI.Threepenny.Internal as Core
@@ -162,15 +164,13 @@ getElementsByTagName _ tag =
     mapM fromJSObject =<< callFunction (ffi "document.getElementsByTagName(%1)" tag)
 
 -- | Get an element by a particular ID.
---
--- FIXME: Misleading type, throws a JavaScript exception when element not found.
 getElementById
     :: Window              -- ^ Browser window
     -> String              -- ^ The ID string.
     -> UI (Maybe Element)  -- ^ Element (if any) with given ID.
-getElementById _ id = do
-    x <- fromJSObject =<< callFunction (ffi "document.getElementById(%1)" id)
-    return $ Just x
+getElementById _ id =
+    E.handle (\(e :: JS.JavaScriptException) -> return Nothing) $
+        fmap Just . fromJSObject =<< callFunction (ffi "document.getElementById(%1)" id)
 
 -- | Get a list of elements by particular class.
 getElementsByClassName

@@ -64,6 +64,7 @@ communicationFromWebSocket request = do
     connection <- WS.acceptRequest request
     commIn     <- STM.newTQueueIO   -- outgoing communication
     commOut    <- STM.newTQueueIO   -- incoming communication
+    commOpen   <- STM.newTVarIO True
 
     -- write data to browser
     let sendData = forever $ do
@@ -76,23 +77,31 @@ communicationFromWebSocket request = do
             input <- WS.receiveData connection
             case input of
                 "ping" -> WS.sendTextData connection . LBS.pack $ "pong"
-                "quit" -> E.throw WS.ConnectionClosed
+                "quit" -> E.throwIO WS.ConnectionClosed
                 input  -> case JSON.decode input of
                     Just x   -> atomically $ STM.writeTQueue commIn x
                     Nothing  -> error $
                         "Foreign.JavaScript: Couldn't parse JSON input"
                         ++ show input
-    
-    let manageConnection = do
-            withAsync sendData $ \_ -> do
-            Left e <- waitCatch =<< async readData
-            atomically $ STM.writeTQueue commIn $
-                JSON.object [ "tag" .= ("Quit" :: Text) ] -- write Quit event
-            E.throw e
 
-    thread <- forkFinally manageConnection
-        (\_ -> WS.sendClose connection $ LBS.pack "close")
-    let commClose = killThread thread
+    -- block until the channel is closed
+    let sentry = atomically $ do
+            open <- STM.readTVar commOpen
+            when open retry
+
+    -- explicitly close the Comm chanenl
+    let commClose = atomically $ STM.writeTVar commOpen False
+
+    -- read/write data until an exception occurs or the channel is no longer open
+    forkFinally (sendData `race_` readData `race_` sentry) $ \_ -> void $ do
+        -- close the communication channel explicitly if that didn't happen yet
+        commClose
+
+        -- attempt to close websocket if still necessary/possible
+        -- ignore any exceptions that may happen if it's already closed
+        let all :: E.SomeException -> Maybe ()
+            all _ = Just ()
+        E.tryJust all $ WS.sendClose connection $ LBS.pack "close"
 
     return $ Comm {..}
 
@@ -112,9 +121,9 @@ routeResources customHTML staticDir =
     where
     fixHandlers f routes = [(a,f b) | (a,b) <- routes]
     noCache h = modifyResponse (setHeader "Cache-Control" "no-cache") >> h
-    
+
     static = maybe [] (\dir -> [("/static", serveDirectory dir)]) staticDir
-    
+
     root = case customHTML of
         Just file -> case staticDir of
             Just dir -> serveFile (dir </> file)

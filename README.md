@@ -49,6 +49,6 @@ mind that is good.
 
 Many thanks to everyone who contributed, provided feedback or simply wrote an application using Threepenny! In particular, many thanks to:
 
-Heinrich Apfelmus, Daniel Austin, Steve Bigham, Ken Friis Larsen, Daniel Mlot, Tim C. Schröder *and also* Daniel Diaz, Alex Greif, Yuval Langer, JP Moresmau, Luke Palmer, Jens Peterson, Jaap van der Plas, rnons, Michael Snoyman, tailcalled
+Heinrich Apfelmus, Daniel Austin, Steve Bigham, Ken Friis Larsen, Daniel Mlot, Tim C. Schröder [*and many others*](CONTRIBUTORS)
 
 Special thanks to *Chris Done* for starting the precursor project Ji.

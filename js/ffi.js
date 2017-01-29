@@ -15,7 +15,7 @@
 // An optional string argument can be used to specify the server URL.
 Haskell.initFFI = function () {
   var connection;
-  var url = window.location.href.toString();
+  var url = window.location.origin.toString();
 
   if (arguments[0]) {
     url = arguments[0]; // take server url from argument
@@ -33,31 +33,37 @@ Haskell.initFFI = function () {
     Haskell.log("Server message: %o", msg);
 
     switch (msg.tag) {
-      case "RunEval" : {
+
+      case "RunEval":
+        try {
           eval(msg.contents);
           reply();
-          break;
-      }
-      case "CallEval" : {
-          var result   = eval(msg.contents);
-          reply({
-            tag      : "Result",
-            contents : result
-          });
-          break;
-      }
-      case "Debug": {
+        } catch (err) {
+          connection.close();
+          throw(err);
+        }
+        break;
+
+      case "CallEval":
+        try {
+          var result = eval(msg.contents);
+          reply({ tag : "Result"   , contents : result });
+        } catch (err) {
+          reply({ tag : "Exception", contents : err.toString() });
+        }
+        break;
+
+      case "Debug":
         Haskell.log("Server debug: %o", msg.contents);
         reply();
         break;
-      }
-      case "Timestamp": {
+
+      case "Timestamp":
         Haskell.log("Timestamp: %f ms", Haskell.performance.now());
         Haskell.log("Elapsed since last timestamp: %f ms",
           Haskell.performance.diff());
         reply();
         break;
-      }
     }
   };
 

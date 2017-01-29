@@ -1,5 +1,28 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.7.1.0** -- Maintenance and snapshot release
+
+Graphics.UI.Threepenny
+
+* Fix `getElementById` to properly return `Nothing` when no element with the given `id` attribute is present. [#129][].
+
+JavaScript FFI
+
+* Implement batching / buffering for FFI calls. [#131][]. Several calls to the `runFunction` function may now buffer the JavaScript code and send it to the browser window in a single message at a later time. This improves performance considerably.
+* Clarify semantics for exceptions. See the file [`doc/javascript-ffi.md`](doc/javascript-ffi.md) for more.
+    * The `UI` monad now supports exception handling by being an instance of the type classes `MonadThrow` and `MonadCatch`.
+    * The function `callFunction` can now throw a `JavaScriptException` exception to the Haskell side.
+    * The function `runFunction` now terminates the connection to the browser window whenever the JavaScript code within throws an exception.
+* Clarify semantics of the `disconnect` event. It is now triggered more reliably. [#133][].
+* Remove unnecessary client response when exporting event handlers. [#131][].
+
+  [#129]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/129
+  [#133]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/129
+
+Dependencies
+
+* Add dependency on `exceptions`
+
 **0.7.0.1** -- Maintenance release
 
 * Bump dependencies to allow `aeson` 1.1
@@ -8,10 +31,10 @@
 
 **0.7.0.0** -- Maintenance and snapshot release
 
-* Reduce communication from browser to server when creating `Element`s.
+* JavaScript FFI: Reduce communication from browser to server when creating `Element`s.
     New function `unsafeCreateJSObject` to create JavaScript objects without
     waiting for a client response. [#131][]
-* Implement escape sequence '%%' for JavaScript FFI. [#132][].
+* JavaScript FFI: Implement escape sequence '%%' when calling JavaScript functions. [#132][].
 * Change type of `onEvent` function to allow unregistering events.
 * Add function `timestamp` for simple performance measurements.
 * Update JavaScript dependencies to jQuery 2.2.3
@@ -20,7 +43,7 @@
 * Bump dependencies to allow `data-default` 0.7
 * Bump dependencies to allow `snap-core` 1.0 and `snap-server` 1.0
 * Bump dependencies to allow `template-haskell` 2.11
-* Bump dependencies to allow `websockest-snap` 0.10
+* Bump dependencies to allow `websockets-snap` 0.10
 
   [#131]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
   [#132]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/132

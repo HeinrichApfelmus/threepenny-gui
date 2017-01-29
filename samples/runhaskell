@@ -5,7 +5,7 @@ if [ -d "../.cabal-sandbox" ]; then
     -package-db ../.cabal-sandbox/*-packages.conf.d \
     -DSAMPLES "$@" -e main
 elif [ -e "../stack.yaml" ]; then
-  stack --stack-yaml "../stack.yaml" exec ghc -- "$@" -e main
+  stack --stack-yaml "../stack.yaml" exec ghc -- -i../src -DSAMPLES "$@" -e main
 else
   ghc "$@" -e main
 fi

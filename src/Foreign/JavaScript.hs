@@ -16,12 +16,16 @@ module Foreign.JavaScript (
     Window, root,
 
     -- * JavaScript FFI
-    ToJS(..), FromJS, JSFunction, JSObject,
-    FFI, ffi, runFunction, callFunction, NewJSObject, unsafeCreateJSObject,
+    ToJS(..), FromJS, JSFunction, JSObject, JavaScriptException,
+    FFI, ffi, runFunction, callFunction,
+    NewJSObject, unsafeCreateJSObject,
+    CallBufferMode(..), setCallBufferMode, flushCallBuffer,
     IsHandler, exportHandler, onDisconnect,
     debug, timestamp,
     ) where
 
+import           Control.Concurrent.STM       as STM
+import           Control.Monad                           (unless)
 import qualified Data.Aeson                   as JSON
 import           Foreign.JavaScript.EventLoop
 import           Foreign.JavaScript.Marshal
@@ -37,14 +41,21 @@ serve
     :: Config               -- ^ Configuration options.
     -> (Window -> IO ())    -- ^ Initialization whenever a client connects.
     -> IO ()
-serve config init = httpComm config (eventLoop init)
+serve config init = httpComm config $ eventLoop $ \w -> do
+    init w
+    flushCallBuffer w   -- make sure that all `runEval` commands are executed
 
 {-----------------------------------------------------------------------------
     JavaScript
 ------------------------------------------------------------------------------}
 -- | Run a JavaScript function, but do not wait for a result.
+--
+-- NOTE: The JavaScript function need not be executed immediately,
+-- it can be buffered and sent to the browser window at a later time.
+-- See 'setCallBufferMode' and 'flushCallBuffer' for more.
 runFunction :: Window -> JSFunction () -> IO ()
-runFunction w f = runEval w =<< toCode f
+runFunction w f = bufferRunEval w =<< toCode f
+
 
 -- | Run a JavaScript function that creates a new object.
 -- Return a corresponding 'JSObject' without waiting for the browser
@@ -55,12 +66,16 @@ runFunction w f = runEval w =<< toCode f
 unsafeCreateJSObject :: Window -> JSFunction NewJSObject -> IO JSObject
 unsafeCreateJSObject w f = do
     g <- wrapImposeStablePtr w f
-    runEval w =<< toCode g
+    bufferRunEval w =<< toCode g
     marshalResult g w JSON.Null
 
 -- | Call a JavaScript function and wait for the result.
 callFunction :: Window -> JSFunction a -> IO a
 callFunction w f = do
+    -- FIXME: Add the code of f to the buffer as well!
+    -- However, we have to pay attention to the semantics of exceptions in this case.
+    flushCallBuffer w
+
     resultJS <- callEval w =<< toCode f
     marshalResult f w resultJS
 
@@ -79,8 +94,46 @@ callFunction w f = do
 -- keep it alive.
 exportHandler :: IsHandler a => Window -> a -> IO JSObject
 exportHandler w f = do
-    g <- newHandler w (handle f w)
-    h <- callFunction w $
+    g <- newHandler w (\args -> handle f w args >> flushCallBuffer w)
+    h <- unsafeCreateJSObject w $
         ffi "Haskell.newEvent(%1,%2)" g (convertArguments f)
     Foreign.addReachable h g
     return h
+
+{-----------------------------------------------------------------------------
+    Call Buffer
+------------------------------------------------------------------------------}
+-- | Set the call buffering mode for the given browser window.
+setCallBufferMode :: Window -> CallBufferMode -> IO ()
+setCallBufferMode w@Window{..} new = do
+    flushCallBuffer w
+    atomically $ writeTVar wCallBufferMode new
+
+-- | Flush the call buffer,
+-- i.e. send all outstanding JavaScript to the client in one single message.
+flushCallBuffer :: Window -> IO ()
+flushCallBuffer w@Window{..} = do
+    code' <- atomically $ do
+        code <- readTVar wCallBuffer
+        writeTVar wCallBuffer id
+        return code
+    let code = code' ""
+    unless (null code) $
+        runEval code
+
+-- Schedule a piece of JavaScript code to be run with `runEval`,
+-- depending on the buffering mode
+bufferRunEval :: Window -> String -> IO ()
+bufferRunEval w@Window{..} code = do
+    action <- atomically $ do
+        mode <- readTVar wCallBufferMode
+        case mode of
+            BufferRun -> do
+                msg <- readTVar wCallBuffer
+                writeTVar wCallBuffer (msg . (\s -> ";" ++ code ++ s))
+                return Nothing
+            NoBuffering -> do
+                return $ Just code
+    case action of
+        Nothing   -> return ()
+        Just code -> runEval code

@@ -11,7 +11,9 @@ module Graphics.UI.Threepenny.Internal (
     UI, runUI, liftIOLater, askWindow,
 
     FFI, FromJS, ToJS, JSFunction, JSObject, ffi,
-    runFunction, callFunction, ffiExport, debug, timestamp,
+    runFunction, callFunction,
+    CallBufferMode(..), setCallBufferMode, flushCallBuffer,
+    ffiExport, debug, timestamp,
 
     Element, fromJSObject, getWindow,
     mkElementNamespace, mkElement, delete, appendChild, clearChildren,
@@ -21,6 +23,7 @@ module Graphics.UI.Threepenny.Internal (
 
 import           Control.Applicative                   (Applicative)
 import           Control.Monad
+import           Control.Monad.Catch
 import           Control.Monad.Fix
 import           Control.Monad.IO.Class
 import qualified Control.Monad.Trans.RWS.Lazy as Monad
@@ -30,9 +33,11 @@ import qualified Data.Aeson              as JSON
 import qualified Foreign.JavaScript      as JS
 import qualified Foreign.RemotePtr       as Foreign
 
-import qualified Reactive.Threepenny     as E
+import qualified Reactive.Threepenny     as RB
 
-import Foreign.JavaScript hiding (runFunction, callFunction, debug, timestamp, Window)
+import Foreign.JavaScript hiding
+    (runFunction, callFunction, setCallBufferMode, flushCallBuffer
+    ,debug, timestamp, Window)
 
 {-----------------------------------------------------------------------------
     Custom Window type
@@ -40,7 +45,7 @@ import Foreign.JavaScript hiding (runFunction, callFunction, debug, timestamp, W
 -- | The type 'Window' represents a browser window.
 data Window = Window
     { jsWindow    :: JS.Window  -- JavaScript window
-    , eDisconnect :: E.Event () -- event that happens when client disconnects
+    , eDisconnect :: RB.Event () -- event that happens when client disconnects
     , wEvents     :: Foreign.Vendor Events
                      -- events associated to 'Element's
     , wChildren   :: Foreign.Vendor ()
@@ -54,7 +59,7 @@ startGUI
     -> IO ()
 startGUI config init = JS.serve config $ \w -> do
     -- set up disconnect event
-    (eDisconnect, handleDisconnect) <- E.newEvent
+    (eDisconnect, handleDisconnect) <- RB.newEvent
     JS.onDisconnect w $ handleDisconnect ()
 
     -- make window
@@ -75,13 +80,13 @@ startGUI config init = JS.serve config $ \w -> do
 --
 -- Note: DOM Elements in a browser window that has been closed
 -- can no longer be manipulated.
-disconnect :: Window -> E.Event ()
+disconnect :: Window -> RB.Event ()
 disconnect = eDisconnect
 
 {-----------------------------------------------------------------------------
     Elements
 ------------------------------------------------------------------------------}
-type Events = String -> E.Event JSON.Value
+type Events = String -> RB.Event JSON.Value
 
 -- Reachability information for children of an 'Element'.
 -- The children of an element are always reachable from this RemotePtr.
@@ -146,7 +151,7 @@ addEvents el Window{ jsWindow = w, wEvents = wEvents } = do
             JS.runFunction w $
                 ffi "Haskell.bind(%1,%2,%3)" el name handlerPtr
 
-    events <- E.newEventsNamed initializeEvent
+    events <- RB.newEventsNamed initializeEvent
 
     -- Create new pointer and add reachability.
     Foreign.withRemotePtr el $ \coupon _ -> do
@@ -181,7 +186,7 @@ domEvent
         --   Note that the @on@-prefix is not included,
         --   the name is @click@ and so on.
     -> Element          -- ^ Element where the event is to occur.
-    -> E.Event EventData
+    -> RB.Event EventData
 domEvent name el = elEvents el name
 
 -- | Make a new DOM element with a given tag name.
@@ -269,6 +274,12 @@ instance MonadIO UI where
 instance MonadFix UI where
     mfix f = UI $ mfix (unUI . f)
 
+instance MonadThrow UI where
+    throwM = UI . throwM
+
+instance MonadCatch UI where
+    catch m f = UI $ catch (unUI m) (unUI . f)
+
 -- | Execute an 'UI' action in a particular browser window.
 -- Also runs all scheduled 'IO' actions.
 runUI :: Window -> UI a -> IO a
@@ -291,6 +302,10 @@ liftIOLater x = UI $ Monad.tell [x]
 -- | Run the given JavaScript function and carry on. Doesn't block.
 --
 -- The client window uses JavaScript's @eval()@ function to run the code.
+--
+-- NOTE: The JavaScript function need not be executed immediately,
+-- it can be buffered and sent to the browser window at a later time.
+-- See 'setCallBufferMode' and 'flushCallBuffer' for more.
 runFunction :: JSFunction () -> UI ()
 runFunction fun = liftJSWindow $ \w -> JS.runFunction w fun
 
@@ -299,6 +314,15 @@ runFunction fun = liftJSWindow $ \w -> JS.runFunction w fun
 -- The client window uses JavaScript's @eval()@ function to run the code.
 callFunction :: JSFunction a -> UI a
 callFunction fun = liftJSWindow $ \w -> JS.callFunction w fun
+
+-- | Set the call buffering mode for the browser window.
+setCallBufferMode :: CallBufferMode -> UI ()
+setCallBufferMode x = liftJSWindow $ \w -> JS.setCallBufferMode w x
+
+-- | Flush the call buffer,
+-- i.e. send all outstanding JavaScript to the client in one single message.
+flushCallBuffer :: UI ()
+flushCallBuffer = liftJSWindow $ \w -> JS.flushCallBuffer w
 
 -- | Export the given Haskell function so that it can be called
 -- from JavaScript code.

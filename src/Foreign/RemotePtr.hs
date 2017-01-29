@@ -49,7 +49,7 @@ mkWeakIORefValue r@(GHC.IORef (GHC.STRef r#)) v f = GHC.IO $ \s ->
   case GHC.mkWeak# r# v f s of (# s1, w #) -> (# s1, GHC.Weak w #)
 #endif
 #else
-mkWeakIORefValue r@(GHC.IORef (GHC.STRef r#)) v f = GHC.IO $ \s ->
+mkWeakIORefValue r@(GHC.IORef (GHC.STRef r#)) v (GHC.IO f) = GHC.IO $ \s ->
   case GHC.mkWeak# r# v f s of (# s1, w #) -> (# s1, GHC.Weak w #)
 #endif
 

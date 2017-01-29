@@ -30,6 +30,7 @@ type Message = (UTCTime, String, String)
 
 setup :: Chan Message -> Window -> UI ()
 setup globalMsgs window = do
+    UI.setCallBufferMode BufferRun
     msgs <- liftIO $ Chan.dupChan globalMsgs
 
     return window # set title "Chat"
@@ -60,6 +61,7 @@ receiveMessages w msgs messageArea = do
         runUI w $ do
           element messageArea #+ [mkMessage msg]
           UI.scrollToBottom messageArea
+          flushCallBuffer -- make sure that JavaScript functions are executed
 
 mkMessageArea :: Chan Message -> IORef String -> UI Element
 mkMessageArea msgs nickname = do
