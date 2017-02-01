@@ -21,9 +21,13 @@ JavaScript FFI
 
 Dependencies
 
-* Bump dependencies to allow `websockets` 0.10
 * Add dependency on `exceptions`
 
+**0.7.0.1** -- Maintenance release
+
+* Bump dependencies to allow `aeson` 1.1
+* Bump dependencies to allow `vector` 0.12
+* Bump dependencies to allow `websockets` 0.10
 
 **0.7.0.0** -- Maintenance and snapshot release
 
