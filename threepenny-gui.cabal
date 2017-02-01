@@ -163,6 +163,7 @@ Executable threepenny-examples-canvas
     else
         buildable: False
     main-is:           Canvas.hs
+    other-modules:     Paths
     hs-source-dirs:    samples
 
 Executable threepenny-examples-chat
