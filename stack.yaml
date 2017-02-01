@@ -1,0 +1,7 @@
+resolver: nightly-2017-01-31
+packages:
+- '.'
+extra-deps: []
+flags:
+  threepenny-gui:
+    buildexamples: true
