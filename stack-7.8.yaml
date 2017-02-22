@@ -1,0 +1,8 @@
+flags:
+  threepenny-gui:
+    buildexamples: true
+packages:
+- '.'
+extra-deps:
+- websockets-snap-0.9.0.0
+resolver: lts-2.22
