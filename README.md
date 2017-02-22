@@ -1,4 +1,8 @@
-[![Build Status](https://travis-ci.org/HeinrichApfelmus/threepenny-gui.png)](https://travis-ci.org/HeinrichApfelmus/threepenny-gui)
+[![Travis Build Status](https://travis-ci.org/HeinrichApfelmus/threepenny-gui.png)](https://travis-ci.org/HeinrichApfelmus/threepenny-gui)
+[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/HeinrichApfelmus/threepenny-gui?svg=true)](https://ci.appveyor.com/project/HeinrichApfelmus/threepenny-gui)
+[![Hackage](https://img.shields.io/hackage/v/threepenny-gui.svg)](https://hackage.haskell.org/package/threepenny-gui)
+[![Stackage LTS](http://stackage.org/package/threepenny-gui/badge/lts)](http://stackage.org/lts/package/threepenny-gui)
+[![Stackage Nightly](http://stackage.org/package/threepenny-gui/badge/nightly)](http://stackage.org/nightly/package/threepenny-gui)
 
 Threepenny-gui is a GUI framework written in Haskell that uses the web browser as a display. It's very easy to install. See the
 
