@@ -36,10 +36,7 @@ Haskell.bind = function (el, eventType, fun) {
     });
   } else if(eventType.match('contextmenu|mousemove|mousedown|mouseup')) {
     $(el).bind(eventType, function(e) {
-      var offset = $(this).offset();
-      var x      = e.pageX - offset.left;
-      var y      = e.pageY - offset.top;
-      fun([x, y]);
+      fun([e.pageX, e.pageY]);
     });
   } else if(eventType.match('keydown|keyup')) {
     $(el).bind(eventType, function(e) {
