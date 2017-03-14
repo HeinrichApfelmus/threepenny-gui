@@ -1,0 +1,9 @@
+{
+  "name": "YourApp",
+  "main": "electron.js",
+  "dependencies": {
+    "electron": "^1.6.1",
+    "freeport": "^1.0.5",
+    "wait-on": "^2.0.2"
+  }
+}
