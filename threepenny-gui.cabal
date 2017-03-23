@@ -48,10 +48,12 @@ Data-files:          samples/static/css/*.css
 flag buildExamples
     description: Build example executables.
     default:     False
+    manual:      True
 
 flag network-uri
     description: Get Network.URI from the network-uri package
     default:     True
+    manual:      False
 
 flag rebug
     description: The library uses some techniques that are highly
@@ -60,6 +62,7 @@ flag rebug
                  Bugs in these subsystems are harder to find.
                  Activating this flag will expose more of them.
     default:     False
+    manual:      True
 
 Source-repository head
     type:               git
