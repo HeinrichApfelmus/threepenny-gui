@@ -42,6 +42,9 @@ serve
     -> (Window -> IO ())    -- ^ Initialization whenever a client connects.
     -> IO ()
 serve config init = httpComm config $ eventLoop $ \w -> do
+    runFunction w $
+        ffi "connection.setReloadOnDisconnect(%1)" $ jsWindowReloadOnDisconnect config
+    flushCallBuffer w   -- make sure that all `runEval` commands are executed
     init w
     flushCallBuffer w   -- make sure that all `runEval` commands are executed
 

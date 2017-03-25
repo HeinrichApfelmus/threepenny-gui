@@ -14,6 +14,7 @@
 ********************************************************************* */
 Haskell.createWebSocket = function (url0, receive) {
   var that = {};
+  var optReloadOnDisconnect = false;
   var url  = 'ws:' + url0.slice(5) + '/websocket/';
   var ws   = new WebSocket(url);
   
@@ -43,6 +44,7 @@ Haskell.createWebSocket = function (url0, receive) {
     };
     ws.onclose = function (e) {
       Haskell.log("WebSocket closed: %o", e);
+      if (optReloadOnDisconnect) { window.location.reload(true); }
     };
     ws.onerror = function (e) {
       Haskell.log("WebSocket error: %o", e);
@@ -53,6 +55,8 @@ Haskell.createWebSocket = function (url0, receive) {
   that.send  = function (json) { ws.send(JSON.stringify(json)); };
   // Close the connection
   that.close = function () { ws.send("quit"); };
+  // Set option: Reload window when the websocket connection is broken?
+  that.setReloadOnDisconnect = function (b) { optReloadOnDisconnect = b };
   
   return that;
 };

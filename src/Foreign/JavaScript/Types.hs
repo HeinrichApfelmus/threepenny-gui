@@ -35,6 +35,10 @@ data Config = Config
         -- read from the environment variable @ADDR@.
         -- Alternatively, address @127.0.0.1@ is
         -- used if this variable is not set.
+    , jsWindowReloadOnDisconnect :: Bool
+        -- ^ Reload the browser window if the connection to the server was dropped
+        -- accidentally,
+        -- for instance because the computer was put to sleep and awoken again.
     , jsCustomHTML :: Maybe FilePath
         -- ^ Custom HTML file to replace the default one.
     , jsStatic     :: Maybe FilePath
@@ -51,13 +55,15 @@ defaultAddr = "127.0.0.1"
 
 -- | Default configuration.
 --
--- Port from environment variable or @8023@,
--- listening on @localhost@, no custom HTML, no static directory,
+-- Port from environment variable or @8023@, listening on @localhost@,
+-- do reload on disconnect,
+-- no custom HTML, no static directory,
 -- logging to stderr.
 defaultConfig :: Config
 defaultConfig = Config
     { jsPort       = Nothing
     , jsAddr       = Nothing
+    , jsWindowReloadOnDisconnect = True
     , jsCustomHTML = Nothing
     , jsStatic     = Nothing
     , jsLog        = BS.hPutStrLn stderr
