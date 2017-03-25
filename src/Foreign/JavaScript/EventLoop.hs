@@ -128,8 +128,8 @@ eventLoop init comm = void $ do
                 Just e  -> do
                     handleEvent w e
                         `E.onException` commClose comm -- close channel in case of exception
-            rebug
-            handleEvents
+                    rebug
+                    handleEvents
 
     -- NOTE: Due to an issue with `snap-server` library,
     -- we print the exception ourselves.
