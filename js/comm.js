@@ -41,14 +41,16 @@ Haskell.createWebSocket = function (url0, receive) {
         receive(JSON.parse(msg.data));
       }
     };
+    // Refresh the page when the WebSocket connection is lost
     ws.onclose = function (e) {
       Haskell.log("WebSocket closed: %o", e);
-    };
+      window.location.reload(false);
+    }
     ws.onerror = function (e) {
       Haskell.log("WebSocket error: %o", e);
     };
   };
-  
+
   // Send a JSON message to the server
   that.send  = function (json) { ws.send(JSON.stringify(json)); };
   // Close the connection
