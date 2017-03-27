@@ -145,11 +145,20 @@ an exception will be thrown when we try to send one of those to the browser.
 
 However, we have to make sure that the exception is thrown
 in the thread that constructed the message, not in the thread that
-handles the actual communication with the client. That's why we use
-the function `Control.DeepSeq.force` to make sure that any exception
+handles the actual communication with the client.
+
+That's why we have to use the function
+`Control.DeepSeq.deepseq` to make sure that any exception
 is thrown before handing the message over to another thread.
 
+Since exceptions in pure code do not have a precise ordering relative
+to exceptions in IO code, evaluating the pure value
+also helps with ensuring that the exception is raised before
+any subsequent IO exception; this makes it easier to pinpoint
+the root cause for library users.
+
 -}
+
 
 data JavaScriptException = JavaScriptException String deriving Typeable
 

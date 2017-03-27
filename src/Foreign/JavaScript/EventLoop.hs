@@ -10,6 +10,7 @@ import           Control.Applicative
 import           Control.Concurrent
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM   as STM
+import           Control.DeepSeq                  (deepseq)
 import           Control.Exception        as E
 import           Control.Monad
 import qualified Data.Aeson               as JSON
@@ -67,16 +68,16 @@ eventLoop init comm = void $ do
                 Left  _ -> throwIO $ ErrorCall "Foreign.JavaScript: Browser <-> Server communication broken."
 
     -- FFI calls are made by writing to the `calls` queue.
-    let run msg = do
+    let run  msg = msg `deepseq` do     -- see [ServerMsg strictness]
             atomicallyIfOpen $ writeTQueue calls (Nothing , msg)
-        call msg = do
+        call msg = msg `deepseq` do     -- see [ServerMsg strictness]
             ref <- newEmptyTMVarIO
             atomicallyIfOpen $ writeTQueue calls (Just ref, msg)
             er  <- atomicallyIfOpen $ takeTMVar ref
             case er of
                 Left  e -> E.throwIO $ JavaScriptException e
                 Right x -> return x
-        debug    s = do
+        debug s  = s `deepseq` do       -- see [ServerMsg strictness]
             atomicallyIfOpen $ writeServer comm $ Debug s
 
     -- We also send a separate event when the client disconnects.
