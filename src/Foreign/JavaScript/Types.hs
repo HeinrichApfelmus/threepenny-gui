@@ -20,9 +20,9 @@ import           System.IO                       (stderr)
 import Foreign.RemotePtr
 
 {-----------------------------------------------------------------------------
-    Server Configuration
+    Server Configuration -- Static
 ------------------------------------------------------------------------------}
--- | Configuration of a "Foreign.JavaScript" server.
+-- | Static configuration for a "Foreign.JavaScript" server.
 data Config = Config
     { jsPort       :: Maybe Int           
         -- ^ Port number.
@@ -67,6 +67,27 @@ defaultConfig = Config
     , jsCustomHTML = Nothing
     , jsStatic     = Nothing
     , jsLog        = BS.hPutStrLn stderr
+    }
+
+{-----------------------------------------------------------------------------
+    Server Configuration -- Dynamic
+------------------------------------------------------------------------------}
+-- | URI type.
+--
+-- FIXME: Use the correct type from "Network.URI"
+type URI = String
+
+-- | MIME type.
+type MimeType = ByteString
+
+-- | Representation of a "Foreign.JavaScript" server.
+--
+-- Can be used for dynamic configuration, e.g. serving additional files.
+data Server = Server
+    { loadFile :: MimeType -> FilePath -> IO URI
+    -- ^ Begin to serve a local file with a given Mime Type under a URI.
+    , loadDirectory :: FilePath -> IO String
+    -- ^ Begin to serve a local directory under a URI.
     }
 
 {-----------------------------------------------------------------------------
@@ -198,7 +219,9 @@ data CallBufferMode
 
 -- | Representation of a browser window.
 data Window = Window
-    { runEval        :: String -> IO ()
+    { getServer      :: Server
+    -- ^ Server that tbe browser window communicates with.
+    , runEval        :: String -> IO ()
     , callEval       :: String -> IO JSON.Value
 
     , wCallBuffer     :: TVar (String -> String)
@@ -222,7 +245,7 @@ newPartialWindow = do
     b1  <- newTVarIO id
     b2  <- newTVarIO BufferRun
     let nop = const $ return ()
-    Window nop undefined b1 b2 (return ()) nop nop ptr <$> newVendor <*> newVendor
+    Window undefined nop undefined b1 b2 (return ()) nop nop ptr <$> newVendor <*> newVendor
 
 -- | For the purpose of controlling garbage collection,
 -- every 'Window' as an associated 'RemotePtr' that is alive

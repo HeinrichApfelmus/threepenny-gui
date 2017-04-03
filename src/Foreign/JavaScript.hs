@@ -13,7 +13,8 @@ module Foreign.JavaScript (
 
     -- * Server
     serve, Config(..), defaultConfig,
-    Window, root,
+    Server, MimeType, URI, loadFile, loadDirectory,
+    Window, getServer, root,
 
     -- * JavaScript FFI
     ToJS(..), FromJS, JSFunction, JSObject, JavaScriptException,

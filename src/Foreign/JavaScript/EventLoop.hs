@@ -44,8 +44,8 @@ type Result = Either String JSON.Value
 
 -- | Event loop for a browser window.
 -- Supports concurrent invocations of `runEval` and `callEval`.
-eventLoop :: (Window -> IO void) -> (Comm -> IO ())
-eventLoop init comm = void $ do
+eventLoop :: (Window -> IO void) -> (Server -> Comm -> IO ())
+eventLoop init server comm = void $ do
     -- To support concurrent FFI calls, we make three threads.
     -- The thread `multiplexer` reads from the client and 
     --   sorts the messages into the appropriate queue.
@@ -86,7 +86,8 @@ eventLoop init comm = void $ do
     let onDisconnect m = atomically $ writeTVar disconnect m
 
     w0 <- newPartialWindow
-    let w = w0 { runEval      = run  . RunEval
+    let w = w0 { getServer    = server
+               , runEval      = run  . RunEval
                , callEval     = call . CallEval
                , debug        = debug
                , timestamp    = run Timestamp

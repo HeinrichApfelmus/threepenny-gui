@@ -34,7 +34,7 @@ import Foreign.JavaScript.Types
     HTTP Server using WebSockets
 ------------------------------------------------------------------------------}
 -- | Run a HTTP server that creates a 'Comm' channel.
-httpComm :: Config -> (Comm -> IO ()) -> IO ()
+httpComm :: Config -> (Server -> Comm -> IO ()) -> IO ()
 httpComm Config{..} worker = do
     env <- getEnvironment
     let portEnv = Safe.readMay =<< Prelude.lookup "PORT" env
@@ -45,9 +45,11 @@ httpComm Config{..} worker = do
                $ Snap.setErrorLog  (Snap.ConfigIoLog jsLog)
                $ Snap.setAccessLog (Snap.ConfigIoLog jsLog)
                $ Snap.defaultConfig
+        server = Server { loadFile = undefined, loadDirectory = undefined }
+
     Snap.httpServe config . route $
         routeResources jsCustomHTML jsStatic
-        ++ routeWebsockets worker
+        ++ routeWebsockets (worker server)
 
 -- | Route the communication between JavaScript and the server
 routeWebsockets :: (Comm -> IO void) -> Routes
@@ -133,3 +135,6 @@ routeResources customHTML staticDir =
 writeTextMime text mime = do
     modifyResponse (setHeader "Content-type" mime)
     writeText text
+
+
+
