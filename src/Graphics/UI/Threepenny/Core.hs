@@ -2,21 +2,21 @@
 module Graphics.UI.Threepenny.Core (
     -- * Synopsis
     -- | Core functionality of the Threepenny GUI library.
-    
+
     -- * Server
     -- $server
     Config(..), defaultConfig, startGUI,
     loadFile, loadDirectory,
-    
+
     -- * UI monad
     -- $ui
-    UI, runUI, askWindow, liftIOLater,
+    UI, runUI, MonadUI(..), askWindow, liftIOLater,
     module Control.Monad.IO.Class,
     module Control.Monad.Fix,
-    
+
     -- * Browser Window
     Window, title,
-    
+
     -- * DOM elements
     -- | Create and manipulate DOM elements.
     Element, getWindow, mkElement, mkElementNamespace, delete,
@@ -24,27 +24,27 @@ module Graphics.UI.Threepenny.Core (
         getHead, getBody,
         (#+), children, text, html, attr, style, value,
     getElementsByTagName, getElementById, getElementsByClassName,
-    
+
     -- * Layout
     -- | Combinators for quickly creating layouts.
     -- They can be adjusted with CSS later on.
     grid, row, column,
-    
+
     -- * Events
     -- | For a list of predefined events, see "Graphics.UI.Threepenny.Events".
     EventData, domEvent, unsafeFromJSON, disconnect, on, onEvent, onChanges,
     module Reactive.Threepenny,
-    
+
     -- * Attributes
     -- | For a list of predefined attributes, see "Graphics.UI.Threepenny.Attributes".
     (#), (#.),
     Attr, WriteAttr, ReadAttr, ReadWriteAttr(..),
     set, sink, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
     bimapAttr, fromObjectProperty,
-    
+
     -- * Widgets
     Widget(..), element, widget,
-    
+
     -- * JavaScript FFI
     -- | Direct interface to JavaScript in the browser window.
     debug, timestamp,
@@ -52,10 +52,10 @@ module Graphics.UI.Threepenny.Core (
     JSFunction, ffi, runFunction, callFunction,
     CallBufferMode(..), setCallBufferMode, flushCallBuffer,
     ffiExport,
-    
+
     -- * Internal and oddball functions
     fromJQueryProp,
-    
+
     ) where
 
 import Control.Monad          (forM_, forM, void)
@@ -214,7 +214,7 @@ column = grid . map (:[])
 grid    :: [[UI Element]] -> UI Element
 grid mrows = do
         rows0 <- mapM (sequence) mrows
-    
+
         rows  <- forM rows0 $ \row0 -> do
             row <- forM row0 $ \entry ->
                 wrap "table-cell" [entry]
@@ -236,7 +236,7 @@ on :: (element -> Event a) -> element -> (a -> UI void) -> UI ()
 on f x = void . onEvent (f x)
 
 -- | Register an 'UI' action to be executed whenever the 'Event' happens.
--- 
+--
 -- FIXME: Should be unified with 'on'?
 onEvent :: Event a -> (a -> UI void) -> UI (UI ())
 onEvent e h = do
@@ -316,7 +316,7 @@ sink attr bi mx = do
     liftIOLater $ do
         i <- currentValue bi
         runUI window $ set' attr i x
-        Reactive.onChange bi  $ \i -> runUI window $ set' attr i x  
+        Reactive.onChange bi  $ \i -> runUI window $ set' attr i x
     return x
 
 -- | Get attribute value.
