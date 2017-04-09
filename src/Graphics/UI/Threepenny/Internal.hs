@@ -6,7 +6,7 @@ module Graphics.UI.Threepenny.Internal (
 
     -- * Documentation
     Window, disconnect,
-    startGUI,
+    startGUI, loadFile, loadDirectory,
 
     UI, runUI, liftIOLater, askWindow,
 
@@ -37,7 +37,7 @@ import qualified Reactive.Threepenny     as RB
 
 import Foreign.JavaScript hiding
     (runFunction, callFunction, setCallBufferMode, flushCallBuffer
-    ,debug, timestamp, Window)
+    ,debug, timestamp, Window, loadFile, loadDirectory)
 
 {-----------------------------------------------------------------------------
     Custom Window type
@@ -82,6 +82,17 @@ startGUI config init = JS.serve config $ \w -> do
 -- can no longer be manipulated.
 disconnect :: Window -> RB.Event ()
 disconnect = eDisconnect
+
+-- | Begin to serve a local file with a given 'MimeType' under a relative URI.
+loadFile
+    :: MimeType  -- ^ MIME type
+    -> FilePath  -- ^ Local path to the file
+    -> UI String -- ^ Relative URI under which this file is now accessible
+loadFile x y = liftJSWindow $ \w -> JS.loadFile (JS.getServer w) x y
+
+-- | Make a local directory available under a relative URI.
+loadDirectory :: FilePath -> UI String
+loadDirectory x = liftJSWindow $ \w -> JS.loadDirectory (JS.getServer w) x
 
 {-----------------------------------------------------------------------------
     Elements

@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 module Foreign.JavaScript.Server (
-    httpComm, loadFile, loadDirectory
+    httpComm, loadFile, loadDirectory,
     ) where
 
 -- import general libraries

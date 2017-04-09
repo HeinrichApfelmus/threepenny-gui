@@ -6,6 +6,7 @@ module Graphics.UI.Threepenny.Core (
     -- * Server
     -- $server
     Config(..), defaultConfig, startGUI,
+    loadFile, loadDirectory,
     
     -- * UI monad
     -- $ui

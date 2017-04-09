@@ -12,7 +12,7 @@ import Graphics.UI.Threepenny.Core
 main :: IO ()
 main = do
     static <- getStaticDir
-    startGUI defaultConfig { jsStatic = Just static } setup
+    startGUI defaultConfig setup
 
 canvasSize = 400
 
@@ -100,7 +100,8 @@ setup window = do
         canvas # UI.fillText   "is awesome" (140,60)
 
     -- draw the haskell logo
-    img <- UI.img # set UI.src "static/haskell-logo.png"
+    url <- UI.loadFile "image/png" "static/haskell-logo.png"
+    img <- UI.img # set UI.src url
 
     on UI.click drawImage $ const $ do
         canvas # UI.drawImage img (60,20)
