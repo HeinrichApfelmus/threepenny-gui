@@ -84,11 +84,11 @@ type MimeType = ByteString
 --
 -- Can be used for dynamic configuration, e.g. serving additional files.
 data Server = Server
-    { loadFile :: MimeType -> FilePath -> IO URI
-    -- ^ Begin to serve a local file with a given Mime Type under a URI.
-    , loadDirectory :: FilePath -> IO String
-    -- ^ Begin to serve a local directory under a URI.
+    { sFiles :: MVar Filepaths
+    , sDirs  :: MVar Filepaths
     }
+type Filepaths = (Integer, Map ByteString (FilePath, MimeType))
+newFilepaths = (0, Map.empty)
 
 {-----------------------------------------------------------------------------
     Communication channel

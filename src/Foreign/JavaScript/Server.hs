@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 module Foreign.JavaScript.Server (
-    httpComm
+    httpComm, loadFile, loadDirectory
     ) where
 
 -- import general libraries
@@ -9,9 +9,11 @@ import           Control.Concurrent.Async
 import           Control.Concurrent.STM     as STM
 import qualified Control.Exception          as E
 import           Control.Monad
+import           Control.Monad.IO.Class
 import           Data.ByteString                    (ByteString)
 import qualified Data.ByteString.Char8      as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Map                   as M
 import           Data.Text
 import qualified Safe                       as Safe
 import           System.Environment
@@ -45,10 +47,11 @@ httpComm Config{..} worker = do
                $ Snap.setErrorLog  (Snap.ConfigIoLog jsLog)
                $ Snap.setAccessLog (Snap.ConfigIoLog jsLog)
                $ Snap.defaultConfig
-        server = Server { loadFile = undefined, loadDirectory = undefined }
+               
+    server <- Server <$> newMVar newFilepaths <*> newMVar newFilepaths
 
     Snap.httpServe config . route $
-        routeResources jsCustomHTML jsStatic
+        routeResources server jsCustomHTML jsStatic
         ++ routeWebsockets (worker server)
 
 -- | Route the communication between JavaScript and the server
@@ -112,13 +115,17 @@ communicationFromWebSocket request = do
 ------------------------------------------------------------------------------}
 type Routes = [(ByteString, Snap ())]
 
-routeResources :: Maybe FilePath -> Maybe FilePath -> Routes
-routeResources customHTML staticDir =
+routeResources :: Server -> Maybe FilePath -> Maybe FilePath -> Routes
+routeResources server customHTML staticDir =
     fixHandlers noCache $
         static ++
         [("/"            , root)
         ,("/haskell.js"  , writeTextMime jsDriverCode  "application/javascript")
         ,("/haskell.css" , writeTextMime cssDriverCode "text/css")
+        ,("/file/:name"                ,
+            withFilepath (sFiles server) (flip serveFileAs))
+        ,("/dir/:name"                 ,
+            withFilepath (sDirs  server) (\path _ -> serveDirectory path))
         ]
     where
     fixHandlers f routes = [(a,f b) | (a,b) <- routes]
@@ -136,5 +143,35 @@ writeTextMime text mime = do
     modifyResponse (setHeader "Content-type" mime)
     writeText text
 
+-- | Extract  from a URI
+withFilepath :: MVar Filepaths -> (FilePath -> MimeType -> Snap a) -> Snap a
+withFilepath rDict cont = do
+    mName    <- getParam "name"
+    (_,dict) <- liftIO $ withMVar rDict return
+    case (\key -> M.lookup key dict) =<< mName of
+        Just (path,mimetype) -> cont path mimetype
+        Nothing              -> error $ "File not loaded: " ++ show mName
 
+-- FIXME: Serving large files fails with the exception
+-- System.SendFile.Darwin: invalid argument (Socket is not connected)
+
+-- | Associate an URL to a FilePath
+newAssociation :: MVar Filepaths -> (FilePath, MimeType) -> IO String
+newAssociation rDict (path,mimetype) = do
+    (old, dict) <- takeMVar rDict
+    let new = old + 1; key = show new ++ takeFileName path
+    putMVar rDict $ (new, M.insert (BS.pack key) (path,mimetype) dict)
+    return key
+
+-- | Begin to serve a local file with a given 'MimeType' under a URI.
+loadFile :: Server -> MimeType -> FilePath -> IO String
+loadFile server mimetype path = do
+    key <- newAssociation (sFiles server) (path, mimetype)
+    return $ "/file/" ++ key
+
+-- | Begin to serve a local directory under a URI.
+loadDirectory :: Server -> FilePath -> IO String
+loadDirectory server path = do
+    key <- newAssociation (sDirs server) (path,"")
+    return $ "/dir/" ++ key
 
