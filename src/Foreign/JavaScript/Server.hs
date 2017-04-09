@@ -144,12 +144,12 @@ writeTextMime text mime = do
     writeText text
 
 -- | Extract  from a URI
-withFilepath :: MVar Filepaths -> (FilePath -> MimeType -> Snap a) -> Snap a
+withFilepath :: MVar Filepaths -> (FilePath -> ByteString -> Snap a) -> Snap a
 withFilepath rDict cont = do
     mName    <- getParam "name"
     (_,dict) <- liftIO $ withMVar rDict return
     case (\key -> M.lookup key dict) =<< mName of
-        Just (path,mimetype) -> cont path mimetype
+        Just (path,mimetype) -> cont path (BS.pack mimetype)
         Nothing              -> error $ "File not loaded: " ++ show mName
 
 -- FIXME: Serving large files fails with the exception

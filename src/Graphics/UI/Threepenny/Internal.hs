@@ -85,7 +85,7 @@ disconnect = eDisconnect
 
 -- | Begin to serve a local file with a given 'MimeType' under a relative URI.
 loadFile
-    :: MimeType  -- ^ MIME type
+    :: String    -- ^ MIME type
     -> FilePath  -- ^ Local path to the file
     -> UI String -- ^ Relative URI under which this file is now accessible
 loadFile x y = liftJSWindow $ \w -> JS.loadFile (JS.getServer w) x y

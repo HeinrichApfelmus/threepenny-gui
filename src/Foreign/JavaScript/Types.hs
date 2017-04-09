@@ -78,7 +78,7 @@ defaultConfig = Config
 type URI = String
 
 -- | MIME type.
-type MimeType = ByteString
+type MimeType = String
 
 -- | Representation of a "Foreign.JavaScript" server.
 --
