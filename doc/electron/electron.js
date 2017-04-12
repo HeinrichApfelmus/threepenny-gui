@@ -7,7 +7,7 @@ const waitOn = require('wait-on');
  // Time to wait for Threepenny server, milliseconds
 const timeout = 10000;
 // Relative path to the Threepenny binary.
-const relBin = '.stack-work/dist/x86_64-osx/Cabal-1.24.2.0/build/your-app/your-app';
+const relBin = './build/your-app-exe';
 // Additional arguments to pass to the Threepenny binary.
 const binArgs = ['otherArg1', 'otherArg2'];
 
