@@ -1,9 +1,9 @@
-import Control.Monad
+import           Control.Monad
 
-import Paths
+import           Paths
 
-import qualified Graphics.UI.Threepenny as UI
-import Graphics.UI.Threepenny.Core
+import qualified Graphics.UI.Threepenny      as UI
+import           Graphics.UI.Threepenny.Core
 
 
 {-----------------------------------------------------------------------------
@@ -12,7 +12,7 @@ import Graphics.UI.Threepenny.Core
 main :: IO ()
 main = do
     static <- getStaticDir
-    startGUI defaultConfig setup
+    startGUI defaultConfig { jsStatic = Just static } setup
 
 canvasSize = 400
 
@@ -100,9 +100,7 @@ setup window = do
         canvas # UI.fillText   "is awesome" (140,60)
 
     -- draw the haskell logo
-    url <- UI.loadFile "image/png" "static/haskell-logo.png"
-    img <- UI.img # set UI.src url
+    img <- UI.img # set UI.src "static/haskell-logo.png"
 
     on UI.click drawImage $ const $ do
         canvas # UI.drawImage img (60,20)
-
