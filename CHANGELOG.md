@@ -1,10 +1,11 @@
 ## Changelog for the `threepenny-gui` package
 
-**0.7.1.0** -- Maintenance and snapshot release
+**0.8.0.0** -- Snapshot release
 
 Graphics.UI.Threepenny
 
 * Fix `getElementById` to properly return `Nothing` when no element with the given `id` attribute is present. [#129][].
+* Bring back `loadFile` and `loadDirectory`. [#110][]
 
 JavaScript FFI
 
@@ -13,11 +14,16 @@ JavaScript FFI
     * The `UI` monad now supports exception handling by being an instance of the type classes `MonadThrow` and `MonadCatch`.
     * The function `callFunction` can now throw a `JavaScriptException` exception to the Haskell side.
     * The function `runFunction` now terminates the connection to the browser window whenever the JavaScript code within throws an exception.
+* Exceptions in the `UI` monad that are not handled are now printed properly for better debugging. [#145][]
 * Clarify semantics of the `disconnect` event. It is now triggered more reliably. [#133][].
 * Remove unnecessary client response when exporting event handlers. [#131][].
+* Add option `jsWindowReloadOnDisconnect` to reload the browser window [#130][] whenever the WebSocket connection is broken. This is useful for e.g. mobile devices, which tend to disconnect WebSocket connections very often.
 
+  [#110]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/110
   [#129]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/129
-  [#133]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/129
+  [#130]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/130
+  [#133]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/133
+  [#145]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/145
 
 Dependencies
 
