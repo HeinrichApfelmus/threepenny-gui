@@ -4,6 +4,7 @@ module Foreign.JavaScript.Server (
     ) where
 
 -- import general libraries
+import           Control.Applicative
 import           Control.Concurrent
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM     as STM
