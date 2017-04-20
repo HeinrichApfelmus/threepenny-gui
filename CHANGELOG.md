@@ -28,6 +28,7 @@ JavaScript FFI
 Dependencies
 
 * Add dependency on `exceptions`
+* Bump dependencies to allow `aeson` 1.2
 * Bump dependencies to allow `websockets` 0.11
 
 **0.7.0.1** -- Maintenance release
