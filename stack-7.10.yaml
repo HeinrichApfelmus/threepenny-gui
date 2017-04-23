@@ -1,0 +1,7 @@
+resolver: lts-6.31
+packages:
+- '.'
+extra-deps: []
+flags:
+  threepenny-gui:
+    buildexamples: true
