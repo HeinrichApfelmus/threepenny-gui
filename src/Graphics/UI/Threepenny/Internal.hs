@@ -218,6 +218,13 @@ mkElementNamespace namespace tag = do
         fromJSObject0 el window
 
 -- | Delete the given element.
+--
+-- This operation removes the element from the browser window DOM
+-- and marks it for garbage collection on the Haskell side.
+-- The element is unuseable afterwards.
+--
+-- NOTE: If you wish to temporarily remove an element from the DOM tree,
+-- change the 'children' property of its parent element instead.
 delete :: Element -> UI ()
 delete el = liftJSWindow $ \w -> do
     JS.runFunction w $ ffi "$(%1).detach()" el
