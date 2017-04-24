@@ -22,7 +22,45 @@ import Foreign.RemotePtr
 {-----------------------------------------------------------------------------
     Server Configuration -- Static
 ------------------------------------------------------------------------------}
--- | Static configuration for a "Foreign.JavaScript" server.
+-- NOTE: Unfortunately, Haddock currently does not create documentation for
+-- record fields when the constructor is not exported.
+-- That's why we copy & paste it in the documentation for the data type.
+{- | Static configuration for a "Foreign.JavaScript" server.
+
+This is a record type which has the following fields:
+
+* @jsPort :: Maybe Int@          
+
+    Port number.
+    @Nothing@ means that the port number is read from the environment variable @PORT@.
+    Alternatively, port @8023@ is used if this variable is not set.
+
+* @jsAddr :: Maybe ByteString@
+
+    Bind address.
+    @Nothing@ means that the bind address is read from the environment variable @ADDR@.
+    Alternatively, address @127.0.0.1@ is used if this variable is not set.
+
+* @jsWindowReloadOnDisconnect :: Bool@
+
+    Reload the browser window if the connection to the server was dropped accidentally,
+    for instance because the computer was put to sleep and awoken again.
+
+* @jsCustomHTML :: Maybe FilePath@
+
+    Custom HTML file to replace the default one.
+
+* @jsStatic :: Maybe FilePath@
+
+    Directory that is served under @/static@.
+
+* @jsLog :: ByteString -> IO ()@
+
+    Function to print a single log message.
+
+(For reasons of forward compatibility, the constructor is not exported.)
+
+-}
 data Config = Config
     { jsPort       :: Maybe Int           
         -- ^ Port number.

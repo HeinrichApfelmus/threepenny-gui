@@ -6,13 +6,15 @@ module Foreign.JavaScript (
     -- This module implements a web server that communicates with
     -- a web browser and allows you to execute arbitrary JavaScript code on it.
     --
-    -- Note: This module is used internally by the "Graphics.UI.Threepenny"
+    -- NOTE: This module is used internally by the "Graphics.UI.Threepenny"
     -- library, but the types are /not/ compatible.
     -- Use "Foreign.JavaScript" only if you want to roll your own
     -- interface to the web browser.
 
     -- * Server
-    serve, Config(..), defaultConfig,
+    serve, defaultConfig, Config(
+          jsPort, jsAddr, jsWindowReloadOnDisconnect
+        , jsCustomHTML, jsStatic, jsLog),
     Server, MimeType, URI, loadFile, loadDirectory,
     Window, getServer, root,
 
