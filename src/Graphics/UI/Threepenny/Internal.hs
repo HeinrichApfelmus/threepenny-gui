@@ -15,7 +15,7 @@ module Graphics.UI.Threepenny.Internal (
     CallBufferMode(..), setCallBufferMode, flushCallBuffer,
     ffiExport, debug, timestamp,
 
-    Element, fromJSObject, getWindow,
+    Element(toJSObject), fromJSObject, getWindow,
     mkElementNamespace, mkElement, delete, appendChild, clearChildren,
 
     EventData, domEvent, unsafeFromJSON,
