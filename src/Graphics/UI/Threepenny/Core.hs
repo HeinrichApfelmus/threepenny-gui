@@ -51,7 +51,7 @@ module Graphics.UI.Threepenny.Core (
     ToJS, FFI,
     JSFunction, ffi, runFunction, callFunction,
     CallBufferMode(..), setCallBufferMode, flushCallBuffer,
-    ffiExport,
+    ffiExport, ffiExport',
 
     -- * Internal and oddball functions
     fromJQueryProp,
