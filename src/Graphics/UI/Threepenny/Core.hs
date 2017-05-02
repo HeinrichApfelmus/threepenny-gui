@@ -19,7 +19,7 @@ module Graphics.UI.Threepenny.Core (
 
     -- * DOM elements
     -- | Create and manipulate DOM elements.
-    Element(toJSObject), getWindow, mkElement, mkElementNamespace, delete,
+    Element, toJSObject, getWindow, mkElement, mkElementNamespace, delete,
         string,
         getHead, getBody,
         (#+), children, text, html, attr, style, value,

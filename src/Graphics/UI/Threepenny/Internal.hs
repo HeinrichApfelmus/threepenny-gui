@@ -104,10 +104,10 @@ type Events = String -> RB.Event JSON.Value
 type Children = Foreign.RemotePtr ()
 
 data Element = Element
-    { toJSObject  :: JS.JSObject -- corresponding JavaScript object
-    , elEvents    :: Events      -- FRP event mapping
-    , elChildren  :: Children    -- The children of this element
-    , elWindow    :: Window      -- Window in which the element was created
+    { toJSObject  :: JS.JSObject -- ^ The corresponding JavaScript object.
+    , elEvents    :: Events      -- ^ FRP event mapping
+    , elChildren  :: Children    -- ^ The children of this element
+    , elWindow    :: Window      -- ^ Window in which the element was created
     } deriving (Typeable)
 
 instance ToJS Element where
@@ -360,20 +360,20 @@ flushCallBuffer = liftJSWindow $ \w -> JS.flushCallBuffer w
 -- but it also means that the Haskell runtime has no way to detect
 -- early when it is no longer needed.
 --
--- In contrast, if you use the variant 'ffiExport\'',
+-- In contrast, if you use the variant 'ffiExport'',
 -- then the handler will be garbage collected
 -- unless the caller keeps it alive using 'addReachable'.
-
 ffiExport :: JS.IsHandler a => a -> UI JSObject
 ffiExport fun = liftJSWindow $ \w -> do
     handlerPtr <- JS.exportHandler w fun
     Foreign.addReachable (JS.root w) handlerPtr
     return handlerPtr
+
 -- | Export the given Haskell function so that it can be called
 -- from JavaScript code.
 --
 -- NOTE: The caller is responsible for ensuring the JSObject returned
--- by this function is kept alive using 'addReachable'.
+-- by this function is kept alive using 'Foreign.addReachable'.
 -- Otherwise it may be collected by the Javascript side garbage collector.
 ffiExport' :: JS.IsHandler a => a -> UI JSObject
 ffiExport' fun = liftJSWindow (`JS.exportHandler` fun)
