@@ -13,7 +13,7 @@ module Graphics.UI.Threepenny.Internal (
     FFI, FromJS, ToJS, JSFunction, JSObject, ffi,
     runFunction, callFunction,
     CallBufferMode(..), setCallBufferMode, flushCallBuffer,
-    ffiExport, ffiExport', debug, timestamp,
+    ffiExport, debug, timestamp,
 
     Element(toJSObject), fromJSObject, getWindow,
     mkElementNamespace, mkElement, delete, appendChild, clearChildren,
@@ -352,7 +352,7 @@ flushCallBuffer = liftJSWindow $ \w -> JS.flushCallBuffer w
 -- | Export the given Haskell function so that it can be called
 -- from JavaScript code.
 --
--- NOTE: The JSObject returned by this function
+-- NOTE: At the moment, the 'JSObject' representing the exported function
 -- will be referenced by the browser 'Window' in which it was created,
 -- preventing garbage collection until this browser 'Window' is disconnected.
 --
@@ -360,23 +360,15 @@ flushCallBuffer = liftJSWindow $ \w -> JS.flushCallBuffer w
 -- but it also means that the Haskell runtime has no way to detect
 -- early when it is no longer needed.
 --
--- In contrast, if you use the variant 'ffiExport'',
+-- In contrast, if you use the function 'domEvent' to register an
+-- event handler to an 'Element',
 -- then the handler will be garbage collected
--- unless the caller keeps it alive using 'addReachable'.
+-- as soon as the associated 'Element' is garbage collected.
 ffiExport :: JS.IsHandler a => a -> UI JSObject
 ffiExport fun = liftJSWindow $ \w -> do
     handlerPtr <- JS.exportHandler w fun
     Foreign.addReachable (JS.root w) handlerPtr
     return handlerPtr
-
--- | Export the given Haskell function so that it can be called
--- from JavaScript code.
---
--- NOTE: The caller is responsible for ensuring the JSObject returned
--- by this function is kept alive using 'Foreign.addReachable'.
--- Otherwise it may be collected by the Javascript side garbage collector.
-ffiExport' :: JS.IsHandler a => a -> UI JSObject
-ffiExport' fun = liftJSWindow (`JS.exportHandler` fun)
 
 -- | Print a message on the client console if the client has debugging enabled.
 debug :: String -> UI ()
