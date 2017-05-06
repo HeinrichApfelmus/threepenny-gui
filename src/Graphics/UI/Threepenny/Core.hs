@@ -19,7 +19,7 @@ module Graphics.UI.Threepenny.Core (
 
     -- * DOM elements
     -- | Create and manipulate DOM elements.
-    Element, toJSObject, getWindow, mkElement, mkElementNamespace, delete,
+    Element, getWindow, mkElement, mkElementNamespace, delete,
         string,
         getHead, getBody,
         (#+), children, text, html, attr, style, value,
@@ -52,7 +52,8 @@ module Graphics.UI.Threepenny.Core (
     JSFunction, ffi, runFunction, callFunction,
     CallBufferMode(..), setCallBufferMode, flushCallBuffer,
     ffiExport,
-
+    -- ** Internals
+    toJSObject, liftJSWindow,
     -- * Internal and oddball functions
     fromJQueryProp,
 
