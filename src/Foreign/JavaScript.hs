@@ -7,7 +7,8 @@ module Foreign.JavaScript (
     -- a web browser and allows you to execute arbitrary JavaScript code on it.
     --
     -- NOTE: This module is used internally by the "Graphics.UI.Threepenny"
-    -- library, but the types are /not/ compatible.
+    -- library, but the types are /not/ compatible directly
+    -- (although some escape hatches are provided).
     -- Use "Foreign.JavaScript" only if you want to roll your own
     -- interface to the web browser.
 

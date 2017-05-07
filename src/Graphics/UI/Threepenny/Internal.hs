@@ -8,14 +8,14 @@ module Graphics.UI.Threepenny.Internal (
     Window, disconnect,
     startGUI, loadFile, loadDirectory,
 
-    UI, runUI, MonadUI(..), liftIOLater, askWindow,
+    UI, runUI, MonadUI(..), liftIOLater, askWindow, liftJSWindow,
 
     FFI, FromJS, ToJS, JSFunction, JSObject, ffi,
     runFunction, callFunction,
     CallBufferMode(..), setCallBufferMode, flushCallBuffer,
     ffiExport, debug, timestamp,
 
-    Element, fromJSObject, getWindow,
+    Element(toJSObject), fromJSObject, getWindow,
     mkElementNamespace, mkElement, delete, appendChild, clearChildren,
 
     EventData, domEvent, unsafeFromJSON,
@@ -104,10 +104,10 @@ type Events = String -> RB.Event JSON.Value
 type Children = Foreign.RemotePtr ()
 
 data Element = Element
-    { toJSObject  :: JS.JSObject -- corresponding JavaScript object
-    , elEvents    :: Events      -- FRP event mapping
-    , elChildren  :: Children    -- The children of this element
-    , elWindow    :: Window      -- Window in which the element was created
+    { toJSObject  :: JS.JSObject -- ^ Access to the primitive 'JS.JSObject' for roll-your-own foreign calls.
+    , elEvents    :: Events      -- ^ FRP event mapping
+    , elChildren  :: Children    -- ^ The children of this element
+    , elWindow    :: Window      -- ^ Window in which the element was created
     } deriving (Typeable)
 
 instance ToJS Element where
@@ -279,6 +279,8 @@ class (Monad m) => MonadUI m where
 instance MonadUI UI where
     liftUI = id
 
+-- | Access to the primitive 'JS.Window' object,
+--   for roll-your-own JS foreign calls.
 liftJSWindow :: (JS.Window -> IO a) -> UI a
 liftJSWindow f = askWindow >>= liftIO . f . jsWindow
 
