@@ -17,6 +17,7 @@ import qualified Data.Aeson               as JSON
 import           Data.IORef
 import qualified Data.Map                 as Map
 import qualified Data.Text                as T
+import           System.IO
 import qualified System.Mem
 
 import Foreign.RemotePtr        as Foreign
@@ -154,7 +155,7 @@ eventLoop init server comm = void $ do
 -- (The exception is rethrown.)
 printException :: IO a -> IO a
 printException = E.handle $ \e -> do
-    putStrLn $ show (e :: E.SomeException)
+    hPrint stderr (e :: E.SomeException)
     E.throwIO e
 
 {-----------------------------------------------------------------------------
