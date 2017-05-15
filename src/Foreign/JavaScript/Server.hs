@@ -48,8 +48,8 @@ httpComm Config{..} worker = do
                $ Snap.setErrorLog  (Snap.ConfigIoLog jsLog)
                $ Snap.setAccessLog (Snap.ConfigIoLog jsLog)
                $ Snap.defaultConfig
-               
-    server <- Server <$> newMVar newFilepaths <*> newMVar newFilepaths
+
+    server <- Server <$> newMVar newFilepaths <*> newMVar newFilepaths <*> return jsLog
 
     Snap.httpServe config . route $
         routeResources server jsCustomHTML jsStatic

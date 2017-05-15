@@ -124,6 +124,7 @@ type MimeType = String
 data Server = Server
     { sFiles :: MVar Filepaths
     , sDirs  :: MVar Filepaths
+    , sLog   :: ByteString -> IO () -- function for logging
     }
 type Filepaths = (Integer, Map ByteString (FilePath, MimeType))
 newFilepaths = (0, Map.empty)

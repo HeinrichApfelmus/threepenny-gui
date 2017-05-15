@@ -14,6 +14,7 @@ import           Control.DeepSeq                  (deepseq)
 import           Control.Exception        as E
 import           Control.Monad
 import qualified Data.Aeson               as JSON
+import qualified Data.ByteString.Char8    as BS
 import           Data.IORef
 import qualified Data.Map                 as Map
 import qualified Data.Text                as T
@@ -133,6 +134,14 @@ eventLoop init server comm = void $ do
                     rebug
                     handleEvents
 
+    -- | Execute an IO action, but also print any exceptions that it may throw.
+    -- (The exception is rethrown.)
+    let
+        printException :: IO a -> IO a
+        printException = E.handle $ \e -> do
+            sLog server . BS.pack $ show (e :: E.SomeException)
+            E.throwIO e
+
     -- NOTE: Due to an issue with `snap-server` library,
     -- we print the exception ourselves.
     printException $
@@ -149,13 +158,6 @@ eventLoop init server comm = void $ do
             -- FIXME: Asynchronous exceptions should not be masked during the disconnect handler
             m <- atomically $ readTVar disconnect
             m
-
--- | Execute an IO action, but also print any exceptions that it may throw.
--- (The exception is rethrown.)
-printException :: IO a -> IO a
-printException = E.handle $ \e -> do
-    putStrLn $ show (e :: E.SomeException)
-    E.throwIO e
 
 {-----------------------------------------------------------------------------
     Exports, Imports and garbage collection
