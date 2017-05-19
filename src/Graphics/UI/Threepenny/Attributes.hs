@@ -14,7 +14,7 @@ module Graphics.UI.Threepenny.Attributes (
     id_, ismap, lang, marginheight, marginwidth, maxlength, method, multiple,
     name, nohref, noresize, noshade, nowrap,
     rel, rev, rows, rowspan, rules,
-    scrolling, selected, shape, size, src,
+    scrolling, selected, shape, size, src, position,
     target, text_, title__, type_, usemap, valign, version, vlink, vspace, width,
     ) where
 
@@ -115,6 +115,7 @@ selected            = emptyAttr "selected"
 shape               =   strAttr "shape"
 size                =   strAttr "size"
 src                 =   strAttr "src"
+position            =   strAttr "position"
 target              =   strAttr "target"
 text_               =   strAttr "text"
 class_              =   strAttr "class"
