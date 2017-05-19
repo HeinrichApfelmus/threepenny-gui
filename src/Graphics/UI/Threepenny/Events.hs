@@ -53,7 +53,7 @@ hover = silence . domEvent "mouseenter"
 -- | Event that periodically occurs while the mouse is moving over an element.
 --
 -- The event value represents the mouse coordinates
--- relative to the upper left corner of the element.
+-- relative to the upper left corner of the display.
 --
 -- Note: The @<body>@ element responds to mouse move events,
 -- but only in the area occupied by actual content,
