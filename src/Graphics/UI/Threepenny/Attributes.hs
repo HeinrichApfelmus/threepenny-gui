@@ -1,22 +1,4 @@
-module Graphics.UI.Threepenny.Attributes (
-    -- * Synopsis
-    -- | Element attributes.
-
-    -- * Input elements
-    checked, selection, enabled,
-
-    -- * HTML attributes
-    action, align, alink, alt, altcode, archive,
-    background, base, bgcolor, border, bordercolor,
-    cellpadding, cellspacing, checked_, class_, clear_, code_, codebase,
-    color, cols, colspan, compact, content, coords,
-    enctype, face, for, frameborder, height, href, hspace, httpequiv,
-    id_, ismap, lang, marginheight, marginwidth, maxlength, method, multiple,
-    name, nohref, noresize, noshade, nowrap,
-    rel, rev, rows, rowspan, rules,
-    scrolling, selected, shape, size, src,
-    target, text_, title__, type_, usemap, valign, version, vlink, vspace, width,
-    ) where
+module Graphics.UI.Threepenny.Attributes where
 
 import qualified Data.Aeson                  as JSON
 import           Graphics.UI.Threepenny.Core
