@@ -31,8 +31,8 @@ Haskell.bind = function (el, eventType, fun) {
   } else if (eventType.match('dragstart|dragenter|dragover|dragleave|drag|drop|dragend')) {
     $(el).bind(eventType, function(e) {
       fun( e.originalEvent.dataTransfer
-            ? [e.originalEvent.dataTransfer.getData("dragData")]
-            : [] );
+            ? [e.clientX.toString(), e.clientY.toString(), e.originalEvent.dataTransfer.getData("dragData")]
+            : [e.clientX.toString(), e.clientY.toString()] );
     });
   } else if(eventType.match('contextmenu|mousemove|mousedown|mouseup')) {
     $(el).bind(eventType, function(e) {

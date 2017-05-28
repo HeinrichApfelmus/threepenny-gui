@@ -52,7 +52,7 @@ mkDragPair color position = do
                 # set text ""
                 # set UI.droppable False
 
-    on UI.drop elDrop $ \color' -> when (color == color') $ void $ do
+    on UI.drop elDrop $ \(color', (_x, _y)) -> when (color == color') $ void $ do
         liftIO $ writeIORef dropSuccess True
         delete elDrag
         element elDrop
