@@ -1,5 +1,13 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.8.1.0** — Snapshot release
+
+* Expose JavaScript FFI functions `toJSObject` and `liftJSWindow` in `Graphics.UI.Threepenny`. This is useful for linking the lifetime of JavaScript objects to the lifetime of `Element`. [#181][]
+* Use `jsLog` parameter to log exceptions. [#185][]
+
+  [#181]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/181
+  [#185]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/185
+
 **0.8.0.0** — Snapshot release
 
 Graphics.UI.Threepenny
