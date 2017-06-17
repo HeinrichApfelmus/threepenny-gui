@@ -228,3 +228,14 @@ Executable threepenny-examples-drummachine
     main-is:           DrumMachine.hs
     other-modules:     Paths_threepenny_gui, Paths
     hs-source-dirs:    samples
+
+Executable threepenny-examples-svg
+    if flag(buildExamples)
+        cpp-options:       -DCABAL
+        build-depends:     base                      >= 4     && < 5
+                          ,threepenny-gui
+    else
+        buildable: False
+    main-is:           Svg.hs
+    other-modules:     Paths_threepenny_gui, Paths
+    hs-source-dirs:    samples
