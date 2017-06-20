@@ -10,7 +10,7 @@ environment:
     STACK_ROOT: "c:\\sr"
 
 test_script:
-- stack setup --resolver nightly > nul
+- stack setup > nul
 # The ugly echo "" hack is to avoid complaints about 0 being an invalid file
 # descriptor
-- echo "" | stack --no-terminal --resolver nightly test
+- echo "" | stack --no-terminal test
