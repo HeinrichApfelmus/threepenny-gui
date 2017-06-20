@@ -21,6 +21,10 @@ matrix:
     compiler: ": #cabal 7.6.3"
     addons: {apt: {packages: [cabal-install-1.16,ghc-7.6.3], sources: [hvr-ghc]}}
 
+  - env: BUILD=cabal GHCVER=8.2.1 CABALVER=1.24
+    compiler: ": #cabal 8.2.1"
+    addons: {apt: {packages: [cabal-install-1.24,ghc-8.2.1], sources: [hvr-ghc]}}
+
   - env: BUILD=stack ARGS="--stack-yaml stack-7.8.yaml"
     compiler: ": #stack 7.8.4"
     addons: {apt: {packages: [libgmp-dev]}}
