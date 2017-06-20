@@ -134,7 +134,7 @@ eventLoop init server comm = void $ do
                     rebug
                     handleEvents
 
-    -- | Execute an IO action, but also print any exceptions that it may throw.
+    -- Execute an IO action, but also print any exceptions that it may throw.
     -- (The exception is rethrown.)
     let
         printException :: IO a -> IO a
