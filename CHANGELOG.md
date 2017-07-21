@@ -1,6 +1,6 @@
 ## Changelog for the `threepenny-gui` package
 
-**Unreleased**
+**0.8.0.1** — Maintenance release
 
 * Bump dependencies for compatibility with GHC-8.2.1
 * Bump dependencies to allow `websockets` 0.12
