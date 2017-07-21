@@ -4,8 +4,7 @@ packages:
 extra-deps:
 - aeson-1.2.0.0
 - websockets-0.12.0.0
-- websockets-snap-0.10.2.1
+- websockets-snap-0.10.2.3
 flags:
   threepenny-gui:
     buildexamples: true
-allow-newer: true # https://github.com/jaspervdj/websockets-snap/issues/20

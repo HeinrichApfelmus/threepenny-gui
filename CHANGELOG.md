@@ -1,10 +1,5 @@
 ## Changelog for the `threepenny-gui` package
 
-**Unreleased**
-
-* Bump dependencies for compatibility with GHC-8.2.1
-* Bump dependencies to allow `websockets` 0.12
-
 **0.8.1.0** — Snapshot release
 
 * Expose JavaScript FFI functions `toJSObject` and `liftJSWindow` in `Graphics.UI.Threepenny`. This is useful for linking the lifetime of JavaScript objects to the lifetime of `Element`. [#181][]
@@ -12,6 +7,11 @@
 
   [#181]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/181
   [#185]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/185
+
+**0.8.0.1** — Maintenance release
+
+* Bump dependencies for compatibility with GHC-8.2.1
+* Bump dependencies to allow `websockets` 0.12
 
 **0.8.0.0** — Snapshot release
 
