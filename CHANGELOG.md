@@ -1,5 +1,9 @@
 ## Changelog for the `threepenny-gui` package
 
+**Unreleased**
+
+* Bump dependencies for compatibility with GHC-8.2.1
+
 **0.8.0.0** — Snapshot release
 
 Graphics.UI.Threepenny
