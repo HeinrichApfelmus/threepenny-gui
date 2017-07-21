@@ -3,6 +3,7 @@
 **Unreleased**
 
 * Bump dependencies for compatibility with GHC-8.2.1
+* Bump dependencies to allow `websockets` 0.12
 
 **0.8.1.0** — Snapshot release
 
