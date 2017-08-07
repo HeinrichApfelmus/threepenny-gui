@@ -37,10 +37,10 @@ matrix:
     compiler: ": #stack default"
     addons: {apt: {packages: [libgmp-dev]}}
 
-  # Build on macOS in addition to Linux
-  - env: BUILD=stack ARGS=""
-    compiler: ": #stack default osx"
-    os: osx
+  ## Build on macOS in addition to Linux
+  #- env: BUILD=stack ARGS=""
+  #  compiler: ": #stack default osx"
+  #  os: osx
 
 before_install:
 # Using compiler above sets CC to an invalid value, so unset it
