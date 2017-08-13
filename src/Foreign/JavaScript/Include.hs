@@ -9,7 +9,7 @@ import           System.IO
 
 #if defined(SAMPLES)
 root :: FilePath
-root = "../" -- we are running the examples from ghci
+root = "../" -- we are running the examples from the 'samples' directory
 #else
 root :: FilePath
 root = "./"

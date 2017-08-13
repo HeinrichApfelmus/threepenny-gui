@@ -10,10 +10,14 @@ module Foreign.JavaScript.Marshal (
     ) where
 
 import           Data.Aeson             as JSON
+#if defined(CABAL)
 #if MIN_VERSION_aeson(1,0,0)
 import qualified Data.Aeson.Text        as JSON   (encodeToTextBuilder)
 #else
 import qualified Data.Aeson.Encode      as JSON   (encodeToTextBuilder)
+#endif
+#else
+import qualified Data.Aeson.Text        as JSON   (encodeToTextBuilder)
 #endif
 import qualified Data.Aeson.Types       as JSON
 import           Data.Functor                     ((<$>))
