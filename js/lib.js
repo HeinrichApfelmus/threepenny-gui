@@ -48,7 +48,7 @@ Haskell.bind = function (el, eventType, fun) {
     });
   } else {
     $(el).bind(eventType, function(e) {
-      fun(e.which ? [e.which.toString()] : []);
+      fun(e.which ? [e.which.toString()] : e.detail || []);
       return true;
     });
   }
