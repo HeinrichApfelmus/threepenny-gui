@@ -17,8 +17,8 @@ Haskell.map = function (fun, array) {
 };
 
 /////////////////////////////////////////////////////////////////////
-// Binding to events
-Haskell.bind = function (el, eventType, fun) {
+// Attach an event handler for a particular event type to an element
+Haskell.on = function (el, eventType, fun) {
   if(eventType === 'livechange') {
     $(el).livechange(300,function(e){
       fun([ $(el).val() ]);
@@ -29,25 +29,25 @@ Haskell.bind = function (el, eventType, fun) {
       fun(x.toString());
     });
   } else if (eventType.match('dragstart|dragenter|dragover|dragleave|drag|drop|dragend')) {
-    $(el).bind(eventType, function(e) {
+    $(el).on(eventType, function(e) {
       fun( e.originalEvent.dataTransfer
             ? [e.originalEvent.dataTransfer.getData("dragData")]
             : [] );
     });
   } else if(eventType.match('contextmenu|mousemove|mousedown|mouseup')) {
-    $(el).bind(eventType, function(e) {
+    $(el).on(eventType, function(e) {
       var offset = $(this).offset();
       var x      = e.pageX - offset.left;
       var y      = e.pageY - offset.top;
       fun([x, y]);
     });
   } else if(eventType.match('keydown|keyup')) {
-    $(el).bind(eventType, function(e) {
+    $(el).on(eventType, function(e) {
       fun(e.keyCode);
       return true;
     });
   } else {
-    $(el).bind(eventType, function(e) {
+    $(el).on(eventType, function(e) {
       fun(e.which ? [e.which.toString()] : e.detail || []);
       return true;
     });

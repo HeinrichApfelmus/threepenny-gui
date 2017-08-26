@@ -6,11 +6,13 @@
 * Add support for [custom DOM events][customevent] (`CustomEvent`). [#196][]
 * Expose JavaScript FFI functions `toJSObject` and `liftJSWindow` in `Graphics.UI.Threepenny`. This is useful for linking the lifetime of JavaScript objects to the lifetime of `Element`. [#181][]
 * Use `jsLog` parameter to log exceptions. [#185][]
+* Update bundled jQuery to version 3.2.1. [#186][]
 
   [customevent]: https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent/CustomEvent
   [#163]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/163
   [#181]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/181
   [#185]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/185
+  [#186]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/186
   [#191]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/191
   [#192]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/192
   [#196]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/196

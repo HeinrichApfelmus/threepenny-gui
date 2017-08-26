@@ -19,7 +19,7 @@ Haskell.createWebSocket = function (url0, receive) {
   var ws   = new WebSocket(url);
   
   // Close WebSocket when the browser window is closed.
-  $(window).unload( function () {
+  $(window).on('unload', function () {
     ws.close();
   });
 

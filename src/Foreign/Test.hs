@@ -71,7 +71,7 @@ addHandler :: IsHandler a => String -> a -> Element -> Window -> IO ()
 addHandler name handler e w = do
     handlerPtr <- exportHandler w handler
     addReachable e handlerPtr                   -- make handler reachable from element
-    runFunction w $ ffi "Haskell.bind(%1,%2,%3)" e name handlerPtr
+    runFunction w $ ffi "Haskell.on(%1,%2,%3)" e name handlerPtr
 
 -- | Append a child element to a parent element.
 appendChild :: Element -> Element -> Window -> IO ()

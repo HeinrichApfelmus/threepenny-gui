@@ -160,7 +160,7 @@ addEvents el Window{ jsWindow = w, wEvents = wEvents } = do
             -- make handler reachable from element
             Foreign.addReachable el handlerPtr
             JS.runFunction w $
-                ffi "Haskell.bind(%1,%2,%3)" el name handlerPtr
+                ffi "Haskell.on(%1,%2,%3)" el name handlerPtr
 
     events <- RB.newEventsNamed initializeEvent
 
