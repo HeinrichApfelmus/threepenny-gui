@@ -115,6 +115,7 @@ Library
                     ,deepseq                >= 1.3.0 && < 1.5
                     ,exceptions             >= 0.6   && < 0.9
                     ,filepath               >= 1.3.0 && < 1.5.0
+                    ,file-embed             == 0.0.10
                     ,hashable               >= 1.1.0 && < 1.3
                     ,safe                   == 0.3.*
                     ,snap-server            >= 0.9.0 && < 1.1
