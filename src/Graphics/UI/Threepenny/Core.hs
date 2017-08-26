@@ -88,6 +88,11 @@ or have set the port number to @jsPort=Just 8023@.)
 The server is multithreaded.
 FFI calls can be made concurrently, but events are handled sequentially.
 
+FFI calls can be __buffered__,
+so in some circumstances, it may happen that you manipulate the browser window,
+but the effect is not immediately visible.
+See 'CallBufferMode' for more information.
+
 -}
 
 {-----------------------------------------------------------------------------

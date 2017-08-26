@@ -22,15 +22,15 @@ main = do
     static   <- getStaticDir
     messages <- Chan.newChan
     startGUI defaultConfig
-        { jsCustomHTML = Just "chat.html"
-        , jsStatic     = Just static
+        { jsCustomHTML     = Just "chat.html"
+        , jsStatic         = Just static
+        , jsCallBufferMode = BufferRun
         } $ setup messages
 
 type Message = (UTCTime, String, String)
 
 setup :: Chan Message -> Window -> UI ()
 setup globalMsgs window = do
-    UI.setCallBufferMode BufferRun
     msgs <- liftIO $ Chan.dupChan globalMsgs
 
     return window # set title "Chat"

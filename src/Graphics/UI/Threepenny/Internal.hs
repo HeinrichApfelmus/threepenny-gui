@@ -326,7 +326,7 @@ liftIOLater x = UI $ Monad.tell [x]
 {-----------------------------------------------------------------------------
     FFI
 ------------------------------------------------------------------------------}
--- | Run the given JavaScript function and carry on. Doesn't block.
+-- | Run a JavaScript function, but do not wait for a result.
 --
 -- The client window uses JavaScript's @eval()@ function to run the code.
 --
@@ -336,7 +336,7 @@ liftIOLater x = UI $ Monad.tell [x]
 runFunction :: JSFunction () -> UI ()
 runFunction fun = liftJSWindow $ \w -> JS.runFunction w fun
 
--- | Run the given JavaScript function and wait for results. Blocks.
+-- | Call a JavaScript function and wait for the result.
 --
 -- The client window uses JavaScript's @eval()@ function to run the code.
 callFunction :: JSFunction a -> UI a

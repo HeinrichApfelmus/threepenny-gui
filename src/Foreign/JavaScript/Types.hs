@@ -41,11 +41,6 @@ This is a record type which has the following fields:
     @Nothing@ means that the bind address is read from the environment variable @ADDR@.
     Alternatively, address @127.0.0.1@ is used if this variable is not set.
 
-* @jsWindowReloadOnDisconnect :: Bool@
-
-    Reload the browser window if the connection to the server was dropped accidentally,
-    for instance because the computer was put to sleep and awoken again.
-
 * @jsCustomHTML :: Maybe FilePath@
 
     Custom HTML file to replace the default one.
@@ -58,31 +53,27 @@ This is a record type which has the following fields:
 
     Function to print a single log message.
 
+* @jsWindowReloadOnDisconnect :: Bool@
+
+    Reload the browser window if the connection to the server was dropped accidentally,
+    for instance because the computer was put to sleep and awoken again.
+
+* @jsCallBufferMode :: CallBufferMode@
+
+    The initial 'CallBufferMode' to use for 'runFunction'.
+    It can be changed at any time with 'setCallBufferMode'.
+
 (For reasons of forward compatibility, the constructor is not exported.)
 
 -}
 data Config = Config
     { jsPort       :: Maybe Int           
-        -- ^ Port number.
-        -- @Nothing@ means that the port number is
-        -- read from the environment variable @PORT@.
-        -- Alternatively, port @8023@ is used if this variable is not set.
     , jsAddr       :: Maybe ByteString
-        -- ^ Bind address.
-        -- @Nothing@ means that the bind address is
-        -- read from the environment variable @ADDR@.
-        -- Alternatively, address @127.0.0.1@ is
-        -- used if this variable is not set.
-    , jsWindowReloadOnDisconnect :: Bool
-        -- ^ Reload the browser window if the connection to the server was dropped
-        -- accidentally,
-        -- for instance because the computer was put to sleep and awoken again.
     , jsCustomHTML :: Maybe FilePath
-        -- ^ Custom HTML file to replace the default one.
     , jsStatic     :: Maybe FilePath
-        -- ^ Directory that is served under @/static@.
     , jsLog        :: ByteString -> IO ()
-        -- ^ Print a single log message.
+    , jsWindowReloadOnDisconnect :: Bool
+    , jsCallBufferMode :: CallBufferMode
     }
 
 defaultPort :: Int
@@ -94,9 +85,10 @@ defaultAddr = "127.0.0.1"
 -- | Default configuration.
 --
 -- Port from environment variable or @8023@, listening on @localhost@,
--- do reload on disconnect,
 -- no custom HTML, no static directory,
--- logging to stderr.
+-- logging to stderr,
+-- do reload on disconnect,
+-- __buffer FFI calls__.
 defaultConfig :: Config
 defaultConfig = Config
     { jsPort       = Nothing
@@ -105,6 +97,7 @@ defaultConfig = Config
     , jsCustomHTML = Nothing
     , jsStatic     = Nothing
     , jsLog        = BS.hPutStrLn stderr
+    , jsCallBufferMode = BufferRun
     }
 
 {-----------------------------------------------------------------------------
@@ -240,9 +233,6 @@ quit :: Event
 quit = ("quit", JSON.Null, Consistent)
 
 -- | Specification of how JavaScript functions should be called.
---
--- The default mode for a new browser window is 'NoBuffering'.
--- Use 'setCallBufferMode' to change the mode at any time.
 data CallBufferMode
     = NoBuffering
     -- ^ When 'runFunction' is used to call a JavaScript function,
@@ -282,7 +272,7 @@ newPartialWindow :: IO Window
 newPartialWindow = do
     ptr <- newRemotePtr "" () =<< newVendor
     b1  <- newTVarIO id
-    b2  <- newTVarIO BufferRun
+    b2  <- newTVarIO NoBuffering
     let nop = const $ return ()
     Window undefined nop undefined b1 b2 (return ()) nop nop ptr <$> newVendor <*> newVendor
 

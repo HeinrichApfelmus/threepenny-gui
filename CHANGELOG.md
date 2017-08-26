@@ -2,11 +2,16 @@
 
 **0.8.1.0** — Snapshot release
 
+* Improve documentation and handling of call buffering (`CallBufferMode`). The default call buffer mode was documented incorrectly, it is `BufferRun`. [#163][], [#191][], [#192][]
 * Expose JavaScript FFI functions `toJSObject` and `liftJSWindow` in `Graphics.UI.Threepenny`. This is useful for linking the lifetime of JavaScript objects to the lifetime of `Element`. [#181][]
 * Use `jsLog` parameter to log exceptions. [#185][]
 
+  [#163]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/163
   [#181]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/181
   [#185]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/185
+  [#191]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/191
+  [#192]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/192
+
 
 **0.8.0.1** — Maintenance release
 
