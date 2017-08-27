@@ -247,7 +247,12 @@ on f x = void . onEvent (f x)
 onEvent :: Event a -> (a -> UI void) -> UI (UI ())
 onEvent e h = do
     window <- askWindow
-    unregister <- liftIO $ register e (void . runUI window . h)
+    let flush = liftJSWindow $ \w -> do
+            mode <- JS.getCallBufferMode w
+            case mode of
+                FlushOften -> JS.flushCallBuffer w
+                _          -> return ()
+    unregister <- liftIO $ register e (void . runUI window . (>> flush) . h)
     return (liftIO unregister)
 
 -- | Execute a 'UI' action whenever a 'Behavior' changes.

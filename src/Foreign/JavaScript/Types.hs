@@ -97,7 +97,7 @@ defaultConfig = Config
     , jsCustomHTML = Nothing
     , jsStatic     = Nothing
     , jsLog        = BS.hPutStrLn stderr
-    , jsCallBufferMode = BufferRun
+    , jsCallBufferMode = FlushOften
     }
 
 {-----------------------------------------------------------------------------
@@ -244,7 +244,12 @@ data CallBufferMode
     -- All JavaScript functions that are held back in this way
     -- are combined into a single message,
     -- which is finally sent whenever 'callFunction' or
-    -- 'flushCallBuffer' are used.
+    -- 'flushCallBuffer' are used, or an exported Haskell function is called.
+    | FlushOften
+    -- ^ The same as 'BufferRun', but this mode indicates
+    -- client libraries and programs are encouraged to flush the buffer more often
+    -- to simplify usage. Users may choose 'BufferRun' instead if they want more control
+    -- over flushing the buffer.
 
 -- | Representation of a browser window.
 data Window = Window

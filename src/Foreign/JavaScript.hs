@@ -24,7 +24,7 @@ module Foreign.JavaScript (
     ToJS(..), FromJS, JSFunction, JSObject, JavaScriptException,
     FFI, ffi, runFunction, callFunction,
     NewJSObject, unsafeCreateJSObject,
-    CallBufferMode(..), setCallBufferMode, flushCallBuffer,
+    CallBufferMode(..), setCallBufferMode, getCallBufferMode, flushCallBuffer,
     IsHandler, exportHandler, onDisconnect,
     debug, timestamp,
     ) where
@@ -118,6 +118,10 @@ setCallBufferMode w@Window{..} new = do
     flushCallBuffer w
     atomically $ writeTVar wCallBufferMode new
 
+-- | Get the call buffering mode for the given browser window.
+getCallBufferMode :: Window -> IO CallBufferMode
+getCallBufferMode w@Window{..} = atomically $ readTVar wCallBufferMode
+
 -- | Flush the call buffer,
 -- i.e. send all outstanding JavaScript to the client in one single message.
 flushCallBuffer :: Window -> IO ()
@@ -137,12 +141,12 @@ bufferRunEval w@Window{..} code = do
     action <- atomically $ do
         mode <- readTVar wCallBufferMode
         case mode of
-            BufferRun -> do
+            NoBuffering -> do
+                return $ Just code
+            _ -> do
                 msg <- readTVar wCallBuffer
                 writeTVar wCallBuffer (msg . (\s -> ";" ++ code ++ s))
                 return Nothing
-            NoBuffering -> do
-                return $ Just code
     case action of
         Nothing   -> return ()
         Just code -> runEval code

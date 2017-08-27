@@ -2,7 +2,8 @@
 
 **0.8.1.0** — Snapshot release
 
-* Improve documentation and handling of call buffering (`CallBufferMode`). The default call buffer mode was documented incorrectly, it is `BufferRun`. [#163][], [#191][], [#192][]
+* Improve documentation and handling of call buffering (`CallBufferMode`). The default call buffer mode was documented incorrectly, it was  `BufferRun` and is now `FlushOften`. [#163][], [#191][], [#192][]
+* Add new default `CallBufferMode`: `FlushOften`. This mode is like `BufferRun`, but will flush the buffer at every `onEvent` as well, leading to less confusion when using the library in most circumstances. [#191][]
 * Add support for [custom DOM events][customevent] (`CustomEvent`). [#196][]
 * Expose JavaScript FFI functions `toJSObject` and `liftJSWindow` in `Graphics.UI.Threepenny`. This is useful for linking the lifetime of JavaScript objects to the lifetime of `Element`. [#181][]
 * Use `jsLog` parameter to log exceptions. [#185][]
