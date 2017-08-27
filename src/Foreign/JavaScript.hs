@@ -32,6 +32,7 @@ module Foreign.JavaScript (
 import           Control.Concurrent.STM       as STM
 import           Control.Monad                           (unless)
 import qualified Data.Aeson                   as JSON
+import           Foreign.JavaScript.CallBuffer
 import           Foreign.JavaScript.EventLoop
 import           Foreign.JavaScript.Marshal
 import           Foreign.JavaScript.Server
@@ -64,7 +65,6 @@ serve config init = httpComm config $ eventLoop $ \w -> do
 -- See 'setCallBufferMode' and 'flushCallBuffer' for more.
 runFunction :: Window -> JSFunction () -> IO ()
 runFunction w f = bufferRunEval w =<< toCode f
-
 
 -- | Run a JavaScript function that creates a new object.
 -- Return a corresponding 'JSObject' without waiting for the browser
@@ -108,45 +108,3 @@ exportHandler w f = do
         ffi "Haskell.newEvent(%1,%2)" g (convertArguments f)
     Foreign.addReachable h g
     return h
-
-{-----------------------------------------------------------------------------
-    Call Buffer
-------------------------------------------------------------------------------}
--- | Set the call buffering mode for the given browser window.
-setCallBufferMode :: Window -> CallBufferMode -> IO ()
-setCallBufferMode w@Window{..} new = do
-    flushCallBuffer w
-    atomically $ writeTVar wCallBufferMode new
-
--- | Get the call buffering mode for the given browser window.
-getCallBufferMode :: Window -> IO CallBufferMode
-getCallBufferMode w@Window{..} = atomically $ readTVar wCallBufferMode
-
--- | Flush the call buffer,
--- i.e. send all outstanding JavaScript to the client in one single message.
-flushCallBuffer :: Window -> IO ()
-flushCallBuffer w@Window{..} = do
-    code' <- atomically $ do
-        code <- readTVar wCallBuffer
-        writeTVar wCallBuffer id
-        return code
-    let code = code' ""
-    unless (null code) $
-        runEval code
-
--- Schedule a piece of JavaScript code to be run with `runEval`,
--- depending on the buffering mode
-bufferRunEval :: Window -> String -> IO ()
-bufferRunEval w@Window{..} code = do
-    action <- atomically $ do
-        mode <- readTVar wCallBufferMode
-        case mode of
-            NoBuffering -> do
-                return $ Just code
-            _ -> do
-                msg <- readTVar wCallBuffer
-                writeTVar wCallBuffer (msg . (\s -> ";" ++ code ++ s))
-                return Nothing
-    case action of
-        Nothing   -> return ()
-        Just code -> runEval code

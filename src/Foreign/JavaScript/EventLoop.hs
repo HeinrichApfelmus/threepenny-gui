@@ -20,7 +20,8 @@ import qualified Data.Map                 as Map
 import qualified Data.Text                as T
 import qualified System.Mem
 
-import Foreign.RemotePtr        as Foreign
+import Foreign.RemotePtr             as Foreign
+import Foreign.JavaScript.CallBuffer
 import Foreign.JavaScript.Types
 
 rebug :: IO ()
@@ -47,8 +48,10 @@ type Result = Either String JSON.Value
 -- Supports concurrent invocations of `runEval` and `callEval`.
 eventLoop :: (Window -> IO void) -> (Server -> Comm -> IO ())
 eventLoop init server comm = void $ do
-    -- To support concurrent FFI calls, we make three threads.
-    -- The thread `multiplexer` reads from the client and 
+    -- To support concurrent FFI calls, we need three threads.
+    -- A fourth thread supports 
+    --
+    -- The thread `multiplexer` reads from the client and
     --   sorts the messages into the appropriate queue.
     events      <- newTQueueIO
     results     <- newTQueueIO :: IO (TQueue Result)
@@ -150,14 +153,21 @@ eventLoop init server comm = void $ do
         -- run `multiplexer` and `handleCalls` concurrently
         withAsync multiplexer $ \_ ->
         withAsync handleCalls $ \_ ->
+        withAsync (flushCallBufferPeriodically w) $ \_ ->
         E.finally (init w >> handleEvents) $ do
             putStrLn "Foreign.JavaScript: Browser window disconnected."
             -- close communication channel if still necessary
-            commClose comm                
+            commClose comm
             -- trigger the `disconnect` event
             -- FIXME: Asynchronous exceptions should not be masked during the disconnect handler
             m <- atomically $ readTVar disconnect
             m
+
+-- | Thread that periodically flushes the call buffer
+flushCallBufferPeriodically :: Window -> IO ()
+flushCallBufferPeriodically w =
+    forever $ threadDelay (flushPeriod*1000) >> flushCallBuffer w
+
 
 {-----------------------------------------------------------------------------
     Exports, Imports and garbage collection

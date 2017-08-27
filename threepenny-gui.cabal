@@ -89,7 +89,8 @@ Library
                     ,Graphics.UI.Threepenny.Widgets
                     ,Reactive.Threepenny
   other-modules:
-                     Foreign.JavaScript.EventLoop
+                     Foreign.JavaScript.CallBuffer
+                    ,Foreign.JavaScript.EventLoop
                     ,Foreign.JavaScript.Include
                     ,Foreign.JavaScript.Marshal
                     ,Foreign.JavaScript.Resources

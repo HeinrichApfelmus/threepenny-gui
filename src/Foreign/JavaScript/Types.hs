@@ -250,6 +250,11 @@ data CallBufferMode
     -- client libraries and programs are encouraged to flush the buffer more often
     -- to simplify usage. Users may choose 'BufferRun' instead if they want more control
     -- over flushing the buffer.
+    | FlushPeriodically
+    -- ^ The same as 'BufferRun', except that the buffer will also be flushed
+    -- every 300ms.
+
+flushPeriod = 300 :: Int
 
 -- | Representation of a browser window.
 data Window = Window
