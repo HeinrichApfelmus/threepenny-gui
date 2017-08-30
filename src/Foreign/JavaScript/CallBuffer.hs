@@ -5,6 +5,8 @@ import Control.Concurrent
 import Control.Concurrent.STM as STM
 import Control.Monad
 
+import GHC.Conc
+import Data.Time
 import Foreign.JavaScript.Types
 
 {-----------------------------------------------------------------------------
@@ -27,6 +29,7 @@ flushCallBuffer w@Window{..} = do
     code' <- atomically $ do
         code <- readTVar wCallBuffer
         writeTVar wCallBuffer id
+        tryTakeTMVar wCallBufferStats
         return code
     let code = code' ""
     unless (null code) $
@@ -44,6 +47,12 @@ bufferRunEval w@Window{..} code = do
             _ -> do
                 msg <- readTVar wCallBuffer
                 writeTVar wCallBuffer (msg . (\s -> ";" ++ code ++ s))
+                case mode of
+                  FlushPeriodically{..}-> do
+                    t0 <- unsafeIOToSTM getCurrentTime
+                    v <- tryTakeTMVar wCallBufferStats
+                    putTMVar wCallBufferStats (maybe t0 (const t0) v)
+                  i -> return ()
                 return Nothing
     case action of
         Nothing   -> return ()

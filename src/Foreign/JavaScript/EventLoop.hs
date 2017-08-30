@@ -23,6 +23,8 @@ import qualified System.Mem
 import Foreign.RemotePtr             as Foreign
 import Foreign.JavaScript.CallBuffer
 import Foreign.JavaScript.Types
+import Data.Time
+import GHC.Conc
 
 rebug :: IO ()
 #ifdef REBUG
@@ -49,7 +51,7 @@ type Result = Either String JSON.Value
 eventLoop :: (Window -> IO void) -> (Server -> Comm -> IO ())
 eventLoop init server comm = void $ do
     -- To support concurrent FFI calls, we need three threads.
-    -- A fourth thread supports 
+    -- A fourth thread supports
     --
     -- The thread `multiplexer` reads from the client and
     --   sorts the messages into the appropriate queue.
@@ -165,8 +167,23 @@ eventLoop init server comm = void $ do
 
 -- | Thread that periodically flushes the call buffer
 flushCallBufferPeriodically :: Window -> IO ()
-flushCallBufferPeriodically w =
-    forever $ threadDelay (flushPeriod*1000) >> flushCallBuffer w
+flushCallBufferPeriodically w@Window{..} = forever $ do
+  b <- atomically $ do
+    tl <-  takeTMVar wCallBufferStats
+    FlushPeriodically max_flush_delay <- readTVar wCallBufferMode
+    tc <- unsafeIOToSTM getCurrentTime
+    let delta = diffUTCTime tc tl * 1000
+    if delta > fromIntegral max_flush_delay
+       then return (Right (max_flush_delay - ceiling delta))
+       else do
+        putTMVar wCallBufferStats tl
+        return $ Left max_flush_delay
+  case b of
+    Right delta -> do
+        flushCallBuffer w
+        threadDelay (delta*1000)
+    Left delta ->
+        threadDelay (delta*1000)
 
 
 {-----------------------------------------------------------------------------

@@ -16,6 +16,7 @@ import           Data.String
 import           Data.Text
 import           Data.Typeable
 import           System.IO                       (stderr)
+import           Data.Time
 
 import Foreign.RemotePtr
 
@@ -29,7 +30,7 @@ import Foreign.RemotePtr
 
 This is a record type which has the following fields:
 
-* @jsPort :: Maybe Int@          
+* @jsPort :: Maybe Int@
 
     Port number.
     @Nothing@ means that the port number is read from the environment variable @PORT@.
@@ -67,7 +68,7 @@ This is a record type which has the following fields:
 
 -}
 data Config = Config
-    { jsPort       :: Maybe Int           
+    { jsPort       :: Maybe Int
     , jsAddr       :: Maybe ByteString
     , jsCustomHTML :: Maybe FilePath
     , jsStatic     :: Maybe FilePath
@@ -251,10 +252,11 @@ data CallBufferMode
     -- to simplify usage. Users may choose 'BufferRun' instead if they want more control
     -- over flushing the buffer.
     | FlushPeriodically
+      { max_buffer_timeout :: Int
+      }
     -- ^ The same as 'BufferRun', except that the buffer will also be flushed
     -- every 300ms.
 
-flushPeriod = 300 :: Int
 
 -- | Representation of a browser window.
 data Window = Window
@@ -265,6 +267,7 @@ data Window = Window
 
     , wCallBuffer     :: TVar (String -> String)
     , wCallBufferMode :: TVar CallBufferMode
+    , wCallBufferStats :: TMVar UTCTime
 
     , timestamp      :: IO ()
     -- ^ Print a timestamp and the time difference to the previous one
@@ -278,13 +281,17 @@ data Window = Window
     , wJSObjects     :: Vendor JSPtr
     }
 
+defaultBufferFlushConfig :: CallBufferMode
+defaultBufferFlushConfig =  FlushPeriodically 25
+
 newPartialWindow :: IO Window
 newPartialWindow = do
     ptr <- newRemotePtr "" () =<< newVendor
     b1  <- newTVarIO id
     b2  <- newTVarIO NoBuffering
+    b3  <- newEmptyTMVarIO
     let nop = const $ return ()
-    Window undefined nop undefined b1 b2 (return ()) nop nop ptr <$> newVendor <*> newVendor
+    Window undefined nop undefined b1 b2 b3 (return ()) nop nop ptr <$> newVendor <*> newVendor
 
 -- | For the purpose of controlling garbage collection,
 -- every 'Window' as an associated 'RemotePtr' that is alive
