@@ -223,14 +223,14 @@ instance Show JavaScriptException where
 {-----------------------------------------------------------------------------
     Window & Event Loop
 ------------------------------------------------------------------------------}
-data Consistency  = Consistent | Inconsistent
-type Event        = (Coupon, JSON.Value, Consistency)
+-- | An event sent from the browser window to the server.
+type Event        = (Coupon, JSON.Value)
 
 -- | An event handler that can be passed to the JavaScript client.
 type HsEvent      = RemotePtr (JSON.Value -> IO ())
 
 quit :: Event
-quit = ("quit", JSON.Null, Consistent)
+quit = ("quit", JSON.Null)
 
 -- | Specification of how JavaScript functions should be called.
 data CallBufferMode
