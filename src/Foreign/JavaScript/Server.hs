@@ -25,7 +25,7 @@ import           Data.Aeson                             ((.=))
 import qualified Data.Aeson                    as JSON
 import qualified Network.WebSockets            as WS
 import qualified Network.WebSockets.Snap       as WS
-import           Snap.Core
+import           Snap.Core                     as Snap
 import qualified Snap.Http.Server              as Snap
 import           Snap.Util.FileServe
 
@@ -37,7 +37,7 @@ import Foreign.JavaScript.Types
     HTTP Server using WebSockets
 ------------------------------------------------------------------------------}
 -- | Run a HTTP server that creates a 'Comm' channel.
-httpComm :: Config -> (Server -> Comm -> IO ()) -> IO ()
+httpComm :: Config -> EventLoop -> IO ()
 httpComm Config{..} worker = do
     env <- getEnvironment
     let portEnv = Safe.readMay =<< Prelude.lookup "PORT" env
@@ -56,13 +56,15 @@ httpComm Config{..} worker = do
         ++ routeWebsockets (worker server)
 
 -- | Route the communication between JavaScript and the server
-routeWebsockets :: (Comm -> IO void) -> Routes
+routeWebsockets :: (RequestInfo -> Comm -> IO void) -> Routes
 routeWebsockets worker = [("websocket", response)]
     where
-    response = WS.runWebSocketsSnap $ \ws -> void $ do
-        comm <- communicationFromWebSocket ws
-        worker comm
-        -- error "Foreign.JavaScript: unreachable code path."
+    response = do
+        requestInfo <- Snap.getRequest
+        WS.runWebSocketsSnap $ \ws -> void $ do
+            comm <- communicationFromWebSocket ws
+            worker (rqCookies requestInfo) comm
+            -- error "Foreign.JavaScript: unreachable code path."
 
 -- | Create 'Comm' channel from WebSocket request.
 communicationFromWebSocket :: WS.PendingConnection -> IO Comm

@@ -15,6 +15,7 @@ import           Data.Map                as Map
 import           Data.String
 import           Data.Text
 import           Data.Typeable
+import           Snap.Core                       (Cookie(..))
 import           System.IO                       (stderr)
 
 import Foreign.RemotePtr
@@ -256,10 +257,17 @@ data CallBufferMode
 
 flushPeriod = 300 :: Int
 
+-- | Action that the server will run when a browser window connects.
+type EventLoop   = Server -> RequestInfo -> Comm -> IO ()
+type RequestInfo = [Cookie]
+
 -- | Representation of a browser window.
 data Window = Window
     { getServer      :: Server
-    -- ^ Server that tbe browser window communicates with.
+    -- ^ Server that the browser window communicates with.
+    , getCookies     :: [Cookie]
+    -- ^ Cookies that the browser window has sent to the server when connecting.
+
     , runEval        :: String -> IO ()
     , callEval       :: String -> IO JSON.Value
 
@@ -284,7 +292,7 @@ newPartialWindow = do
     b1  <- newTVarIO id
     b2  <- newTVarIO NoBuffering
     let nop = const $ return ()
-    Window undefined nop undefined b1 b2 (return ()) nop nop ptr <$> newVendor <*> newVendor
+    Window undefined [] nop undefined b1 b2 (return ()) nop nop ptr <$> newVendor <*> newVendor
 
 -- | For the purpose of controlling garbage collection,
 -- every 'Window' as an associated 'RemotePtr' that is alive

@@ -18,7 +18,7 @@ module Foreign.JavaScript (
         , jsCustomHTML, jsStatic, jsLog
         , jsWindowReloadOnDisconnect, jsCallBufferMode),
     Server, MimeType, URI, loadFile, loadDirectory,
-    Window, getServer, root,
+    Window, getServer, getCookies, root,
 
     -- * JavaScript FFI
     ToJS(..), FromJS, JSFunction, JSObject, JavaScriptException,

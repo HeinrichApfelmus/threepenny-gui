@@ -1,5 +1,9 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.8.2.0** — Snapshot release
+
+* Add `getCookies` function that retrieves the cookies sent with the HTTP request when the browser window connects (to the websocket).
+
 **0.8.1.0** — Snapshot release
 
 * Improve documentation and handling of call buffering (`CallBufferMode`). The default call buffer mode was documented incorrectly, it was  `BufferRun` and is now `FlushOften`. [#163][], [#191][], [#192][]
