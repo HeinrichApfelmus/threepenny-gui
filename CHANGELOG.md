@@ -2,7 +2,9 @@
 
 **0.8.2.0** — Snapshot release
 
-* Add `getCookies` function that retrieves the cookies sent with the HTTP request when the browser window connects (to the websocket).
+* Add `getCookies` function that retrieves the cookies sent with the HTTP request when the browser window connects (to the websocket). [#137][]
+
+  [#137]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/137
 
 **0.8.1.0** — Snapshot release
 
