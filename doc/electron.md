@@ -66,6 +66,16 @@ contains any additional arguments to pass to the binary. If you're not sure
 about the relative path to your application binary, and you're using Stack, see
 the [next section](#explicit-binary-location).
 
+Another file you will need to add is this [index.html](./electron/index.html).
+You will need to add it as a `customHTML` in your call of `startGui` as follows:
+```Haskell
+startGui defaultConfig
+    { -- other settings...
+    , jsCustomHTML = Just "index.html"
+    , -- other settings...
+    } setup
+```
+
 Now run your app with Electron: `./node_modules/.bin/electron electron.js`
 
 ### Explicit binary location
@@ -78,6 +88,33 @@ directory:
 ```stack install --local-bin-path build```
 
 Now you can simply set `relBin` to `./build/your-app-exe`.
+
+## Accessing electron with FFI
+
+The Haskell FFI can be used to access electron utilities.
+For instance, to display a dialog when a button is pressed:
+
+```Haskell
+button <- UI.button # set UI.text "Click me!"
+on UI.click button $ const $ runFunction $ ffi "require('electron').dialog.showOpenDialog({})"
+```
+
+A reference of electron functions can be found at https://electron.atom.io/docs/.
+
+The [jmacro](https://hackage.haskell.org/package/jmacro) library could prove useful for more involved applications, such as showing a modal dialog:
+
+```Haskell
+runFunction $ ffi $ show $ renderJs
+    [jmacro|
+        var {|BrowserWindow: BrowserWindow|} = remote;
+        var modal = new BrowserWindow({parent: remote.getCurrentWindow(),
+                                       modal: true});
+        modal.setMenu(null);
+        modal.loadURL('file://' + require('path').join(remote.app.getAppPath(), 'dialog.html'));
+
+        modal.once('ready-to-show', \() { modal.show() })
+    |]
+```
 
 ## Packaging with electron-packager
 This section assumes the app is already setup to run with Electron based on
