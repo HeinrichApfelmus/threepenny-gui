@@ -35,7 +35,7 @@ following on startup:
 - opens an Electron window which loads the URL of our Threepenny app
 
 To get started with the linked `electron.js` first add
-this [package.json]('./electron/package.json') to your project root directory.
+this [package.json](./electron/package.json) to your project root directory.
 You'll need Node installed and `npm` on your PATH, confirm by running `which
 npm`. Now run `npm install` from the project root directory to install the
 necessary dependencies.
