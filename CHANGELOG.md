@@ -3,8 +3,11 @@
 **0.8.2.0** — Snapshot release
 
 * Add `getCookies` function that retrieves the cookies sent with the HTTP request when the browser window connects (to the websocket). [#137][]
+* Allow Electron process to be accessed from JavaScript FFI. [#200][] This means that Threepenny is now more useful when used with the [Electron][] framework, see [doc/electron.md](doc/electron.md) for more information on that.
 
   [#137]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/137
+  [#200]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/200
+  [electron]: https://electron.atom.io
 
 **0.8.1.0** — Snapshot release
 

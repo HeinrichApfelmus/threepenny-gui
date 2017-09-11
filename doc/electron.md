@@ -35,7 +35,7 @@ following on startup:
 - opens an Electron window which loads the URL of our Threepenny app
 
 To get started with the linked `electron.js` first add
-this [package.json]('./electron/package.json') to your project root directory.
+this [package.json](./electron/package.json) to your project root directory.
 You'll need Node installed and `npm` on your PATH, confirm by running `which
 npm`. Now run `npm install` from the project root directory to install the
 necessary dependencies.
@@ -78,6 +78,34 @@ directory:
 ```stack install --local-bin-path build```
 
 Now you can simply set `relBin` to `./build/your-app-exe`.
+
+## Accessing electron with FFI
+
+The Haskell FFI can be used to access electron utilities.
+For instance, to display a dialog when a button is pressed:
+
+```Haskell
+button <- UI.button # set UI.text "Click me!"
+on UI.click button $ const $ runFunction $ ffi "require('electron').dialog.showOpenDialog({})"
+```
+
+A reference of electron functions can be found at https://electron.atom.io/docs/.
+
+The [jmacro](https://hackage.haskell.org/package/jmacro) library could prove useful for more involved applications, such as showing a modal dialog:
+
+```Haskell
+runFunction $ ffi $ show $ renderJs
+    [jmacro|
+        var {|BrowserWindow: BrowserWindow|} = remote;
+        var modal = new BrowserWindow({parent: remote.getCurrentWindow(),
+                                       modal: true,
+                                       show: false});
+        modal.setMenu(null);
+        modal.loadURL('file://' + require('path').join(remote.app.getAppPath(), 'dialog.html'));
+
+        modal.once('ready-to-show', \() { modal.show() })
+    |]
+```
 
 ## Packaging with electron-packager
 This section assumes the app is already setup to run with Electron based on
