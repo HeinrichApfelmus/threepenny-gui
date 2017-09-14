@@ -98,7 +98,8 @@ runFunction $ ffi $ show $ renderJs
     [jmacro|
         var {|BrowserWindow: BrowserWindow|} = remote;
         var modal = new BrowserWindow({parent: remote.getCurrentWindow(),
-                                       modal: true});
+                                       modal: true,
+                                       show: false});
         modal.setMenu(null);
         modal.loadURL('file://' + require('path').join(remote.app.getAppPath(), 'dialog.html'));
 
