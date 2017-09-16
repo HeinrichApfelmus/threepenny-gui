@@ -66,16 +66,6 @@ contains any additional arguments to pass to the binary. If you're not sure
 about the relative path to your application binary, and you're using Stack, see
 the [next section](#explicit-binary-location).
 
-Another file you will need to add is this [index.html](./electron/index.html).
-You will need to add it as a `customHTML` in your call of `startGui` as follows:
-```Haskell
-startGui defaultConfig
-    { -- other settings...
-    , jsCustomHTML = Just "index.html"
-    , -- other settings...
-    } setup
-```
-
 Now run your app with Electron: `./node_modules/.bin/electron electron.js`
 
 ### Explicit binary location
