@@ -91,9 +91,16 @@ blur = silence . domEvent "blur"
 type KeyCode = Int
 
 -- | Key pressed while element has focus.
+-- Returns the keycode (as opposed to the ASCII value) of any key, including
+-- SHIFT, CTRL and arrow keys.
 keydown :: Element -> Event KeyCode
 keydown = fmap unsafeFromJSON . domEvent "keydown"
 
 -- | Key released while element has focus.
 keyup :: Element -> Event KeyCode
 keyup   = fmap unsafeFromJSON . domEvent "keyup"
+
+-- | Key pressed while element has focus.
+-- Returns the actual character, taking into account SHIFT or CAPS LOCK.
+keypress :: Element -> Event Char
+keypress = fmap (toEnum . read . head . unsafeFromJSON) . domEvent "keypress"
