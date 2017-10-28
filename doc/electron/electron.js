@@ -27,7 +27,7 @@ freeport((err, port) => {
     win = new BrowserWindow({
       width: 800,
       height: 600,
-      webPreferences: { nodeIntegration: true },
+      webPreferences: { nodeIntegration: true }
     });
 
     console.log(`Loading URL: ${url}`);
