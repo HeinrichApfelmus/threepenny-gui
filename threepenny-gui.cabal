@@ -140,11 +140,9 @@ Executable threepenny-examples-bartab
         cpp-options:       -DCABAL
         build-depends:     base                      >= 4     && < 5
                           ,threepenny-gui
-                          ,filepath
     else
         buildable: False
     main-is:           BarTab.hs
-    other-modules:     Paths_threepenny_gui, Paths
     hs-source-dirs:    samples
 
 Executable threepenny-examples-buttons
@@ -239,5 +237,4 @@ Executable threepenny-examples-svg
     else
         buildable: False
     main-is:           Svg.hs
-    other-modules:     Paths_threepenny_gui, Paths
     hs-source-dirs:    samples
