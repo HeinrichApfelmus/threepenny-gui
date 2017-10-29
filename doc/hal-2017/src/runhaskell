@@ -1,0 +1,12 @@
+#!/bin/sh
+if [ -d "./.cabal-sandbox" ]; then
+  ghc \
+    -no-user-package-db \
+    -package-db ./.cabal-sandbox/*-packages.conf.d \
+    "$@" -e main
+elif [ -e "./stack.yaml" ]; then
+  stack --stack-yaml "./stack.yaml" exec \
+    ghc -- "$@" -e main
+else
+  ghc "$@" -e main
+fi

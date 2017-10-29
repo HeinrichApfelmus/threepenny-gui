@@ -1,0 +1,6 @@
+resolver: lts-9.10
+
+# use Stack without a Cabal file
+# Remember to install desired dependencies beforehand, e.g.
+#    > stack build threepenny-gui
+packages: []
