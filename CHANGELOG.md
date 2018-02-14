@@ -3,6 +3,7 @@
 **0.8.2.1** — Maintenance release
 
 * Bump dependencies to allow `async` 2.2
+* Fix a compatibility issue with Cabal-2.0
 
 **0.8.2.0** — Snapshot release
 
