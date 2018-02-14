@@ -1,5 +1,10 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.8.2.1** — Maintenance release
+
+* Bump dependencies to allow `async` 2.2
+* Fix a compatibility issue with Cabal-2.0
+
 **0.8.2.0** — Snapshot release
 
 * Add `getCookies` function that retrieves the cookies sent with the HTTP request when the browser window connects (to the websocket). [#137][]
