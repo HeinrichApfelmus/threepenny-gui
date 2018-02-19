@@ -40,7 +40,7 @@ code and run them on the client. Consider this approach similar to [a
 shading language](http://en.wikipedia.org/wiki/Shading_language).
 You can import any JavaScript library and use it from the JavaScript FFI.
 
-If you don't want to write JavaScript, then you could choose a Haskell-like language like [PureScript](http://www.purescript.org), [Fay](https://github.com/faylang/fay/wiki). You can also directly compile JavaScript to Haskell with [Haste](https://github.com/valderman/haste-compiler) or [GHCJS](https://github.com/ghcjs/ghcjs).
+If you don't want to write JavaScript, then you could choose a Haskell-like language like [PureScript](http://www.purescript.org), [Fay](https://github.com/faylang/fay/wiki). You can also directly compile Haskell to JavaScript with [Haste](https://github.com/valderman/haste-compiler) or [GHCJS](https://github.com/ghcjs/ghcjs).
 
 # Future ideas
 
