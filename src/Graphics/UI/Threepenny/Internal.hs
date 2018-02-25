@@ -288,11 +288,11 @@ instance Functor UI where
     fmap f = UI . fmap f . unUI
 
 instance Applicative UI where
-    pure  = return
+    pure  = UI . pure
     (<*>) = ap
 
 instance Monad UI where
-    return  = UI . return
+    return  = pure
     m >>= k = UI $ unUI m >>= unUI . k
 
 instance MonadIO UI where
