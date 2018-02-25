@@ -1,5 +1,9 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.8.2.2** – Maintenance release
+
+* Bump dependencies to allow `exceptions` 0.9.0
+
 **0.8.2.1** — Maintenance release
 
 * Bump dependencies to allow `async` 2.2
