@@ -134,6 +134,8 @@ Library
       build-depends: network-uri            >= 2.6    && < 2.7
   else
       build-depends: network                >= 2.3.0  && < 2.6
+  if impl(ghc >= 8.0)
+      ghc-options: -Wcompat -Wnoncanonical-monad-instances -Wnoncanonical-monadfail-instances
 
 Executable threepenny-examples-bartab
     if flag(buildExamples)
@@ -166,7 +168,7 @@ Executable threepenny-examples-canvas
     else
         buildable: False
     main-is:           Canvas.hs
-    other-modules:     Paths
+    other-modules:     Paths_threepenny_gui, Paths
     hs-source-dirs:    samples
 
 Executable threepenny-examples-chat

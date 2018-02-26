@@ -21,7 +21,7 @@ module Graphics.UI.Threepenny.Internal (
     EventData, domEvent, unsafeFromJSON,
     ) where
 
-import           Control.Applicative                   (Applicative)
+import           Control.Applicative                   (Applicative(..))
 import           Control.Monad
 import           Control.Monad.Catch
 import           Control.Monad.Fix
@@ -288,11 +288,11 @@ instance Functor UI where
     fmap f = UI . fmap f . unUI
 
 instance Applicative UI where
-    pure  = return
+    pure  = UI . pure
     (<*>) = ap
 
 instance Monad UI where
-    return  = UI . return
+    return  = pure
     m >>= k = UI $ unUI m >>= unUI . k
 
 instance MonadIO UI where
