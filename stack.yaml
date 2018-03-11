@@ -5,5 +5,5 @@ packages:
 - .
 extra-deps:
 - async-2.2.1
-- exceptions-0.9.0
+- exceptions-0.10.0
 resolver: lts-10.5

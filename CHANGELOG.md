@@ -3,6 +3,7 @@
 **UNRELEASED**
 
 * Bump dependencies to allow `aeson` 1.3.0.0
+* Bump dependencies to allow `exceptions` 0.10.0
 
 **0.8.2.2** – Maintenance release
 
