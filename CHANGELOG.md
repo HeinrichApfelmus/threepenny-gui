@@ -1,9 +1,11 @@
 ## Changelog for the `threepenny-gui` package
 
-**UNRELEASED**
+**0.8.2.3**
 
+* Compatibility with GHC-8.4.1
 * Bump dependencies to allow `aeson` 1.3.0.0
 * Bump dependencies to allow `exceptions` 0.10.0
+* Bump dependencies to allow `snap-server` 1.1.0.0
 
 **0.8.2.2** – Maintenance release
 
