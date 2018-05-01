@@ -1,5 +1,8 @@
 ## Changelog for the `threepenny-gui` package
 
+**UNRELEASED**
+* Remove redundant dependency on `network-uri` and`network`
+
 **0.8.2.3**
 
 * Compatibility with GHC-8.4.1
