@@ -28,6 +28,12 @@ bug-reports:         https://github.com/HeinrichApfelmus/threepenny-gui/issues
 Category:            Web, GUI
 Build-type:          Simple
 Cabal-version:       >=1.8
+Tested-With:         GHC == 7.6.3
+                    ,GHC == 7.8.4
+                    ,GHC == 7.10.3
+                    ,GHC == 8.0.2
+                    ,GHC == 8.2.2
+                    ,GHC == 8.4.2
 
 Extra-Source-Files:  CHANGELOG.md
                     ,README.md

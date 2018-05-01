@@ -3,8 +3,5 @@ flags:
     buildexamples: true
 packages:
 - .
-extra-deps:
-- async-2.2.1
-- exceptions-0.10.0
-- template-haskell-2.13.0.0
-resolver: lts-10.5
+extra-deps: []
+resolver: lts-11.7
