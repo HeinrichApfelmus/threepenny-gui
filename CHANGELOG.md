@@ -3,6 +3,7 @@
 **UNRELEASED**
 * Remove redundant dependency on `network-uri` and`network`
 * Bump dependencies to allow `aeson` 1.4.0.0
+* Exclude `websockets` 0.12.5.0 from dependencies.
 
 **0.8.2.3**
 
