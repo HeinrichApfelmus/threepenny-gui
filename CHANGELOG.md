@@ -1,11 +1,11 @@
 ## Changelog for the `threepenny-gui` package
 
-**UNRELEASED**
-* Remove redundant dependency on `network-uri` and`network`
+**0.8.2.4** – Maintenance release
+* Remove redundant dependencies on `network-uri` and `network`
 * Bump dependencies to allow `aeson` 1.4.0.0
 * Exclude `websockets` 0.12.5.0 from dependencies.
 
-**0.8.2.3**
+**0.8.2.3** – Maintenance release
 
 * Compatibility with GHC-8.4.1
 * Bump dependencies to allow `aeson` 1.3.0.0
