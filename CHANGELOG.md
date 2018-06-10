@@ -2,6 +2,7 @@
 
 **UNRELEASED**
 * Remove redundant dependency on `network-uri` and`network`
+* Bump dependencies to allow `aeson` 1.4.0.0
 
 **0.8.2.3**
 
