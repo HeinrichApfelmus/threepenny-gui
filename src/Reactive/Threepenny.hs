@@ -218,7 +218,7 @@ accumB a e = liftIO $ do
 -- > stepper x0 ex = return $ \time ->
 -- >     last (x0 : [x | (timex,x) <- ex, timex < time])
 --
--- Note that the smaller-than-sign in the comparision @timex < time@ means
+-- Note that the smaller-than-sign in the comparison @timex < time@ means
 -- that the value of the behavior changes \"slightly after\"
 -- the event occurrences. This allows for recursive definitions.
 stepper :: MonadIO m => a -> Event a -> m (Behavior a)
