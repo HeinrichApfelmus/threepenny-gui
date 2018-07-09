@@ -8,7 +8,7 @@ module Graphics.UI.Threepenny.Events (
     -- * Standard DOM events
     click, contextmenu, mousemove, mousedown, mouseup,
     hover, leave,
-    focus, blur,
+    focus, blur, resize,
     KeyCode, keyup, keydown, keypress,
     ) where
 
@@ -87,6 +87,11 @@ focus = silence . domEvent "focus"
 blur :: Element -> Event ()
 blur = silence . domEvent "blur"
 
+-- | Element reports its window's resize.
+--   Note that there should only be at most one
+--   'resize' event registered.
+resize :: Element -> Event (Int,Int)
+resize = fmap readCoordinates . domEvent "resize"
 
 type KeyCode = Int
 
