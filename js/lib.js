@@ -52,6 +52,7 @@ Haskell.on = function (el, eventType, fun) {
       fun([t.innerWidth, t.innerHeight]);
       return true;
     };
+    fun([window.innerWidth, window.innerHeight]);
   } else {
     $(el).on(eventType, function(e) {
       fun(e.which ? [e.which.toString()] : e.detail || []);
