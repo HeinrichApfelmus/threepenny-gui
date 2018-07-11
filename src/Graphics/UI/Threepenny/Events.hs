@@ -8,12 +8,13 @@ module Graphics.UI.Threepenny.Events (
     -- * Standard DOM events
     click, contextmenu, mousemove, mousedown, mouseup,
     hover, leave,
-    focus, blur, resize,
+    focus, blur, resize, resize',
     KeyCode, keyup, keydown, keypress,
     ) where
 
 import Graphics.UI.Threepenny.Attributes
 import Graphics.UI.Threepenny.Core
+import System.IO.Unsafe (unsafePerformIO)
 
 silence = fmap (const ())
 
@@ -92,6 +93,9 @@ blur = silence . domEvent "blur"
 --   'resize' event registered.
 resize :: Element -> Event (Int,Int)
 resize = fmap readCoordinates . domEvent "resize"
+resize' :: Window -> Event (Int,Int)
+resize' w = fmap readCoordinates $ domEvent "resize" e -- do fmap readCoordinates .
+  where e = unsafePerformIO (runUI w $ getBody w)
 
 type KeyCode = Int
 
