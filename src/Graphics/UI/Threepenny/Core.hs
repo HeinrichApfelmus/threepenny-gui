@@ -37,7 +37,7 @@ module Graphics.UI.Threepenny.Core (
 
     -- * Attributes
     -- | For a list of predefined attributes, see "Graphics.UI.Threepenny.Attributes".
-    (#), (#.),
+    (#), (#.), (#=),
     Attr, WriteAttr, ReadAttr, ReadWriteAttr(..),
     set, sink, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
     bimapAttr, fromObjectProperty,
@@ -284,6 +284,10 @@ infixl 8 #.
 -- | Convenient combinator for setting the CSS class on element creation.
 (#.) :: UI Element -> String -> UI Element
 (#.) mx s = mx # set (attr "class") s
+
+-- | Convenient combinator for bulk setting of attributes on element creation.
+(#=) :: Foldable t => UI x -> t (ReadWriteAttr x i o, i) -> UI x
+(#=) e = ($ e) . foldl (\f p -> f . uncurry set p) id
 
 -- | Attributes can be 'set' and 'get'.
 type Attr x a = ReadWriteAttr x a a
