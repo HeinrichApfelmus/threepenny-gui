@@ -64,6 +64,7 @@ import Control.Monad.Fix
 import Control.Monad.IO.Class
 
 import qualified Control.Monad.Catch             as E
+import qualified Data.Foldable                   as F
 import qualified Data.Aeson                      as JSON
 import qualified Foreign.JavaScript              as JS
 import qualified Graphics.UI.Threepenny.Internal as Core
@@ -286,8 +287,8 @@ infixl 8 #.
 (#.) mx s = mx # set (attr "class") s
 
 -- | Convenient combinator for bulk setting of attributes on element creation.
-(#=) :: Foldable t => UI x -> t (ReadWriteAttr x i o, i) -> UI x
-(#=) e = ($ e) . foldl (\f p -> f . uncurry set p) id
+(#=) :: F.Foldable t => UI x -> t (ReadWriteAttr x i o, i) -> UI x
+(#=) e = ($ e) . F.foldl (\f p -> f . uncurry set p) id
 
 -- | Attributes can be 'set' and 'get'.
 type Attr x a = ReadWriteAttr x a a
