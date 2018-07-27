@@ -9,7 +9,7 @@ module Graphics.UI.Threepenny.Events (
     click, contextmenu, mousemove, mousedown, mouseup,
     hover, leave,
     focus, blur,
-    KeyCode, keyup, keydown,
+    KeyCode, keyup, keydown, keypress,
     ) where
 
 import Graphics.UI.Threepenny.Attributes
