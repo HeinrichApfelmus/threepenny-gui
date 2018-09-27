@@ -55,7 +55,7 @@ module Graphics.UI.Threepenny.SVG.Attributes (
     y, y1, y2, yChannelSelector,
     z, zoomAndPan,
 
-    -- * Regular attributes (alternative spellings)
+    -- * Regular attributes (alternative spellings, deprecated)
     refx, refy,
 
     -- * Presentation attributes
@@ -267,6 +267,7 @@ refX                         =  strAttr "refX"
 refY                         =  strAttr "refY"
 refx                         =  refX
 refy                         =  refY
+{-# DEPRECATED refx, refy "Use 'refX' and 'refY' instead" #-}
 rendering_intent             =  strAttr "rendering-intent"
 repeatCount                  =  strAttr "repeatCount"
 repeatDur                    =  strAttr "repeatDur"
