@@ -38,7 +38,7 @@ module Graphics.UI.Threepenny.SVG.Attributes (
     panose_1, path, pathLength, patternContentUnits,
     patternTransform, patternUnits, points, pointsAtX, pointsAtY, pointsAtZ,
     preserveAlpha, preserveAspectRatio, primitiveUnits,
-    r, radius, refx, refy, rendering_intent, repeatCount, repeatDur,
+    r, radius, refX, refY, rendering_intent, repeatCount, repeatDur,
     requiredExtensions, requiredFeatures, restart, result, rotate, rx, ry,
     scale, seed, slope, spacing, specularConstant, specularExponent, spreadMethod,
     startOffset, stdDeviation, stemh, stemv, stitchTiles,
@@ -54,6 +54,9 @@ module Graphics.UI.Threepenny.SVG.Attributes (
     xml_base, xml_lang, xml_space,
     y, y1, y2, yChannelSelector,
     z, zoomAndPan,
+
+    -- * Regular attributes (alternative spellings)
+    refx, refy,
 
     -- * Presentation attributes
     alignment_baseline, baseline_shift,
@@ -260,8 +263,10 @@ preserveAspectRatio          =  strAttr "preserveAspectRatio"
 primitiveUnits               =  strAttr "primitiveUnits"
 r                            =  strAttr "r"
 radius                       =  strAttr "radius"
-refx                         =  strAttr "refX"
-refy                         =  strAttr "refY"
+refX                         =  strAttr "refX"
+refY                         =  strAttr "refY"
+refx                         =  refX
+refy                         =  refY
 rendering_intent             =  strAttr "rendering-intent"
 repeatCount                  =  strAttr "repeatCount"
 repeatDur                    =  strAttr "repeatDur"
