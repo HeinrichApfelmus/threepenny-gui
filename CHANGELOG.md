@@ -1,6 +1,12 @@
 ## Changelog for the `threepenny-gui` package
 
-**0.8.2.5** – Maintenance release
+**UNRELEASED** – Maintenance and snapshot release
+
+* Export `keypress` event.
+* Fix the spelling of the `refX` and `refY` SVG attributes.
+  `refX` and `refY` are added to `Graphics.UI.Threepenny.SVG.Attributes`,
+  the old lowercase versions are deprecated.
+* Invoke compatibility mode of IE11 for jQuery v3.2.1.
 * Compatibility with GHC-8.6.1
 
 **0.8.2.4** – Maintenance release
