@@ -1,6 +1,6 @@
 ## Changelog for the `threepenny-gui` package
 
-**UNRELEASED** – Maintenance and snapshot release
+**0.8.3.0** – Maintenance and snapshot release
 
 * Export `keypress` event.
 * Fix the spelling of the `refX` and `refY` SVG attributes.
