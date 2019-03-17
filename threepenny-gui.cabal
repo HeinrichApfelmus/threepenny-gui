@@ -33,7 +33,8 @@ Tested-With:         GHC == 7.6.3
                     ,GHC == 7.10.3
                     ,GHC == 8.0.2
                     ,GHC == 8.2.2
-                    ,GHC == 8.4.2
+                    ,GHC == 8.4.3
+                    ,GHC == 8.6.4
 
 Extra-Source-Files:  CHANGELOG.md
                     ,README.md
