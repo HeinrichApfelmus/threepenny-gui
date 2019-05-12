@@ -1,5 +1,9 @@
 ## Changelog for the `threepenny-gui` package
 
+**UNRELEASED**
+
+* Bump dependencies to allow `hashable` 1.3.0.0
+
 **0.8.3.0** – Maintenance and snapshot release
 
 * Export `keypress` event.
