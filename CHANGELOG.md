@@ -1,8 +1,10 @@
 ## Changelog for the `threepenny-gui` package
 
-**UNRELEASED**
+**0.8.3.1** – Maintenance release
 
-* Bump dependencies to allow `hashable` 1.3.0.0
+* Bump dependencies for compatibility with GHC-8.8.
+* Bump dependencies to allow `hashable` 1.3.0.0.
+* Remove support for GHC 7.6 and 7.8.
 
 **0.8.3.0** – Maintenance and snapshot release
 
