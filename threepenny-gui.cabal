@@ -1,5 +1,5 @@
 Name:                threepenny-gui
-Version:             0.8.3.1
+Version:             0.8.3.2
 Synopsis:            GUI framework that uses the web browser as a display.
 Description:
     Threepenny-GUI is a GUI framework that uses the web browser as a display.
@@ -27,7 +27,7 @@ Homepage:            http://wiki.haskell.org/Threepenny-gui
 bug-reports:         https://github.com/HeinrichApfelmus/threepenny-gui/issues
 Category:            Web, GUI
 Build-type:          Simple
-Cabal-version:       >=1.8
+Cabal-version:       >=1.10
 Tested-With:         GHC == 7.10.3
                     ,GHC == 8.0.2
                     ,GHC == 8.2.2
@@ -104,7 +104,7 @@ Library
                     ,Reactive.Threepenny.PulseLatch
                     ,Reactive.Threepenny.Types
                     ,Paths_threepenny_gui
-  extensions:        CPP
+  other-extensions: CPP
   cpp-options:      -DCABAL
   if flag(rebug)
       cpp-options:  -DREBUG
@@ -133,7 +133,8 @@ Library
                     ,vault                  == 0.3.*
                     ,vector                 >= 0.10   && < 0.13
   if impl(ghc >= 8.0)
-      ghc-options: -Wcompat -Wnoncanonical-monad-instances -Wnoncanonical-monadfail-instances
+      ghc-options: -Wcompat -Wnoncanonical-monad-instances
+  default-language: Haskell2010
 
 Executable threepenny-examples-bartab
     if flag(buildExamples)
@@ -144,6 +145,7 @@ Executable threepenny-examples-bartab
         buildable: False
     main-is:           BarTab.hs
     hs-source-dirs:    samples
+    default-language: Haskell2010
 
 Executable threepenny-examples-buttons
     if flag(buildExamples)
@@ -156,6 +158,7 @@ Executable threepenny-examples-buttons
     main-is:           Buttons.hs
     other-modules:     Paths_threepenny_gui, Paths
     hs-source-dirs:    samples
+    default-language: Haskell2010
 
 Executable threepenny-examples-canvas
     if flag(buildExamples)
@@ -168,6 +171,7 @@ Executable threepenny-examples-canvas
     main-is:           Canvas.hs
     other-modules:     Paths_threepenny_gui, Paths
     hs-source-dirs:    samples
+    default-language: Haskell2010
 
 Executable threepenny-examples-chat
     if flag(buildExamples)
@@ -181,6 +185,7 @@ Executable threepenny-examples-chat
     main-is:           Chat.hs
     other-modules:     Paths_threepenny_gui, Paths, Data.List.Extra
     hs-source-dirs:    samples
+    default-language: Haskell2010
 
 Executable threepenny-examples-crud
     if flag(buildExamples)
@@ -192,6 +197,7 @@ Executable threepenny-examples-crud
         buildable: False
     main-is:           CRUD.hs
     hs-source-dirs:    samples
+    default-language: Haskell2010
 
 Executable threepenny-examples-currencyconverter
     if flag(buildExamples)
@@ -203,6 +209,7 @@ Executable threepenny-examples-currencyconverter
         buildable: False
     main-is:           CurrencyConverter.hs
     hs-source-dirs:    samples
+    default-language: Haskell2010
 
 Executable threepenny-examples-dragndropexample
     if flag(buildExamples)
@@ -215,6 +222,7 @@ Executable threepenny-examples-dragndropexample
     main-is:           DragNDropExample.hs
     other-modules:     Paths_threepenny_gui, Paths
     hs-source-dirs:    samples
+    default-language: Haskell2010
 
 Executable threepenny-examples-drummachine
     if flag(buildExamples)
@@ -227,6 +235,7 @@ Executable threepenny-examples-drummachine
     main-is:           DrumMachine.hs
     other-modules:     Paths_threepenny_gui, Paths
     hs-source-dirs:    samples
+    default-language: Haskell2010
 
 Executable threepenny-examples-svg
     if flag(buildExamples)
@@ -237,3 +246,4 @@ Executable threepenny-examples-svg
         buildable: False
     main-is:           Svg.hs
     hs-source-dirs:    samples
+    default-language: Haskell2010
