@@ -10,6 +10,9 @@ module Graphics.UI.Threepenny.Events (
     hover, leave,
     focus, blur,
     KeyCode, keyup, keydown, keypress,
+
+    -- * Migration
+    roundCoordinates
     ) where
 
 import Graphics.UI.Threepenny.Attributes
@@ -43,7 +46,9 @@ click :: Element -> Event ()
 click = silence . domEvent "click"
 
 -- | Context menu event.
-contextmenu :: Element -> Event (Int,Int)
+--
+-- The mouse coordinates are relative to the upper left corner of the element.
+contextmenu :: Element -> Event (Double,Double)
 contextmenu = fmap readCoordinates . domEvent "contextmenu"
 
 -- | Mouse enters an element.
@@ -58,21 +63,48 @@ hover = silence . domEvent "mouseenter"
 -- Note: The @<body>@ element responds to mouse move events,
 -- but only in the area occupied by actual content,
 -- not the whole browser window.
-mousemove :: Element -> Event (Int,Int)
+mousemove :: Element -> Event (Double,Double)
 mousemove = fmap readCoordinates . domEvent "mousemove"
 
-readCoordinates :: EventData -> (Int,Int)
+-- NB:
+-- The return types of mouse events have been redefined from @long@
+-- to @double@ in the CSS Object Model View Model working draft,
+-- which browsers have begun to adopt.
+-- See https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent#Specifications
+-- and https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/pageX
+--
+-- Similarly, we rely on jQuery's @.offset()@ to return
+-- coordinates relative to the upper left corner of the
+-- element, and this may return fractional data.
+-- https://api.jquery.com/offset/
+readCoordinates :: EventData -> (Double,Double)
 readCoordinates json = (x,y)
     where [x,y] = unsafeFromJSON json
 
+-- | Round a pair of `Double` to the next integers.
+-- This function helps you migrate from previous versions of Threepenny-GUI.
+--
+-- The return types of mouse events (`mousedown`, `mouseup`, `mousemove`, `contextmenu`) 
+-- have been redefined from @long@
+-- to @double@ in the CSS Object Model View Model working draft,
+-- which browsers have begun to adopt.
+--
+-- See https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent#Specifications
+--
+-- and https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/pageX
+roundCoordinates :: (Double,Double) -> (Int,Int)
+roundCoordinates (x,y) = (round x, round y)
+
 -- | Mouse down event.
--- The mouse coordinates are relative to the element.
-mousedown :: Element -> Event (Int,Int)
+--
+-- The mouse coordinates are relative to the upper left corner of the element.
+mousedown :: Element -> Event (Double,Double)
 mousedown = fmap readCoordinates . domEvent "mousedown"
 
 -- | Mouse up event.
--- The mouse coordinates are relative to the element.
-mouseup :: Element -> Event (Int,Int)
+--
+-- The mouse coordinates are relative to the upper left corner of the element.
+mouseup :: Element -> Event (Double,Double)
 mouseup = fmap readCoordinates . domEvent "mouseup"
 
 -- | Mouse leaving an element.
