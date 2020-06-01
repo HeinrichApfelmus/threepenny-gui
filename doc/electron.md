@@ -6,6 +6,9 @@ and
 For reference, a minimal working example is available
 [here](https://github.com/barischj/threepenny-gui-electron-example).
 
+An [extended demo for creating a portable Desktop GUI Application](https://github.com/thma/ThreepennyElectron) with Threepenny GUI and Electron has been written by Github user [thma](https://github.com/thma).
+
+
 ## Justification
 Normally when running a Threepenny app we execute our Haskell, with `stack exec`
 or otherwise, which starts a local server and we open our browser on a certain
