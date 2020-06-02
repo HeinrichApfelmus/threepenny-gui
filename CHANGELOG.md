@@ -1,5 +1,17 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.9.0.0** – Maintenance and snapshot release
+
+* The events `contextmenu`, `mousedown`, `mousemove` and `mouseup` now return
+  `Double` coordinates instead of `Int`s. This change reflects updates to the
+  underlying browser APIs and the jQuery library.
+  Users who prefer to keep working with `Int` coordinates may use the added
+  `roundCoordinates` compatibility function.
+  [#238][]
+* Bump dependencies to allow `aeson` 1.5.
+
+[#238]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/238
+
 **0.8.3.2** – Maintenance release
 
 * Bump dependencies for compatibility with GHC-8.10.
