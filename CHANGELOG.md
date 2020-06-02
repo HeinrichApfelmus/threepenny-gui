@@ -4,10 +4,11 @@
 
 * The events `contextmenu`, `mousedown`, `mousemove` and `mouseup` now return
   `Double` coordinates instead of `Int`s. This change reflects updates to the
-  underlying browser APIs and the jQuery library.
+  underlying browser APIs and the jQuery library. [#238][]
+
   Users who prefer to keep working with `Int` coordinates may use the added
   `roundCoordinates` compatibility function.
-  [#238][]
+
 * Bump dependencies to allow `aeson` 1.5.
 
 [#238]: https://github.com/HeinrichApfelmus/threepenny-gui/issues/238
