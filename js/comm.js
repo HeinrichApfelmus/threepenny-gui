@@ -15,7 +15,7 @@
 Haskell.createWebSocket = function (url0, receive) {
   var that = {};
   var optReloadOnDisconnect = false;
-  var url  = 'ws:' + url0.slice(5) + '/websocket/';
+  var url  = 'ws' + url0.slice(4) + '/websocket/';
   var ws   = new WebSocket(url);
   
   // Close WebSocket when the browser window is closed.
