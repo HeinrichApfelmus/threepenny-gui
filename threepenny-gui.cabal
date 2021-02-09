@@ -109,7 +109,7 @@ Library
   if flag(rebug)
       cpp-options:  -DREBUG
       ghc-options:  -O2
-  build-depends:     base                   >= 4.8   && < 4.15
+  build-depends:     base                   >= 4.8   && < 4.16
                     ,aeson                  (>= 0.7 && < 0.10) || == 0.11.* || (>= 1.0 && < 1.6)
                     ,async                  >= 2.0   && < 2.3
                     ,bytestring             >= 0.9.2 && < 0.12
@@ -124,7 +124,7 @@ Library
                     ,snap-server            >= 0.9.0 && < 1.2
                     ,snap-core              >= 0.9.0 && < 1.1
                     ,stm                    >= 2.2    && < 2.6
-                    ,template-haskell       >= 2.7.0  && < 2.17
+                    ,template-haskell       >= 2.7.0  && < 2.18
                     ,text                   >= 0.11   && < 1.3
                     ,transformers           >= 0.3.0  && < 0.6
                     ,unordered-containers   == 0.2.*
