@@ -1,5 +1,10 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.9.1.0** – Maintenance and snapshot release
+
+* Add support for websockets over SSL.
+* Bump dependencies for compatibility with GHC 9.0.
+
 **0.9.0.0** – Maintenance and snapshot release
 
 * The events `contextmenu`, `mousedown`, `mousemove` and `mouseup` now return
