@@ -32,7 +32,7 @@ flushCallBuffer w@Window{..} = do
     unless (null code) $
         runEval code
 
--- Schedule a piece of JavaScript code to be run with `runEval`,
+-- | Schedule a piece of JavaScript code to be run with `runEval`,
 -- depending on the buffering mode
 bufferRunEval :: Window -> String -> IO ()
 bufferRunEval w@Window{..} code = do

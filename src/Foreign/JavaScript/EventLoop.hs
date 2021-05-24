@@ -200,6 +200,6 @@ newJSObjectFromCoupon :: Window -> Foreign.Coupon -> IO JSObject
 newJSObjectFromCoupon w@(Window{..}) coupon = do
     ptr <- newRemotePtr coupon (JSPtr coupon) wJSObjects
     addFinalizer ptr $
-        runEval ("Haskell.freeStablePtr('" ++ T.unpack coupon ++ "')")
+        bufferRunEval w ("Haskell.freeStablePtr('" ++ T.unpack coupon ++ "')")
     return ptr
 
