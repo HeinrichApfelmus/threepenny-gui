@@ -20,7 +20,7 @@ data Pulse a = Pulse
     , evalP       :: EvalP (Maybe a)
     }
 
-instance Hashable Priority where hashWithSalt _ = fromEnum
+instance Hashable Priority where hashWithSalt = (. fromEnum) . (*)
 
 data Latch a = Latch { readL :: EvalL a }
 
