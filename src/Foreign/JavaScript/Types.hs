@@ -271,7 +271,7 @@ data Window = Window
     , runEval        :: String -> IO ()
     , callEval       :: String -> IO JSON.Value
 
-    , wCallBuffer     :: TVar (String -> String)
+    , wCallBuffer     :: TMVar (String -> String)
     , wCallBufferMode :: TVar CallBufferMode
 
     , timestamp      :: IO ()
@@ -289,7 +289,7 @@ data Window = Window
 newPartialWindow :: IO Window
 newPartialWindow = do
     ptr <- newRemotePtr "" () =<< newVendor
-    b1  <- newTVarIO id
+    b1  <- newTMVarIO id
     b2  <- newTVarIO NoBuffering
     let nop = const $ return ()
     Window undefined [] nop undefined b1 b2 (return ()) nop nop ptr <$> newVendor <*> newVendor
