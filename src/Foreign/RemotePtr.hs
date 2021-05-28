@@ -135,7 +135,7 @@ newRemotePtr coupon value Vendor{..} = do
     
     let finalize = atomicModifyIORef' coupons $ \m -> (Map.delete coupon m, ())
     w <- mkWeakIORef ptr finalize
-    atomicModifyIORef' coupons $ \m -> return (Map.insert coupon w m, ())
+    atomicModifyIORef' coupons $ \m -> (Map.insert coupon w m, ())
     atomicModifyIORef' ptr $ \itemdata -> (itemdata { self = w }, ())
     return ptr
 
