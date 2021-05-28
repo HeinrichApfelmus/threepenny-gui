@@ -76,7 +76,9 @@ unsafeCreateJSObject :: Window -> JSFunction NewJSObject -> IO JSObject
 unsafeCreateJSObject w f = do
     g <- wrapImposeStablePtr w f
     bufferRunEval w =<< toCode g
-    marshalResult g w JSON.Null
+    marshalResult g w err
+    where
+    err = error "unsafeCreateJSObject: marshal does not take arguments"
 
 -- | Call a JavaScript function and wait for the result.
 callFunction :: Window -> JSFunction a -> IO a

@@ -12,9 +12,8 @@ import Foreign.JavaScript.Types
 ------------------------------------------------------------------------------}
 -- | Set the call buffering mode for the given browser window.
 setCallBufferMode :: Window -> CallBufferMode -> IO ()
-setCallBufferMode w@Window{..} new = do
-    flushCallBuffer w
-    atomically $ writeTVar wCallBufferMode new
+setCallBufferMode w new =
+    flushCallBufferWithAtomic w $ writeTVar (wCallBufferMode w) new
 
 -- | Get the call buffering mode for the given browser window.
 getCallBufferMode :: Window -> IO CallBufferMode
@@ -23,16 +22,21 @@ getCallBufferMode w@Window{..} = atomically $ readTVar wCallBufferMode
 -- | Flush the call buffer,
 -- i.e. send all outstanding JavaScript to the client in one single message.
 flushCallBuffer :: Window -> IO ()
-flushCallBuffer w@Window{..} = do
-    code' <- atomically $ do
-        code <- readTVar wCallBuffer
-        writeTVar wCallBuffer id
-        return code
-    let code = code' ""
-    unless (null code) $
-        runEval code
+flushCallBuffer w = flushCallBufferWithAtomic w $ return ()
 
--- Schedule a piece of JavaScript code to be run with `runEval`,
+-- | Flush the call buffer, and atomically perform an additional action
+flushCallBufferWithAtomic :: Window -> STM a -> IO a
+flushCallBufferWithAtomic w@Window{..} action = do
+    -- by taking the call buffer, we ensure that no further code
+    -- is added to the buffer while we execute the current buffer's code.
+    code' <- atomically $ takeTMVar wCallBuffer
+    let code = code' ""
+    unless (null code) $ runEval code
+    atomically $ do
+        putTMVar wCallBuffer id
+        action
+
+-- | Schedule a piece of JavaScript code to be run with `runEval`,
 -- depending on the buffering mode
 bufferRunEval :: Window -> String -> IO ()
 bufferRunEval w@Window{..} code = do
@@ -42,8 +46,8 @@ bufferRunEval w@Window{..} code = do
             NoBuffering -> do
                 return $ Just code
             _ -> do
-                msg <- readTVar wCallBuffer
-                writeTVar wCallBuffer (msg . (\s -> ";" ++ code ++ s))
+                msg <- takeTMVar wCallBuffer
+                putTMVar wCallBuffer (msg . (\s -> ";" ++ code ++ s))
                 return Nothing
     case action of
         Nothing   -> return ()

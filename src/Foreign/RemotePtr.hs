@@ -19,7 +19,7 @@ import Prelude hiding (lookup)
 import Control.Monad
 import           Control.Concurrent
 import qualified Data.Text             as T
-import qualified Data.Map              as Map
+import qualified Data.HashMap.Strict   as Map
 import Data.Functor
 import Data.IORef
 
@@ -53,7 +53,7 @@ mkWeakIORefValue r@(GHC.IORef (GHC.STRef r#)) v (GHC.IO f) = GHC.IO $ \s ->
   case GHC.mkWeak# r# v f s of (# s1, w #) -> (# s1, GHC.Weak w #)
 #endif
 
-type Map = Map.Map
+type Map = Map.HashMap
 
 {-----------------------------------------------------------------------------
     Types
@@ -97,8 +97,8 @@ data SomeWeak = forall a. SomeWeak (Weak a)
 -- A single 'RemotePtr' will always be associated with the same 'Coupon'.
 
 data Vendor a = Vendor
-    { coupons :: MVar (Map Coupon (Weak (RemotePtr a)))
-    , counter :: MVar [Integer]
+    { coupons :: IORef (Map Coupon (Weak (RemotePtr a)))
+    , counter :: IORef Integer
     }
 
 {-----------------------------------------------------------------------------
@@ -107,14 +107,14 @@ data Vendor a = Vendor
 -- | Create a new 'Vendor' for trading 'Coupon's and 'RemotePtr's.
 newVendor :: IO (Vendor a)
 newVendor = do
-    counter <- newMVar [0..]
-    coupons <- newMVar Map.empty
+    counter <- newIORef 0
+    coupons <- newIORef Map.empty
     return $ Vendor {..}
 
 -- | Take a 'Coupon' to a 'Vendor' and maybe you'll get a 'RemotePtr' for it.
 lookup :: Coupon -> Vendor a -> IO (Maybe (RemotePtr a))
 lookup coupon Vendor{..} = do
-    w <- Map.lookup coupon <$> readMVar coupons
+    w <- Map.lookup coupon <$> readIORef coupons
     maybe (return Nothing) deRefWeak w
 
 -- | Create a new 'Coupon'.
@@ -124,7 +124,7 @@ lookup coupon Vendor{..} = do
 -- certainly not on a remote machine.
 newCoupon :: Vendor a -> IO Coupon
 newCoupon Vendor{..} =
-    T.pack . show <$> modifyMVar counter (\(n:ns) -> return (ns,n))
+    T.pack . show <$> atomicModifyIORef' counter (\n -> (n+1,n))
 
 -- | Create a new 'RemotePtr' from a 'Coupon' and register it with a 'Vendor'.
 newRemotePtr :: Coupon -> a -> Vendor a -> IO (RemotePtr a)
@@ -133,9 +133,9 @@ newRemotePtr coupon value Vendor{..} = do
     let self = undefined
     ptr      <- newIORef RemoteData{..}
     
-    let finalize = modifyMVar coupons $ \m -> return (Map.delete coupon m, ())
+    let finalize = atomicModifyIORef' coupons $ \m -> (Map.delete coupon m, ())
     w <- mkWeakIORef ptr finalize
-    modifyMVar coupons $ \m -> return (Map.insert coupon w m, ())
+    atomicModifyIORef' coupons $ \m -> return (Map.insert coupon w m, ())
     atomicModifyIORef' ptr $ \itemdata -> (itemdata { self = w }, ())
     return ptr
 

@@ -28,7 +28,7 @@ import qualified Data.Text.Lazy.Builder
 import qualified Data.Vector            as Vector
 import           Safe                             (atMay)
 
-import Foreign.JavaScript.EventLoop (fromJSStablePtr)
+import Foreign.JavaScript.EventLoop (fromJSStablePtr, newJSObjectFromCoupon )
 import Foreign.JavaScript.Types
 import Foreign.RemotePtr
 
@@ -122,14 +122,17 @@ instance FromJS [JSObject] where
 instance FromJS NewJSObject where
     fromJS = FromJS' { wrapCode = id, marshal = \_ _ -> return NewJSObject }
 
+-- | Impose a JS stable pointer upon a newly created JavaScript object.
+--   In this way, JSObject can be created without waiting for the browser
+--   to return a result.
 wrapImposeStablePtr :: Window -> JSFunction NewJSObject -> IO (JSFunction JSObject)
-wrapImposeStablePtr w@(Window{..}) f = do
+wrapImposeStablePtr (Window{..}) f = do
     coupon  <- newCoupon wJSObjects
     rcoupon <- render coupon
     rcode   <- code f
     return $ JSFunction
         { code = return $ apply "Haskell.imposeStablePtr(%1,%2)" [rcode, rcoupon]
-        , marshalResult = \w _ -> newRemotePtr coupon (JSPtr coupon) wJSObjects
+        , marshalResult = \w _ -> newJSObjectFromCoupon w coupon
         }
 
 {-----------------------------------------------------------------------------
