@@ -19,7 +19,7 @@ import Prelude hiding (lookup)
 import Control.Monad
 import           Control.Concurrent
 import qualified Data.Text             as T
-import qualified Data.Map              as Map
+import qualified Data.HashMap.Strict   as Map
 import Data.Functor
 import Data.IORef
 
@@ -53,7 +53,7 @@ mkWeakIORefValue r@(GHC.IORef (GHC.STRef r#)) v (GHC.IO f) = GHC.IO $ \s ->
   case GHC.mkWeak# r# v f s of (# s1, w #) -> (# s1, GHC.Weak w #)
 #endif
 
-type Map = Map.Map
+type Map = Map.HashMap
 
 {-----------------------------------------------------------------------------
     Types
