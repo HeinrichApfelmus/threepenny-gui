@@ -128,7 +128,7 @@ Library
                     ,stm                    >= 2.2    && < 2.6
                     ,template-haskell       >= 2.7.0  && < 2.20
                     ,text                   >= 0.11   && < 2.1
-                    ,transformers           >= 0.3.0  && < 0.6
+                    ,transformers           >= 0.3.0  && < 0.7
                     ,unordered-containers   == 0.2.*
                     ,websockets             (>= 0.8    && < 0.12.5) || (> 0.12.5.0 && < 0.13)
                     ,websockets-snap        >= 0.8    && < 0.11
