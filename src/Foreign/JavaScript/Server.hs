@@ -40,13 +40,10 @@ import Foreign.JavaScript.Types
 httpComm :: Config -> EventLoop -> IO ()
 httpComm Config{..} worker = do
     env <- getEnvironment
-    let portEnv = Safe.readMay =<< Prelude.lookup "PORT" env
-    let addrEnv = fmap BS.pack $ Prelude.lookup "ADDR" env
-    
-    let config = Snap.setPort      (maybe defaultPort id (jsPort `mplus` portEnv))
-               $ Snap.setBind      (maybe defaultAddr id (jsAddr `mplus` addrEnv))
-               $ Snap.setErrorLog  (Snap.ConfigIoLog jsLog)
-               $ Snap.setAccessLog (Snap.ConfigIoLog jsLog)
+
+    let config = Snap.setErrorLog     (Snap.ConfigIoLog jsLog)
+               $ Snap.setAccessLog    (Snap.ConfigIoLog jsLog)
+               $ maybe (configureHTTP env) configureSSL jsUseSSL
                $ Snap.defaultConfig
 
     server <- Server <$> newMVar newFilepaths <*> newMVar newFilepaths <*> return jsLog
@@ -54,6 +51,22 @@ httpComm Config{..} worker = do
     Snap.httpServe config . route $
         routeResources server jsCustomHTML jsStatic
         ++ routeWebsockets (worker server)
+
+    where
+    configureHTTP :: [(String, String)] -> Snap.Config m a -> Snap.Config m a
+    configureHTTP env config =
+        let portEnv = Safe.readMay =<< Prelude.lookup "PORT" env
+            addrEnv = fmap BS.pack $ Prelude.lookup "ADDR" env
+         in Snap.setPort (maybe defaultPort id (jsPort `mplus` portEnv))
+                $ Snap.setBind (maybe defaultAddr id (jsAddr `mplus` addrEnv)) config
+
+    configureSSL :: ConfigSSL -> Snap.Config m a -> Snap.Config m a
+    configureSSL cfgSsl config =
+        Snap.setSSLBind            (jsSSLBind cfgSsl)
+            . Snap.setSSLPort      (jsSSLPort cfgSsl)
+            . Snap.setSSLCert      (jsSSLCert cfgSsl)
+            . Snap.setSSLKey       (jsSSLKey cfgSsl)
+            $ Snap.setSSLChainCert (jsSSLChainCert cfgSsl) config
 
 -- | Route the communication between JavaScript and the server
 routeWebsockets :: (RequestInfo -> Comm -> IO void) -> Routes

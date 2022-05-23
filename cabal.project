@@ -1,2 +1,5 @@
+package snap-server
+  flags: +openssl
+
 packages: "."
 flags: +buildexamples
