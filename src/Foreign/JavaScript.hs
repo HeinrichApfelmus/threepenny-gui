@@ -16,7 +16,8 @@ module Foreign.JavaScript (
     serve, defaultConfig, Config(
           jsPort, jsAddr
         , jsCustomHTML, jsStatic, jsLog
-        , jsWindowReloadOnDisconnect, jsCallBufferMode),
+        , jsWindowReloadOnDisconnect, jsCallBufferMode
+        , jsSSLBind, jsSSLCert, jsSSLChainCert, jsSSLKey, jsSSLPort),
     Server, MimeType, URI, loadFile, loadDirectory,
     Window, getServer, getCookies, root,
 

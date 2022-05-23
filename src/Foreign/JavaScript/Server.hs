@@ -47,6 +47,11 @@ httpComm Config{..} worker = do
                $ Snap.setBind      (maybe defaultAddr id (jsAddr `mplus` addrEnv))
                $ Snap.setErrorLog  (Snap.ConfigIoLog jsLog)
                $ Snap.setAccessLog (Snap.ConfigIoLog jsLog)
+               $ Snap.setSSLBind      (maybe "0.0.0.0" id jsSSLBind)
+               $ Snap.setSSLCert      (maybe "cert.pem" id jsSSLCert)
+               $ Snap.setSSLKey       (maybe "key.pem" id jsSSLKey)
+               $ Snap.setSSLChainCert (maybe False id jsSSLChainCert)
+               $ Snap.setSSLPort      (maybe 443 id jsSSLPort)
                $ Snap.defaultConfig
 
     server <- Server <$> newMVar newFilepaths <*> newMVar newFilepaths <*> return jsLog

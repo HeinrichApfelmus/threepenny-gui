@@ -64,6 +64,32 @@ This is a record type which has the following fields:
     The initial 'CallBufferMode' to use for 'runFunction'.
     It can be changed at any time with 'setCallBufferMode'.
 
+* @jsSSLBind :: Maybe ByteString@
+
+    Bind address for @HTTPS@.
+    @Nothing@ means that the bind address is read from the environment variable @ADDR@.
+    Alternatively, address @0.0.0.0@ is used if this variable is not set.
+
+* @jsSSLCert :: Maybe FilePath@
+
+    Path to SSL certificate file.
+    @Nothing@ means that the path to SSL certificate file is @cert.pem@.
+
+* @jsSSLCert :: Maybe FilePath@
+
+    Path to SSL certificate file.
+    @Nothing@ means that the path to SSL certificate file is @cert.pem@.
+
+* @jsSSLChainCert :: Maybe Bool@
+
+    If it is SSL chain certificate file.
+    @Nothing@ means that False.
+
+* @jsSSLKey :: Maybe FilePath@
+
+    Path to SSL key file.
+    @Nothing@ means that the path to SSL key file is @key.pem@.
+
 (For reasons of forward compatibility, the constructor is not exported.)
 
 -}
@@ -75,6 +101,11 @@ data Config = Config
     , jsLog        :: ByteString -> IO ()
     , jsWindowReloadOnDisconnect :: Bool
     , jsCallBufferMode :: CallBufferMode
+    , jsSSLBind      :: Maybe ByteString
+    , jsSSLCert      :: Maybe FilePath
+    , jsSSLChainCert :: Maybe Bool
+    , jsSSLKey       :: Maybe FilePath
+    , jsSSLPort      :: Maybe Int
     }
 
 defaultPort :: Int
@@ -99,6 +130,11 @@ defaultConfig = Config
     , jsStatic     = Nothing
     , jsLog        = BS.hPutStrLn stderr
     , jsCallBufferMode = FlushOften
+    , jsSSLBind      = Nothing
+    , jsSSLCert      = Nothing
+    , jsSSLChainCert = Nothing
+    , jsSSLKey       = Nothing
+    , jsSSLPort      = Nothing
     }
 
 {-----------------------------------------------------------------------------
