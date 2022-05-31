@@ -39,19 +39,13 @@ import Foreign.JavaScript.Types
 -- | Run a HTTP server that creates a 'Comm' channel.
 httpComm :: Config -> EventLoop -> IO ()
 httpComm Config{..} worker = do
-    env <- getEnvironment
-    let portEnv = Safe.readMay =<< Prelude.lookup "PORT" env
-    let addrEnv = fmap BS.pack $ Prelude.lookup "ADDR" env
-    
-    let config = Snap.setPort      (maybe defaultPort id (jsPort `mplus` portEnv))
-               $ Snap.setBind      (maybe defaultAddr id (jsAddr `mplus` addrEnv))
-               $ Snap.setErrorLog  (Snap.ConfigIoLog jsLog)
-               $ Snap.setAccessLog (Snap.ConfigIoLog jsLog)
+    let config = Snap.setErrorLog     (Snap.ConfigIoLog jsLog)
+               $ Snap.setAccessLog    (Snap.ConfigIoLog jsLog)
                $ Snap.setSSLBind      (maybe "0.0.0.0" id jsSSLBind)
+               $ Snap.setSSLPort      (maybe 443 id jsSSLPort)
                $ Snap.setSSLCert      (maybe "cert.pem" id jsSSLCert)
                $ Snap.setSSLKey       (maybe "key.pem" id jsSSLKey)
                $ Snap.setSSLChainCert (maybe False id jsSSLChainCert)
-               $ Snap.setSSLPort      (maybe 443 id jsSSLPort)
                $ Snap.defaultConfig
 
     server <- Server <$> newMVar newFilepaths <*> newMVar newFilepaths <*> return jsLog
