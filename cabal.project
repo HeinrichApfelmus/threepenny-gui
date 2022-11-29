@@ -3,3 +3,8 @@ package snap-server
 
 packages: "."
 flags: +buildexamples
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/websockets-snap
+  tag: c4844ed79d871f1ff9e2d67073eba0b540c34f49
