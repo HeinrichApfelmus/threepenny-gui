@@ -11,11 +11,6 @@ import qualified Paths_threepenny_gui (getDataDir)
 getStaticDir :: IO FilePath
 getStaticDir = (</> "samples/static") `liftM` Paths_threepenny_gui.getDataDir
 
-#elif defined(FPCOMPLETE)
-
-getStaticDir :: IO FilePath
-getStaticDir = return "samples/static"
-
 #else
 -- using GHCi
 
