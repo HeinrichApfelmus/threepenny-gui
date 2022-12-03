@@ -64,10 +64,15 @@ This is a record type which has the following fields:
     The initial 'CallBufferMode' to use for 'runFunction'.
     It can be changed at any time with 'setCallBufferMode'.
 
-* @jsUseSSLBind :: Maybe ConfigSSL
+* @jsUseSSLBind :: Maybe ConfigSSL@
 
-    @Just@ with a @ConfigSSL@ struct to for the use of HTTPS.
-    @Nothing@ to user HTTP.
+    Whether to serve on a HTTPS connection instead of HTTP for improved security.
+
+    * 'Just' with a 'ConfigSSL' to serve on HTTPS.
+        Note that this will fail silently unless the @snap-server@ package
+        has been compiled with the @openssl@ flag enabled.
+
+    * 'Nothing' to serve on HTTP.
 
 (For reasons of forward compatibility, the constructor is not exported.)
 
@@ -87,25 +92,25 @@ data Config = Config
 
 This is a record type which has the following fields:
 
+* @jsSSLBind :: ByteString@
+
+    Bind address.
+
 * @jsSSLCert :: FilePath@
 
-    Path to SSL certificate file.
-    @Nothing@ means that the path to SSL certificate file is @cert.pem@.
-
-* @jsSSLCert :: FilePath@
-
-    Path to SSL certificate file.
-    @Nothing@ means that the path to SSL certificate file is @cert.pem@.
+    Path to SSL certificate file. Example: @cert.pem@.
 
 * @jsSSLChainCert :: Bool@
 
     If it is SSL chain certificate file.
-    @Nothing@ means that False.
 
 * @jsSSLKey :: FilePath@
 
-    Path to SSL key file.
-    @Nothing@ means that the path to SSL key file is @key.pem@.
+    Path to SSL key file. Example: @key.pem@.
+
+* @jsSSLPort :: ByteString@
+
+    Port number. Example: 443.
 
 -}
 
