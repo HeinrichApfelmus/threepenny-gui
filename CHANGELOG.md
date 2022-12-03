@@ -1,9 +1,18 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.9.2.0** – Maintenance and snapshot release
+
+* Add support for SSL.
+
+  To start the server as an HTTPS server, use the `jsUseSSL` field with appropriate parameters. For security reasons, no information is read from the environment in this case.
+
+* Bump dependencies for compatibility with GHC-9.4.
+* Bump dependencies for compatibility with GHC-9.2.
+
 **0.9.1.0** – Maintenance and snapshot release
 
 * Add support for websockets over SSL.
-* Bump dependencies for compatibility with GHC 9.0.
+* Bump dependencies for compatibility with GHC-9.0.
 
 **0.9.0.0** – Maintenance and snapshot release
 

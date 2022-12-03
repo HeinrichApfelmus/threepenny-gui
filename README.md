@@ -1,4 +1,3 @@
-[![Travis Build Status](https://travis-ci.org/HeinrichApfelmus/threepenny-gui.svg)](https://travis-ci.org/HeinrichApfelmus/threepenny-gui)
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/HeinrichApfelmus/threepenny-gui?svg=true)](https://ci.appveyor.com/project/HeinrichApfelmus/threepenny-gui)
 [![Hackage](https://img.shields.io/hackage/v/threepenny-gui.svg)](https://hackage.haskell.org/package/threepenny-gui)
 [![Stackage LTS](http://stackage.org/package/threepenny-gui/badge/lts)](http://stackage.org/lts/package/threepenny-gui)
