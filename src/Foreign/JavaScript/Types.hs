@@ -30,7 +30,7 @@ import Foreign.RemotePtr
 
 This is a record type which has the following fields:
 
-* @jsPort :: Maybe Int@          
+* @jsPort :: Maybe Int@
 
     Port number.
     @Nothing@ means that the port number is read from the environment variable @PORT@.
@@ -64,17 +64,57 @@ This is a record type which has the following fields:
     The initial 'CallBufferMode' to use for 'runFunction'.
     It can be changed at any time with 'setCallBufferMode'.
 
+* @jsUseSSLBind :: Maybe ConfigSSL
+
+    @Just@ with a @ConfigSSL@ struct to for the use of HTTPS.
+    @Nothing@ to user HTTP.
+
 (For reasons of forward compatibility, the constructor is not exported.)
 
 -}
 data Config = Config
-    { jsPort       :: Maybe Int           
+    { jsPort       :: Maybe Int
     , jsAddr       :: Maybe ByteString
     , jsCustomHTML :: Maybe FilePath
     , jsStatic     :: Maybe FilePath
     , jsLog        :: ByteString -> IO ()
     , jsWindowReloadOnDisconnect :: Bool
     , jsCallBufferMode :: CallBufferMode
+    , jsUseSSL      :: Maybe ConfigSSL
+    }
+
+{- | Static configuration for the SSL version of the "Foreign.JavaScript" server.
+
+This is a record type which has the following fields:
+
+* @jsSSLCert :: FilePath@
+
+    Path to SSL certificate file.
+    @Nothing@ means that the path to SSL certificate file is @cert.pem@.
+
+* @jsSSLCert :: FilePath@
+
+    Path to SSL certificate file.
+    @Nothing@ means that the path to SSL certificate file is @cert.pem@.
+
+* @jsSSLChainCert :: Bool@
+
+    If it is SSL chain certificate file.
+    @Nothing@ means that False.
+
+* @jsSSLKey :: FilePath@
+
+    Path to SSL key file.
+    @Nothing@ means that the path to SSL key file is @key.pem@.
+
+-}
+
+data ConfigSSL = ConfigSSL
+    { jsSSLBind      :: ByteString
+    , jsSSLCert      :: FilePath
+    , jsSSLChainCert :: Bool
+    , jsSSLKey       :: FilePath
+    , jsSSLPort      :: Int
     }
 
 defaultPort :: Int
@@ -99,6 +139,7 @@ defaultConfig = Config
     , jsStatic     = Nothing
     , jsLog        = BS.hPutStrLn stderr
     , jsCallBufferMode = FlushOften
+    , jsUseSSL     = Nothing
     }
 
 {-----------------------------------------------------------------------------
