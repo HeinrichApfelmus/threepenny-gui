@@ -18,7 +18,7 @@ module Foreign.JavaScript (
         , jsCustomHTML, jsStatic, jsLog
         , jsWindowReloadOnDisconnect, jsCallBufferMode
         , jsUseSSL),
-    ConfigSSL (jsSSLBind, jsSSLCert, jsSSLChainCert, jsSSLKey, jsSSLPort),
+    ConfigSSL (..),
     Server, MimeType, URI, loadFile, loadDirectory,
     Window, getServer, getCookies, root,
 

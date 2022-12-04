@@ -5,7 +5,7 @@ module Graphics.UI.Threepenny.Core (
 
     -- * Server
     -- $server
-    Config(..), defaultConfig, startGUI,
+    Config(..), ConfigSSL (..), defaultConfig, startGUI,
     loadFile, loadDirectory,
 
     -- * UI monad
@@ -70,7 +70,7 @@ import qualified Graphics.UI.Threepenny.Internal as Core
 import qualified Reactive.Threepenny             as Reactive
 
 -- exports
-import Foreign.JavaScript                   (Config(..), defaultConfig)
+import Foreign.JavaScript                   (Config(..), ConfigSSL (..), defaultConfig)
 import Graphics.UI.Threepenny.Internal
 import Reactive.Threepenny                  hiding (onChange)
 
@@ -134,7 +134,7 @@ attr name = mkWriteAttr $ \s el ->
 
 -- | Set CSS style of an Element
 style :: WriteAttr Element [(String,String)]
-style = mkWriteAttr $ \xs el -> forM_ xs $ \(name,val) -> 
+style = mkWriteAttr $ \xs el -> forM_ xs $ \(name,val) ->
     runFunction $ ffi "%1.style[%2] = %3" el name val
 
 -- | Value attribute of an element.
@@ -360,7 +360,7 @@ fromJQueryProp name from to = mkReadWriteAttr get set
 fromObjectProperty :: (FromJS a, ToJS a) => String -> Attr Element a
 fromObjectProperty name = mkReadWriteAttr get set
     where
-    set v el = runFunction  $ ffi ("%1." ++ name ++ " = %2") el v    
+    set v el = runFunction  $ ffi ("%1." ++ name ++ " = %2") el v
     get   el = callFunction $ ffi ("%1." ++ name) el
 
 {-----------------------------------------------------------------------------
