@@ -1,6 +1,4 @@
-# Threepenny-GUI
-
-## What is it?
+# What is it?
 
 Threepenny-gui is a GUI framework that uses the web browser as a display.
 
@@ -13,7 +11,7 @@ Features include:
 
 Stability: The library API is still in flux, significant API changes are likely in future versions. The goal is make GUI programming simple, and that just needs some experimentation.
 
-## What is it not?
+# What is it not?
 
 As cool as Threepenny may be, it is ...
 
@@ -27,7 +25,7 @@ If you want to write a web app, have a look at projects like [Fay][fay], [GHCJS]
    [fay]: https://github.com/faylang/fay/wiki
    [haste]: https://github.com/valderman/haste-compiler
 
-## Gallery
+# Gallery
 
 Applications written with Threepenny.
 
@@ -63,7 +61,7 @@ Applications written with Threepenny.
 <br><img src="https://wiki.haskell.org/wikiupload/2/2e/Threepenny-gui-curveproject.jpg" width="386" />
 </table>
 
-## Resources
+# Resources
 
 * Package
 
