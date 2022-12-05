@@ -1,5 +1,5 @@
 # Jekyll configuration
-name: Threepenny-GUI
+title: Threepenny-GUI
 description: Official website of the Threepenny-GUI project
 markdown: GFM
 theme: Minima

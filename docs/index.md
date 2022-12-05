@@ -1,5 +1,8 @@
+---
 layout: page
-title: "Threepenny-GUI"
+title: About
+permalink: /about/
+---
 
 # What is it?
 
