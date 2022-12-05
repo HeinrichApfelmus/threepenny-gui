@@ -40,37 +40,37 @@ Applications written with Threepenny.
 <td>
 <a href="http://fluffynukeit.com/?page_id=535">Daniel Austin's <b>FNIStash</b></a>
 <br>Editor for <a href="http://en.wikipedia.org/wiki/Torchlight_II">Torchlight 2</a> inventories.
-<br><img src="https://wiki.haskell.org/wikiupload/5/51/Threepenny-gui-fnistash.png" height="300" />
+<br><img src="./img/fnistash.png" height="300" />
 <td>
 <a href="https://github.com/duplode/stunts-cartography">Daniel Mlot's <b>Stunts Cartography Track Viewer</b></a>
 <br>Map viewer for the <a href="http://scr.stunts.hu/">Stunts</a> racing game.
-<br><img src="https://wiki.haskell.org/wikiupload/e/ec/Threepenny-gui-stunts-cartography-1.0.0.0.png" height="300" />
+<br><img src="./img/stunts.png" height="300" />
 
 <tr>
 <td>
 <a href="https://github.com/blitzcode/hue-dashboard">Tim Schröder's <b>Hue Dashboard</b></a>
 <br>Control smart lights (<a href="http://www2.meethue.com/en-us">Philips Hue</a>)
-<br><img src="https://wiki.haskell.org/wikiupload/e/ec/Threepenny-gui-hue-dashboard.jpg" height="300" />
+<br><img src="./img/hue-dashboard.jpg" height="300" />
 <td>
 <a href="https://wiki.haskell.org/Hoed">Maarten Faddegon's <b>Hoed</b></a>
 <br>A lightweight tracer and algorithmic debugger for Haskell
-<br><img src="https://wiki.haskell.org/wikiupload/1/13/HoedExplore.png" width="386" />
+<br><img src="./img/hoed.png" width="386" />
 
 <tr>
 <td>
 <a href="https://github.com/CarstenKoenig/Holidays2013">Carsten König's holiday project</a>
 <br>Small viewer for the Mandelbrot set.
-<br><img src="https://wiki.haskell.org/wikiupload/f/fe/Threepenny-gui-mandelbrot.png" height="300" />
+<br><img src="./img/mandelbrot.png" height="300" />
 <td>
 <a href="https://github.com/Chaddai/CurveProject">Chaddai's <b>CurveProject</b></a>
 <br>Plotting curves for math teachers.
-<br><img src="https://wiki.haskell.org/wikiupload/2/2e/Threepenny-gui-curveproject.jpg" width="386" />
+<br><img src="./img/curveproject.jpg" width="386" />
 
 <tr>
 <td colspan="2">
 <a href="https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/docs/cardano-rtview.md"><b>Cardano RTView</b></a>
 <br>Real-time monitoring tool for <a href="https://docs.cardano.org/cardano-components/cardano-node">Cardano</a> nodes.
-<br><img src="./cardano-rtview.png" height="300" />
+<br><img src="./img/cardano-rtview.png" height="300" />
 <td>
 </table>
 
