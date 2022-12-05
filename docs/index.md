@@ -1,3 +1,6 @@
+layout: page
+title: "Threepenny-GUI"
+
 # What is it?
 
 Threepenny-gui is a GUI framework that uses the web browser as a display.
@@ -59,6 +62,13 @@ Applications written with Threepenny.
 <a href="https://github.com/Chaddai/CurveProject">Chaddai's <b>CurveProject</b></a>
 <br>Plotting curves for math teachers.
 <br><img src="https://wiki.haskell.org/wikiupload/2/2e/Threepenny-gui-curveproject.jpg" width="386" />
+
+<tr>
+<td colspan="2">
+<a href="https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/docs/cardano-rtview.md"><b>Cardano RTView</b></a>
+<br>Real-time monitoring tool for <a href="https://docs.cardano.org/cardano-components/cardano-node">Cardano</a> nodes.
+<br><img src="./cardano-rtview.png" height="300" />
+<td>
 </table>
 
 # Resources
