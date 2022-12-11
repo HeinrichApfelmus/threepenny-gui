@@ -1,5 +1,9 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.9.4.0** – Maintenance and snapshot release
+
+* Fix support for SSL: Export `ConfigSSL` constructor.
+
 **0.9.2.0** – Maintenance and snapshot release
 
 * Add support for SSL.
