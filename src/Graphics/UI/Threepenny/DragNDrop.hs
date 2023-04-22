@@ -70,41 +70,45 @@ droppable = mkWriteAttr enable
 -- Change this to 'Maybe String' instead.
 type DragData = String
 
-withDragData = fmap (extract . unsafeFromJSON)
+-- | Coordinate within the application's client area at which an event
+-- occurred.
+type ClientXY = (Int, Int)
+
+withDragDataClientXY = fmap (extract . unsafeFromJSON)
     where
-    extract [s] = s
-    extract _   = ""
+    extract [x, y, s] = (s,  (read x, read y))
+    extract [x, y]    = ("", (read x, read y))
 
 -- | Occurs periodically while the element is being dragged around.
-drag :: Element -> Event DragData
-drag = withDragData . domEvent "drag"
+drag :: Element -> Event (DragData, ClientXY)
+drag = withDragDataClientXY . domEvent "drag"
 
 -- | Dragging the element starts.
-dragStart :: Element -> Event DragData
-dragStart = withDragData . domEvent "dragstart"
+dragStart :: Element -> Event (DragData, ClientXY)
+dragStart = withDragDataClientXY . domEvent "dragstart"
 
 -- | Dragging the element ends.
 --
 -- WARNING: This event can occur both before and after a corresponding 'drop' event.
 dragEnd :: Element -> Event DragData
-dragEnd = withDragData . domEvent "dragend"
+dragEnd = fmap fst . withDragDataClientXY . domEvent "dragend"
 
 -- | The element is now the current target element for a 'drop'.
 -- 
 -- WARNING: This element is buggy when moving the mouse over child elements.
-dragEnter :: Element -> Event DragData
-dragEnter = withDragData . domEvent "dragenter"
+dragEnter :: Element -> Event (DragData, ClientXY)
+dragEnter = withDragDataClientXY . domEvent "dragenter"
 
 -- | Occurs periodically while the element is the current target element.
-dragOver :: Element -> Event DragData
-dragOver = withDragData . domEvent "dragover"
+dragOver :: Element -> Event (DragData, ClientXY)
+dragOver = withDragDataClientXY . domEvent "dragover"
 
 -- | The element is no longer the current target element for a 'drop'.
 --
 -- WARNING: This event is also fired when the mouse is moved over a child element.
-dragLeave :: Element -> Event DragData
-dragLeave = withDragData . domEvent "dragleave"
+dragLeave :: Element -> Event (DragData, ClientXY)
+dragLeave = withDragDataClientXY . domEvent "dragleave"
 
 -- | The drag and drop operation is being completed on this element.
-drop :: Element -> Event DragData
-drop = withDragData . domEvent "drop"
+drop :: Element -> Event (DragData, ClientXY)
+drop = withDragDataClientXY . domEvent "drop"
