@@ -1,0 +1,107 @@
+name: Build cabal project
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - synchronize
+      - opened
+      - reopened
+  merge_group:
+  push:
+    branches:
+      - main
+  schedule:
+    # Run once per day (at UTC 18:00) to maintain cache:
+    - cron: 0 18 * * *
+jobs:
+  build:
+    name: ${{ matrix.os }}-ghc-${{ matrix.ghc }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.allow-failure }}
+    env:
+      cabal-build-dir: b
+    strategy:
+      matrix:
+        allow-failure:
+          - false
+        os:
+          - ubuntu-latest
+        cabal:
+          - 3.8.1.0
+        ghc:
+          - 8.0.2
+          - 8.2.2
+          - 8.4.4
+          - 8.6.5
+          - 8.8.4
+          - 8.10.7
+          - 9.2.8
+          - 9.4.7
+          - 9.6.3
+        include:
+          - ghc: 9.8.1
+            os: ubuntu-latest
+            cabal: 3.8.1.0
+            allow-failure: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Environment
+        uses: haskell-actions/setup@v2
+        id: setup-haskell-cabal
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          cabal-version: ${{ matrix.cabal }}
+
+      - name: Configure
+        run: >
+          cabal configure
+          --builddir=${{ env.cabal-build-dir }}
+          --enable-tests
+          --enable-benchmarks
+          --enable-documentation
+          --test-show-details=direct
+          --write-ghc-environment-files=always
+
+      - name: Freeze
+        run: >
+          cabal freeze
+          --builddir=${{ env.cabal-build-dir }}
+
+      - name: Cache
+        uses: actions/cache@v3
+        env:
+          hash: ${{ hashFiles('cabal.project.freeze') }}
+        with:
+          key: ${{ matrix.os }}-ghc-${{ matrix.ghc }}-${{ env.hash }}
+          restore-keys: |
+            ${{ matrix.os }}-ghc-${{ matrix.ghc }}-
+          path: |
+            ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
+            ${{ env.cabal-build-dir }}
+
+      - name: Dependencies
+        run: >
+          cabal build all
+          --builddir=${{ env.cabal-build-dir }}
+          --only-dependencies
+
+      - name: Build
+        run: >
+          cabal build all
+          --builddir=${{ env.cabal-build-dir }}
+          --enable-tests
+          --enable-benchmarks
+          --ghc-options=-Wall
+
+      - name: Test
+        run: >
+          cabal test all
+          --builddir=${{ env.cabal-build-dir }}
+
+      - name: Benchmark
+        run: >
+          cabal bench all
+          --builddir=${{ env.cabal-build-dir }}
+          || true
