@@ -17,7 +17,7 @@ setCallBufferMode w new =
 
 -- | Get the call buffering mode for the given browser window.
 getCallBufferMode :: Window -> IO CallBufferMode
-getCallBufferMode w@Window{..} = atomically $ readTVar wCallBufferMode
+getCallBufferMode Window{..} = atomically $ readTVar wCallBufferMode
 
 -- | Flush the call buffer,
 -- i.e. send all outstanding JavaScript to the client in one single message.
@@ -26,7 +26,7 @@ flushCallBuffer w = flushCallBufferWithAtomic w $ return ()
 
 -- | Flush the call buffer, and atomically perform an additional action
 flushCallBufferWithAtomic :: Window -> STM a -> IO a
-flushCallBufferWithAtomic w@Window{..} action = do
+flushCallBufferWithAtomic Window{..} action = do
     -- by taking the call buffer, we ensure that no further code
     -- is added to the buffer while we execute the current buffer's code.
     code' <- atomically $ takeTMVar wCallBuffer
@@ -39,7 +39,7 @@ flushCallBufferWithAtomic w@Window{..} action = do
 -- | Schedule a piece of JavaScript code to be run with `runEval`,
 -- depending on the buffering mode
 bufferRunEval :: Window -> String -> IO ()
-bufferRunEval w@Window{..} code = do
+bufferRunEval Window{..} code = do
     action <- atomically $ do
         mode <- readTVar wCallBufferMode
         case mode of
@@ -50,5 +50,5 @@ bufferRunEval w@Window{..} code = do
                 putTMVar wCallBuffer (msg . (\s -> ";" ++ code ++ s))
                 return Nothing
     case action of
-        Nothing   -> return ()
-        Just code -> runEval code
+        Nothing    -> return ()
+        Just code1 -> runEval code1

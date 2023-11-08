@@ -18,6 +18,7 @@ module Graphics.UI.Threepenny.Events (
 import Graphics.UI.Threepenny.Attributes
 import Graphics.UI.Threepenny.Core
 
+silence :: Event a -> Event ()
 silence = fmap (const ())
 
 {-----------------------------------------------------------------------------
@@ -27,6 +28,7 @@ silence = fmap (const ())
 valueChange :: Element -> Event String
 valueChange el = unsafeMapUI el (const $ get value el) (domEvent "keydown" el)
 
+unsafeMapUI :: Element -> (t -> UI b) -> Event t -> Event b
 unsafeMapUI el f = unsafeMapIO (\a -> getWindow el >>= \w -> runUI w (f a))
 
 -- | Event that occurs when the /user/ changes the selection of a @<select>@ element.

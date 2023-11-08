@@ -19,7 +19,6 @@ import qualified Data.Aeson.Encode      as JSON   (encodeToTextBuilder)
 #else
 import qualified Data.Aeson.Text        as JSON   (encodeToTextBuilder)
 #endif
-import qualified Data.Aeson.Types       as JSON
 import           Data.Functor                     ((<$>))
 import           Data.List                        (intercalate)
 import qualified Data.Text              as T
@@ -48,6 +47,7 @@ class ToJS a where
         ys <- mapM render xs
         jsCode $ "[" ++ intercalate "," (map unJSCode ys) ++ "]"
 
+jsCode :: String -> IO JSCode
 jsCode = return . JSCode
 
 instance ToJS Float      where render   = render . JSON.toJSON

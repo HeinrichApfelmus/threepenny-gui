@@ -6,7 +6,6 @@ module Foreign.JavaScript.EventLoop (
     newHandler, fromJSStablePtr, newJSObjectFromCoupon
     ) where
 
-import           Control.Applicative
 import           Control.Concurrent
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM   as STM
@@ -15,10 +14,7 @@ import           Control.Exception        as E
 import           Control.Monad
 import qualified Data.Aeson               as JSON
 import qualified Data.ByteString.Char8    as BS
-import           Data.IORef
-import qualified Data.Map                 as Map
 import qualified Data.Text                as T
-import qualified System.Mem
 
 import Foreign.RemotePtr             as Foreign
 import Foreign.JavaScript.CallBuffer
@@ -35,11 +31,12 @@ rebug = return ()
     Event Loop
 ------------------------------------------------------------------------------}
 -- | Handle a single event
-handleEvent w@(Window{..}) (name, args) = do
+handleEvent :: Window -> (Coupon, JSON.Value) -> IO ()
+handleEvent Window{..} (name, args) = do
     mhandler <- Foreign.lookup name wEventHandlers
     case mhandler of
         Nothing -> return ()
-        Just f  -> withRemotePtr f (\_ f -> f args)
+        Just f  -> withRemotePtr f (\_ g -> g args)
 
 
 type Result = Either String JSON.Value
@@ -47,7 +44,7 @@ type Result = Either String JSON.Value
 -- | Event loop for a browser window.
 -- Supports concurrent invocations of `runEval` and `callEval`.
 eventLoop :: (Window -> IO void) -> EventLoop
-eventLoop init server info comm = void $ do
+eventLoop initialize server info comm = void $ do
     -- To support concurrent FFI calls, we need three threads.
     -- A fourth thread supports 
     --
@@ -112,12 +109,12 @@ eventLoop init server info comm = void $ do
 
     -- Send FFI calls to client and collect results
     let handleCalls = forever $ do
-            ref <- atomically $ do
-                (ref, msg) <- readTQueue calls
+            mref <- atomically $ do
+                (mref, msg) <- readTQueue calls
                 writeServer comm msg
-                return ref
+                return mref
             atomically $
-                case ref of
+                case mref of
                     Just ref -> do
                         result <- readTQueue results
                         putTMVar ref result
@@ -155,7 +152,7 @@ eventLoop init server info comm = void $ do
         withAsync multiplexer $ \_ ->
         withAsync handleCalls $ \_ ->
         withAsync (flushCallBufferPeriodically w) $ \_ ->
-        E.finally (init w >> handleEvents) $ do
+        E.finally (initialize w >> handleEvents) $ do
             putStrLn "Foreign.JavaScript: Browser window disconnected."
             -- close communication channel if still necessary
             commClose comm
@@ -175,7 +172,7 @@ flushCallBufferPeriodically w =
 ------------------------------------------------------------------------------}
 -- | Turn a Haskell function into an event handler.
 newHandler :: Window -> ([JSON.Value] -> IO ()) -> IO HsEvent
-newHandler w@(Window{..}) handler = do
+newHandler Window{..} handler = do
     coupon <- newCoupon wEventHandlers
     newRemotePtr coupon (handler . parseArgs) wEventHandlers
     where

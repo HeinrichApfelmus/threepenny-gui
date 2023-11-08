@@ -42,6 +42,9 @@ module Reactive.Threepenny (
     -- | Functions reserved for special circumstances.
     -- Do not use unless you know what you're doing.
     onChange, unsafeMapIO, newEventsNamed,
+    
+    -- * Testing
+    test, test_recursion1
     ) where
 
 import Control.Applicative
@@ -55,7 +58,6 @@ import qualified Reactive.Threepenny.PulseLatch as Prim
 
 type Pulse = Prim.Pulse
 type Latch = Prim.Latch
-type Map   = Map.Map
 
 {-----------------------------------------------------------------------------
     Types
@@ -104,7 +106,7 @@ newEvent = do
 newEventsNamed :: Ord name
     => Handler (name, Event a, Handler a)   -- ^ Initialization procedure.
     -> IO (name -> Event a)                 -- ^ Series of events.
-newEventsNamed init = do
+newEventsNamed initialize = do
     eventsRef <- newIORef Map.empty
     return $ \name -> E $ memoize $ do
         events <- readIORef eventsRef
@@ -113,7 +115,7 @@ newEventsNamed init = do
             Nothing -> do
                 (p, fire) <- Prim.newPulse
                 writeIORef eventsRef $ Map.insert name p events
-                init (name, E $ fromPure p, fire)
+                initialize (name, E $ fromPure p, fire)
                 return p
 
 
@@ -165,6 +167,7 @@ never = E $ fromPure Prim.neverP
 -- Think of it as
 --
 -- > filterJust es = [(time,a) | (time,Just a) <- es]
+filterJust :: Event (Maybe a) -> Event a
 filterJust e = E $ liftMemo1 Prim.filterJustP (unE e)
 
 -- | Merge two event streams of the same type.
@@ -308,8 +311,8 @@ split :: Event (Either a b) -> (Event a, Event b)
 split e = (filterJust $ fromLeft <$> e, filterJust $ fromRight <$> e)
     where
     fromLeft  (Left  a) = Just a
-    fromLeft  (Right b) = Nothing
-    fromRight (Left  a) = Nothing
+    fromLeft  (Right _) = Nothing
+    fromRight (Left  _) = Nothing
     fromRight (Right b) = Just b
 
 -- | Collect simultaneous event occurrences in a list.
@@ -366,9 +369,9 @@ pair :: Tidings a -> Tidings b -> Tidings (a,b)
 pair (T bx ex) (T by ey) = T b e
     where
     b = (,) <$> bx <*> by
-    x = flip (,) <$> by <@> ex
-    y = (,) <$> bx <@> ey
-    e = unionWith (\(x,_) (_,y) -> (x,y)) x y
+    ex' = flip (,) <$> by <@> ex
+    ey' = (,) <$> bx <@> ey
+    e = unionWith (\(x,_) (_,y) -> (x,y)) ex' ey'
 
 
 {-----------------------------------------------------------------------------

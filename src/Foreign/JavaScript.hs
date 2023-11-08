@@ -31,9 +31,6 @@ module Foreign.JavaScript (
     debug, timestamp,
     ) where
 
-import           Control.Concurrent.STM       as STM
-import           Control.Monad                           (unless)
-import qualified Data.Aeson                   as JSON
 import           Foreign.JavaScript.CallBuffer
 import           Foreign.JavaScript.EventLoop
 import           Foreign.JavaScript.Marshal
@@ -49,12 +46,12 @@ serve
     :: Config               -- ^ Configuration options.
     -> (Window -> IO ())    -- ^ Initialization whenever a client connects.
     -> IO ()
-serve config init = httpComm config $ eventLoop $ \w -> do
+serve config initialize = httpComm config $ eventLoop $ \w -> do
     setCallBufferMode w (jsCallBufferMode config)
     runFunction w $
         ffi "connection.setReloadOnDisconnect(%1)" $ jsWindowReloadOnDisconnect config
     flushCallBuffer w   -- make sure that all `runEval` commands are executed
-    init w
+    initialize w
     flushCallBuffer w   -- make sure that all `runEval` commands are executed
 
 {-----------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-unused-do-bind #-}
 module Graphics.UI.Threepenny.Widgets (
     -- * Synopsis
     -- | Widgets are reusable building blocks for a graphical user interface.
@@ -92,7 +93,7 @@ listBox bitems bsel bdisplay = do
         bindices = (Map.fromList . flip zip [0..]) <$> bitems
         bindex   = lookupIndex <$> bindices <*> bsel
 
-        lookupIndex indices Nothing    = Nothing
+        lookupIndex _indices Nothing   = Nothing
         lookupIndex indices (Just sel) = Map.lookup sel indices
 
     element list # sink UI.selection bindex
@@ -111,8 +112,9 @@ listBox bitems bsel bdisplay = do
 
     return ListBox {..}
 
+items :: WriteAttr Element [UI Element]
 items = mkWriteAttr $ \i x -> void $ do
-    return x # set children [] #+ map (\i -> UI.option #+ [i]) i
+    return x # set children [] #+ map (\j -> UI.option #+ [j]) i
 
 
 

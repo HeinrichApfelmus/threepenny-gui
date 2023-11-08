@@ -13,7 +13,7 @@ module Graphics.UI.Threepenny.Timer (
     ) where
 
 import Data.Typeable
-import Control.Monad (when, forever, void)
+import Control.Monad (when, forever)
 import Control.Concurrent
 import Control.Concurrent.STM
 import Reactive.Threepenny
@@ -34,7 +34,7 @@ timer = liftIO $ do
     tvInterval    <- newTVarIO 1000
     (tTick, fire) <- newEvent
     
-    forkIO $ forever $ do
+    _ <- forkIO $ forever $ do
         atomically $ do
             b <- readTVar tvRunning
             when (not b) retry

@@ -21,7 +21,6 @@ module Graphics.UI.Threepenny.Internal (
     EventData, domEvent, unsafeFromJSON,
     ) where
 
-import           Control.Applicative                   (Applicative(..))
 import           Control.Monad
 import           Control.Monad.Catch
 import           Control.Monad.Fix
@@ -57,7 +56,7 @@ startGUI
     :: Config               -- ^ Server configuration.
     -> (Window -> UI ())    -- ^ Action to run whenever a client browser connects.
     -> IO ()
-startGUI config init = JS.serve config $ \w -> do
+startGUI config initialize = JS.serve config $ \w -> do
     -- set up disconnect event
     (eDisconnect, handleDisconnect) <- RB.newEvent
     JS.onDisconnect w $ handleDisconnect ()
@@ -73,7 +72,7 @@ startGUI config init = JS.serve config $ \w -> do
             }
 
     -- run initialization
-    runUI window $ init window
+    runUI window $ initialize window
 
 -- | Event that occurs whenever the client has disconnected,
 -- be it by closing the browser window or by exception.
@@ -119,7 +118,7 @@ getWindow = return . elWindow
 -- | Lookup or create reachability information for the children of
 -- an element that is represented by a JavaScript object.
 getChildren :: JS.JSObject -> Window -> IO Children
-getChildren el window@Window{ wChildren = wChildren } =
+getChildren el Window{ wChildren = wChildren } =
     Foreign.withRemotePtr el $ \coupon _ -> do
         mptr <- Foreign.lookup coupon wChildren
         case mptr of

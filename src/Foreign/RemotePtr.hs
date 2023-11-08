@@ -17,15 +17,12 @@ module Foreign.RemotePtr (
 
 import Prelude hiding (lookup)
 import Control.Monad
-import           Control.Concurrent
 import qualified Data.Text             as T
 import qualified Data.HashMap.Strict   as Map
 import Data.Functor
 import Data.IORef
 
-import           System.IO.Unsafe         (unsafePerformIO)
 import           System.Mem.Weak          hiding (addFinalizer)
-import qualified System.Mem.Weak  as Weak
 
 import qualified GHC.Base  as GHC
 import qualified GHC.Weak  as GHC
@@ -42,14 +39,14 @@ atomicModifyIORef' = atomicModifyIORef
 mkWeakIORefValue :: IORef a -> value -> IO () -> IO (Weak value)
 #if CABAL
 #if MIN_VERSION_base(4,9,0)
-mkWeakIORefValue r@(GHC.IORef (GHC.STRef r#)) v (GHC.IO f) = GHC.IO $ \s ->
+mkWeakIORefValue (GHC.IORef (GHC.STRef r#)) v (GHC.IO f) = GHC.IO $ \s ->
   case GHC.mkWeak# r# v f s of (# s1, w #) -> (# s1, GHC.Weak w #)
 #else
-mkWeakIORefValue r@(GHC.IORef (GHC.STRef r#)) v f = GHC.IO $ \s ->
+mkWeakIORefValue (GHC.IORef (GHC.STRef r#)) v f = GHC.IO $ \s ->
   case GHC.mkWeak# r# v f s of (# s1, w #) -> (# s1, GHC.Weak w #)
 #endif
 #else
-mkWeakIORefValue r@(GHC.IORef (GHC.STRef r#)) v (GHC.IO f) = GHC.IO $ \s ->
+mkWeakIORefValue (GHC.IORef (GHC.STRef r#)) v (GHC.IO f) = GHC.IO $ \s ->
   case GHC.mkWeak# r# v f s of (# s1, w #) -> (# s1, GHC.Weak w #)
 #endif
 
@@ -133,8 +130,9 @@ newRemotePtr coupon value Vendor{..} = do
     let self = undefined
     ptr      <- newIORef RemoteData{..}
     
-    let finalize = atomicModifyIORef' coupons $ \m -> (Map.delete coupon m, ())
-    w <- mkWeakIORef ptr finalize
+    let doFinalize =
+            atomicModifyIORef' coupons $ \m -> (Map.delete coupon m, ())
+    w <- mkWeakIORef ptr doFinalize
     atomicModifyIORef' coupons $ \m -> (Map.insert coupon w m, ())
     atomicModifyIORef' ptr $ \itemdata -> (itemdata { self = w }, ())
     return ptr
@@ -148,10 +146,10 @@ newRemotePtr coupon value Vendor{..} = do
 -- will not be garbage collected
 -- and its 'Coupon' can be successfully redeemed at the 'Vendor'.
 withRemotePtr :: RemotePtr a -> (Coupon -> a -> IO b) -> IO b
-withRemotePtr ptr f = do
-        RemoteData{..} <- readIORef ptr
+withRemotePtr ptr0 f = do
+        RemoteData{..} <- readIORef ptr0
         b <- f coupon value
-        touch ptr
+        touch ptr0
         return b
     where
     -- make sure that the pointer is alive at this point in the code
