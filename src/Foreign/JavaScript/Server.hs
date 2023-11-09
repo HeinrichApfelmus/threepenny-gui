@@ -15,17 +15,16 @@ import           Data.ByteString                    (ByteString)
 import qualified Data.ByteString.Char8      as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Map                   as M
-import           Data.Text
+import           Data.Text                          (Text)
 import qualified Safe                       as Safe
 import           System.Environment
 import           System.FilePath
 
 -- import web libraries
-import           Data.Aeson                             ((.=))
 import qualified Data.Aeson                    as JSON
 import qualified Network.WebSockets            as WS
 import qualified Network.WebSockets.Snap       as WS
-import           Snap.Core                     as Snap
+import           Snap.Core                     as Snap hiding (path, dir)
 import qualified Snap.Http.Server              as Snap
 import           Snap.Util.FileServe
 
@@ -114,15 +113,15 @@ communicationFromWebSocket request = do
     let commClose = atomically $ STM.writeTVar commOpen False
 
     -- read/write data until an exception occurs or the channel is no longer open
-    forkFinally (sendData `race_` readData `race_` sentry) $ \_ -> void $ do
+    _ <- forkFinally (sendData `race_` readData `race_` sentry) $ \_ -> void $ do
         -- close the communication channel explicitly if that didn't happen yet
         commClose
 
         -- attempt to close websocket if still necessary/possible
         -- ignore any exceptions that may happen if it's already closed
-        let all :: E.SomeException -> Maybe ()
-            all _ = Just ()
-        E.tryJust all $ WS.sendClose connection $ LBS.pack "close"
+        let allExceptions :: E.SomeException -> Maybe ()
+            allExceptions _ = Just ()
+        E.tryJust allExceptions $ WS.sendClose connection $ LBS.pack "close"
 
     return $ Comm {..}
 
@@ -155,6 +154,7 @@ routeResources server customHTML staticDir =
             Nothing  -> logError "Foreign.JavaScript: Cannot use jsCustomHTML file without jsStatic"
         Nothing   -> writeTextMime defaultHtmlFile "text/html"
 
+writeTextMime :: MonadSnap m => Text -> ByteString -> m ()
 writeTextMime text mime = do
     modifyResponse (setHeader "Content-type" mime)
     writeText text

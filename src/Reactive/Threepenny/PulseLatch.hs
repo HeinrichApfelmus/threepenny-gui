@@ -6,6 +6,9 @@ module Reactive.Threepenny.PulseLatch (
     Latch,
     pureL, mapL, applyL, accumL, applyP,
     readLatch,
+    
+    -- * Internal
+    test, test_recursion1
     ) where
 
 
@@ -15,17 +18,13 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.RWS     as Monad
 
 import Data.IORef
-import Data.Monoid (Endo(..))
 
-import           Data.Hashable
 import qualified Data.HashMap.Strict as Map
 import qualified Data.Vault.Strict   as Vault
 import           Data.Unique.Really
 
 import Reactive.Threepenny.Monads
 import Reactive.Threepenny.Types
-
-type Map = Map.HashMap
 
 {-----------------------------------------------------------------------------
     Pulse
@@ -114,11 +113,11 @@ mapP f p = (`dependOn` p) <$> cacheEval (return . fmap f =<< evalP p)
 
 -- | Map an IO function over pulses. Is only executed once.
 unsafeMapIOP :: (a -> IO b) -> Pulse a -> Build (Pulse b)
-unsafeMapIOP f p = (`dependOn` p) <$> cacheEval (traverse . fmap f =<< evalP p)
+unsafeMapIOP f p = (`dependOn` p) <$> cacheEval (traverse' . fmap f =<< evalP p)
     where
-    traverse :: Maybe (IO a) -> EvalP (Maybe a)
-    traverse Nothing  = return Nothing
-    traverse (Just m) = Just <$> lift m
+    traverse' :: Maybe (IO a) -> EvalP (Maybe a)
+    traverse' Nothing  = return Nothing
+    traverse' (Just m) = Just <$> lift m
 
 -- | Filter occurrences. Only keep those of the form 'Just'.
 filterJustP :: Pulse (Maybe a) -> Build (Pulse a)

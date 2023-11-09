@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 module Graphics.UI.Threepenny.SVG.Attributes (
     -- * Synopsis
     -- | SVG attributes as defined by W3C, Scalable Vector Graphics (SVG) 1.1

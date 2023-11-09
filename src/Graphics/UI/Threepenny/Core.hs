@@ -175,17 +175,19 @@ getElementById
     :: Window              -- ^ Browser window
     -> String              -- ^ The ID string.
     -> UI (Maybe Element)  -- ^ Element (if any) with given ID.
-getElementById _ id =
-    E.handle (\(e :: JS.JavaScriptException) -> return Nothing) $
-        fmap Just . fromJSObject =<< callFunction (ffi "document.getElementById(%1)" id)
+getElementById _ ident =
+    E.handle (\(_ :: JS.JavaScriptException) -> return Nothing) $
+        fmap Just . fromJSObject
+            =<< callFunction (ffi "document.getElementById(%1)" ident)
 
 -- | Get a list of elements by particular class.
 getElementsByClassName
     :: Window        -- ^ Browser window
     -> String        -- ^ The class string.
     -> UI [Element]  -- ^ Elements with given class.
-getElementsByClassName window s =
-    mapM fromJSObject =<< callFunction (ffi "document.getElementsByClassName(%1)" s)
+getElementsByClassName _ s =
+    mapM fromJSObject
+        =<< callFunction (ffi "document.getElementsByClassName(%1)" s)
 
 {-----------------------------------------------------------------------------
     Layout
@@ -222,9 +224,9 @@ grid mrows = do
         rows0 <- mapM (sequence) mrows
 
         rows  <- forM rows0 $ \row0 -> do
-            row <- forM row0 $ \entry ->
+            row1 <- forM row0 $ \entry ->
                 wrap "table-cell" [entry]
-            wrap "table-row" row
+            wrap "table-row" row1
         wrap "table" rows
 
     where
@@ -306,9 +308,9 @@ instance Functor (ReadWriteAttr x i) where
 -- | Map input and output type of an attribute.
 bimapAttr :: (i' -> i) -> (o -> o')
           -> ReadWriteAttr x i o -> ReadWriteAttr x i' o'
-bimapAttr from to attr = attr
-    { get' = fmap to . get' attr
-    , set' = \i' -> set' attr (from i')
+bimapAttr from to attribute = attribute
+    { get' = fmap to . get' attribute
+    , set' = \i' -> set' attribute (from i')
     }
 
 -- | Set value of an attribute in the 'UI' monad.
@@ -321,47 +323,47 @@ set attr i mx = do { x <- mx; set' attr i x; return x; }
 -- Note: For reasons of efficiency, the attribute is only
 -- updated when the value changes.
 sink :: ReadWriteAttr x i o -> Behavior i -> UI x -> UI x
-sink attr bi mx = do
+sink attribute bi mx = do
     x <- mx
     window <- askWindow
     liftIOLater $ do
-        i <- currentValue bi
-        runUI window $ set' attr i x
-        Reactive.onChange bi  $ \i -> runUI window $ set' attr i x
+        i0 <- currentValue bi
+        runUI window $ set' attribute i0 x
+        Reactive.onChange bi  $ \i -> runUI window $ set' attribute i x
     return x
 
 -- | Get attribute value.
 get :: ReadWriteAttr x i o -> x -> UI o
-get attr = get' attr
+get attribute = get' attribute
 
 -- | Build an attribute from a getter and a setter.
 mkReadWriteAttr
     :: (x -> UI o)          -- ^ Getter.
     -> (i -> x -> UI ())    -- ^ Setter.
     -> ReadWriteAttr x i o
-mkReadWriteAttr get set = ReadWriteAttr { get' = get, set' = set }
+mkReadWriteAttr geti seto = ReadWriteAttr { get' = geti, set' = seto }
 
 -- | Build attribute from a getter.
 mkReadAttr :: (x -> UI o) -> ReadAttr x o
-mkReadAttr get = mkReadWriteAttr get (\_ _ -> return ())
+mkReadAttr geti = mkReadWriteAttr geti (\_ _ -> return ())
 
 -- | Build attribute from a setter.
 mkWriteAttr :: (i -> x -> UI ()) -> WriteAttr x i
-mkWriteAttr set = mkReadWriteAttr (\_ -> return ()) set
+mkWriteAttr seto = mkReadWriteAttr (\_ -> return ()) seto
 
 -- | Turn a jQuery property @.prop()@ into an attribute.
 fromJQueryProp :: String -> (JSON.Value -> a) -> (a -> JSON.Value) -> Attr Element a
-fromJQueryProp name from to = mkReadWriteAttr get set
+fromJQueryProp name from to = mkReadWriteAttr geti seto
     where
-    set v el = runFunction $ ffi "$(%1).prop(%2,%3)" el name (to v)
-    get   el = fmap from $ callFunction $ ffi "$(%1).prop(%2)" el name
+    seto v el = runFunction $ ffi "$(%1).prop(%2,%3)" el name (to v)
+    geti   el = fmap from $ callFunction $ ffi "$(%1).prop(%2)" el name
 
 -- | Turn a JavaScript object property @.prop = ...@ into an attribute.
 fromObjectProperty :: (FromJS a, ToJS a) => String -> Attr Element a
-fromObjectProperty name = mkReadWriteAttr get set
+fromObjectProperty name = mkReadWriteAttr geti seto
     where
-    set v el = runFunction  $ ffi ("%1." ++ name ++ " = %2") el v
-    get   el = callFunction $ ffi ("%1." ++ name) el
+    seto v el = runFunction  $ ffi ("%1." ++ name ++ " = %2") el v
+    geti   el = callFunction $ ffi ("%1." ++ name) el
 
 {-----------------------------------------------------------------------------
     Widget class

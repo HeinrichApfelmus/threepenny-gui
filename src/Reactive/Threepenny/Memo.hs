@@ -17,6 +17,7 @@ data Memo a
 
 type MemoD a = Either (IO a) a
 
+fromPure :: a -> Memo a
 fromPure = Const
 
 at :: Memo a -> IO a

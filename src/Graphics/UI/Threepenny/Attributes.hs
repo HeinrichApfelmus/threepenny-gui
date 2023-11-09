@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 module Graphics.UI.Threepenny.Attributes (
     -- * Synopsis
     -- | Element attributes.
@@ -50,13 +51,13 @@ selection = fromJQueryProp "selectedIndex" from (JSON.toJSON . maybe (-1) id)
     http://hackage.haskell.org/package/html
 ------------------------------------------------------------------------------}
 strAttr :: String -> WriteAttr Element String
-strAttr name = mkWriteAttr (set' (attr name))
+strAttr attrname = mkWriteAttr (set' (attr attrname))
 
 intAttr :: String -> WriteAttr Element Int
-intAttr name = mkWriteAttr (set' (attr name) . show)
+intAttr attrname = mkWriteAttr (set' (attr attrname) . show)
 
 emptyAttr :: String -> WriteAttr Element Bool
-emptyAttr name = mkWriteAttr (set' (attr name) . f)
+emptyAttr attrname = mkWriteAttr (set' (attr attrname) . f)
     where
     f True  = "1"
     f False = "0"

@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 -- | Predefined DOM elements, for convenience.
 module Graphics.UI.Threepenny.Elements (
     -- * Combinations and utilities
@@ -22,7 +23,6 @@ module Graphics.UI.Threepenny.Elements (
     ) where
 
 import           Control.Monad
-import           Control.Monad.Trans.Reader
 import           Graphics.UI.Threepenny.Core
 import           Prelude                     hiding (div, map, span)
 

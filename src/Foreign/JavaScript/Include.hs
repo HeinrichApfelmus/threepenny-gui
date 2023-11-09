@@ -8,8 +8,8 @@ import           System.IO
 
 include :: FilePath -> Q Exp
 include path = do
-    path <- makeRelativeToProject path
-    LitE . StringL <$> runIO (readFileUTF8 path)
+    relativePath <- makeRelativeToProject path
+    LitE . StringL <$> runIO (readFileUTF8 relativePath)
 
 readFileUTF8 :: FilePath -> IO String
 readFileUTF8 path = do

@@ -20,7 +20,6 @@ import Data.List(intercalate)
 import Numeric (showHex)
 
 import Graphics.UI.Threepenny.Core
-import qualified Data.Aeson as JSON
 
 {-----------------------------------------------------------------------------
     Canvas
@@ -240,8 +239,8 @@ stroke = runFunction . ffi "%1.getContext('2d').stroke()"
 -- The 'textAlign' attributes determines the position of the text
 -- relative to the point.
 fillText :: String -> Point -> Canvas -> UI ()
-fillText text (x,y) canvas =
-  runFunction $ ffi "%1.getContext('2d').fillText(%2, %3, %4)" canvas text x y
+fillText t (x,y) canvas =
+  runFunction $ ffi "%1.getContext('2d').fillText(%2, %3, %4)" canvas t x y
 
 -- | Render the outline of a text at a certain point on the canvas.
 -- 
@@ -250,8 +249,8 @@ fillText text (x,y) canvas =
 -- The 'textAlign' attributes determines the position of the text
 -- relative to the point.
 strokeText :: String -> Point -> Canvas -> UI ()
-strokeText text (x,y) canvas =
-  runFunction $ ffi "%1.getContext('2d').strokeText(%2, %3, %4)" canvas text x y
+strokeText t (x,y) canvas =
+  runFunction $ ffi "%1.getContext('2d').strokeText(%2, %3, %4)" canvas t x y
 
 {-----------------------------------------------------------------------------
     helper functions

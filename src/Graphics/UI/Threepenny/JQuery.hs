@@ -1,10 +1,7 @@
 module Graphics.UI.Threepenny.JQuery where
 
-import Control.Arrow
-import Data.String
 import Data.Char
 import Data.Default
-import Data.Maybe
 
 import Graphics.UI.Threepenny.Core
 
