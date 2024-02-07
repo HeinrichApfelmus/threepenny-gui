@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell, CPP #-}
 module Foreign.JavaScript.Include (include) where
 
-import           Data.Functor
 import           Data.FileEmbed      (makeRelativeToProject)
 import           Language.Haskell.TH
 import           System.IO

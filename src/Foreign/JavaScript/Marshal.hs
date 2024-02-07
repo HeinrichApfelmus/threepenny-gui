@@ -19,7 +19,6 @@ import qualified Data.Aeson.Encode      as JSON   (encodeToTextBuilder)
 #else
 import qualified Data.Aeson.Text        as JSON   (encodeToTextBuilder)
 #endif
-import           Data.Functor                     ((<$>))
 import           Data.List                        (intercalate)
 import qualified Data.Text              as T
 import qualified Data.Text.Lazy

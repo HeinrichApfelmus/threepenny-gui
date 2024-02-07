@@ -1,5 +1,4 @@
 import Control.Monad (void)
-import Data.Maybe
 import Text.Printf
 import Safe          (readMay)
 

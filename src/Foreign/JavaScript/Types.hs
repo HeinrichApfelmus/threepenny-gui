@@ -1,16 +1,13 @@
 {-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 module Foreign.JavaScript.Types where
 
-import           Control.Applicative
 import qualified Control.Exception       as E
 import           Control.Concurrent.STM  as STM
-import           Control.Concurrent.Chan as Chan
 import           Control.Concurrent.MVar
 import           Control.DeepSeq
 import           Data.Aeson              as JSON
 import           Data.ByteString.Char8           (ByteString)
 import qualified Data.ByteString.Char8   as BS   (hPutStrLn)
-import           Data.IORef
 import           Data.Map                as Map
 import           Data.String
 import           Data.Text
@@ -167,6 +164,8 @@ data Server = Server
     , sLog   :: ByteString -> IO () -- function for logging
     }
 type Filepaths = (Integer, Map ByteString (FilePath, MimeType))
+
+newFilepaths :: Filepaths
 newFilepaths = (0, Map.empty)
 
 {-----------------------------------------------------------------------------
@@ -233,7 +232,8 @@ instance ToJSON ServerMsg where
     toJSON (RunEval  x) = object [ "tag" .= t "RunEval" , "contents" .= toJSON x]
     toJSON (CallEval x) = object [ "tag" .= t "CallEval", "contents" .= toJSON x]
 
-t s = fromString s :: Text
+t :: String -> Text
+t s = fromString s
 
 writeServer :: Comm -> ServerMsg -> STM ()
 writeServer c = writeComm c . toJSON . force
