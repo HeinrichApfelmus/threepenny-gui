@@ -1,6 +1,6 @@
 import Control.Monad
 import Data.IORef
-import Data.Functor
+import Data.Functor hiding (unzip)
 
 import Paths
 import System.FilePath
@@ -42,7 +42,7 @@ setup w = void $ do
     let status = grid [[UI.string "BPM:" , element elBpm]
                       ,[UI.string "Beat:", element elTick]]
     getBody w #+ [UI.div #. "wrap" #+ (status : map element elInstruments)]
-    
+
     timer <- UI.timer # set UI.interval (bpm2ms defaultBpm)
     eBeat <- accumE (0::Int) $
         (\beat -> (beat + 1) `mod` (beats * bars)) <$ UI.tick timer
@@ -51,12 +51,12 @@ setup w = void $ do
         element elTick # set text (show $ beat + 1)
         -- play corresponding sounds
         sequence_ $ map (!! beat) kit
-    
+
     -- allow user to set BPM
     on UI.keydown elBpm $ \keycode -> when (keycode == 13) $ void $ do
         bpm <- read <$> get value elBpm
         return timer # set UI.interval (bpm2ms bpm)
-    
+
     -- start the timer
     UI.start timer
 
@@ -82,13 +82,13 @@ mkInstrument name = do
             checked <- get UI.checked box
             when checked $ do
                 runFunction $ ffi "%1.pause()" elAudio
-                runFunction $ ffi "%1.currentTime = 0" elAudio 
+                runFunction $ ffi "%1.currentTime = 0" elAudio
                 runFunction $ ffi "%1.play()" elAudio
         beats    = map play . concat $ elCheckboxes
         elGroups = [UI.span #. "bar" #+ map element bar | bar <- elCheckboxes]
-    
+
     elInstrument <- UI.div #. "instrument"
         #+ (element elAudio : UI.string name : elGroups)
-    
+
     return (beats, elInstrument)
 
