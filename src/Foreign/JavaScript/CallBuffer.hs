@@ -1,7 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 module Foreign.JavaScript.CallBuffer where
 
-import Control.Concurrent
 import Control.Concurrent.STM as STM
 import Control.Monad
 

@@ -12,10 +12,7 @@
 import Prelude hiding (lookup)
 import Control.Monad  (void)
 import Data.List      (isPrefixOf)
-import Data.Maybe
-import Data.Monoid
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core hiding (delete)

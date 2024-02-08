@@ -19,7 +19,6 @@ import Prelude hiding (lookup)
 import Control.Monad
 import qualified Data.Text             as T
 import qualified Data.HashMap.Strict   as Map
-import Data.Functor
 import Data.IORef
 
 import           System.Mem.Weak          hiding (addFinalizer)

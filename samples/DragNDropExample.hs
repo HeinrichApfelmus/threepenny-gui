@@ -1,7 +1,5 @@
-import Control.Applicative
 import Control.Monad
 import Data.IORef
-import Data.Maybe
 
 import Paths
 

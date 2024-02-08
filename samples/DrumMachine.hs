@@ -1,9 +1,6 @@
 import Control.Monad
-import Data.IORef
-import Data.Functor hiding (unzip)
 
 import Paths
-import System.FilePath
 
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
@@ -11,12 +8,13 @@ import Graphics.UI.Threepenny.Core
 {-----------------------------------------------------------------------------
     Configuration
 ------------------------------------------------------------------------------}
+bars, beats, defaultBpm :: Int
 bars  = 4
 beats = 4
 defaultBpm = 120
 
 bpm2ms :: Int -> Int
-bpm2ms bpm = ceiling $ 1000*60 / fromIntegral bpm
+bpm2ms bpm = ceiling $ 1000*60 / (fromIntegral bpm :: Double)
 
 -- NOTE: Samples taken from "conductive-examples"
 

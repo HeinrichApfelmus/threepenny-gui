@@ -1,8 +1,6 @@
 import Control.Concurrent
 import qualified Control.Concurrent.Chan as Chan
-import Control.Exception
 import Control.Monad
-import Data.Functor
 import Data.List.Extra
 import Data.Time
 import Data.IORef

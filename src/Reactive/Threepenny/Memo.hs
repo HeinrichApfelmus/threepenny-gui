@@ -3,8 +3,6 @@ module Reactive.Threepenny.Memo (
     Memo, fromPure, memoize, at, liftMemo1, liftMemo2,
     ) where
 
-import Control.Monad
-import Data.Functor
 import Data.IORef
 import System.IO.Unsafe
 
