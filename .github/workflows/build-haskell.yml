@@ -39,6 +39,7 @@ jobs:
           - 9.4.7
           - 9.6.4
           - 9.8.1
+          - 9.10.1
     steps:
       - name: Checkout
         uses: actions/checkout@v3
