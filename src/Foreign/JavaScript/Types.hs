@@ -1,20 +1,50 @@
 {-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 module Foreign.JavaScript.Types where
 
-import qualified Control.Exception       as E
-import           Control.Concurrent.STM  as STM
-import           Control.Concurrent.MVar
-import           Control.DeepSeq
-import           Data.Aeson              as JSON
-import           Data.ByteString.Char8           (ByteString)
-import qualified Data.ByteString.Char8   as BS   (hPutStrLn)
-import           Data.Map                as Map
-import           Data.String
-import           Data.Text
-import           Data.Typeable
-import           Snap.Core                       (Cookie(..))
-import           System.IO                       (stderr)
+import Control.Concurrent.STM
+    ( STM
+    , TMVar
+    , TQueue
+    , TVar
+    )
+import Control.DeepSeq
+    ( NFData (..)
+    , force
+    )
+import Data.Aeson
+    ( toJSON
+    , (.=)
+    , (.:)
+    )
+import Data.ByteString.Char8
+    ( ByteString
+    )
+import Data.Map
+    ( Map
+    )
+import Data.String
+    ( fromString
+    )
+import Data.Text
+    ( Text
+    )
+import Data.Typeable
+    ( Typeable
+    )
+import Snap.Core
+    ( Cookie(..)
+    )
+import System.IO
+    ( stderr
+    )
 
+import qualified Control.Concurrent.STM  as STM
+import qualified Control.Exception       as E
+import qualified Data.Aeson as JSON
+import qualified Data.ByteString.Char8  as BS   (hPutStrLn)
+import qualified Data.Map as Map
+
+import Control.Concurrent.MVar
 import Foreign.RemotePtr
 
 {-----------------------------------------------------------------------------
@@ -196,8 +226,8 @@ data ClientMsg
     | Quit
     deriving (Eq, Show)
 
-instance FromJSON ClientMsg where
-    parseJSON (Object msg) = do
+instance JSON.FromJSON ClientMsg where
+    parseJSON (JSON.Object msg) = do
         tag <- msg .: "tag"
         case (tag :: Text) of
             "Event"     -> Event     <$> (msg .: "name") <*> (msg .: "arguments")
@@ -209,8 +239,10 @@ readClient :: Comm -> STM ClientMsg
 readClient c = do
     msg <- readComm c
     case JSON.fromJSON msg of
-        Error   s -> error $ "Foreign.JavaScript: Error parsing client message " ++ show s
-        Success x -> return x
+        JSON.Error s ->
+            error $ "Foreign.JavaScript: Error parsing client message " ++ show s
+        JSON.Success x
+            -> pure x
 
 -- | Messages sent by the Haskell server.
 data ServerMsg
@@ -226,11 +258,15 @@ instance NFData ServerMsg where
     rnf (Debug     x) = rnf x
     rnf (Timestamp  ) = ()
 
-instance ToJSON ServerMsg where
-    toJSON (Debug    x) = object [ "tag" .= t "Debug"   , "contents" .= toJSON x]
-    toJSON (Timestamp ) = object [ "tag" .= t "Timestamp" ]
-    toJSON (RunEval  x) = object [ "tag" .= t "RunEval" , "contents" .= toJSON x]
-    toJSON (CallEval x) = object [ "tag" .= t "CallEval", "contents" .= toJSON x]
+instance JSON.ToJSON ServerMsg where
+    toJSON (Debug x) =
+        JSON.object [ "tag" .= t "Debug", "contents" .= toJSON x]
+    toJSON Timestamp =
+        JSON.object [ "tag" .= t "Timestamp" ]
+    toJSON (RunEval x) =
+        JSON.object [ "tag" .= t "RunEval", "contents" .= toJSON x]
+    toJSON (CallEval x) =
+        JSON.object [ "tag" .= t "CallEval", "contents" .= toJSON x]
 
 t :: String -> Text
 t s = fromString s
@@ -335,8 +371,8 @@ data Window = Window
 newPartialWindow :: IO Window
 newPartialWindow = do
     ptr <- newRemotePtr "" () =<< newVendor
-    b1  <- newTMVarIO id
-    b2  <- newTVarIO NoBuffering
+    b1  <- STM.newTMVarIO id
+    b2  <- STM.newTVarIO NoBuffering
     let nop = const $ return ()
     Window undefined [] nop undefined b1 b2 (return ()) nop nop ptr <$> newVendor <*> newVendor
 
