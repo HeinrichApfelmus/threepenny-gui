@@ -20,7 +20,7 @@
         # If we are building a haskell project (e.g. the current directory)
         # we'd use this to get the haskell packages from the current project.
         project = pkgs.haskell-nix.project' {
-          compiler-nix-name = "ghc964";
+          compiler-nix-name = "ghc966";
           src = ./.;
           projectFileName = "cabal.project";
 
