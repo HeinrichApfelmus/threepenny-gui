@@ -18,8 +18,6 @@ jobs:
     name: ${{ matrix.os }}-ghc-${{ matrix.ghc }}
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.allow-failure }}
-    env:
-      cabal-build-dir: b
     strategy:
       matrix:
         allow-failure:
@@ -27,78 +25,86 @@ jobs:
         os:
           - ubuntu-latest
         cabal:
-          - latest
+        # Cabal 3.12 does not work due to 'entropy' dependency.
+          - '3.10'
         ghc:
-          - 8.0.2
-          - 8.2.2
-          - 8.4.4
-          - 8.6.5
-          - 8.8.4
-          - 8.10.7
-          - 9.2.8
-          - 9.4.7
-          - 9.6.5
-          - 9.8.2
-          - 9.10.1
+          - '8.0'
+          - '8.2'
+          - '8.4'
+          - '8.6'
+          - '8.8'
+          - '8.10'
+          - '9.2'
+          - '9.4'
+          - '9.6'
+          - '9.8'
+          - '9.10'
+        include:
+          - allow-failure: true
+            os: ubuntu-latest
+            cabal: '3.12'
+            ghc: '9.12'
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Environment
         uses: haskell-actions/setup@v2
-        id: setup-haskell-cabal
+        id: setup
         with:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: ${{ matrix.cabal }}
 
       - name: Configure
-        run: >
-          cabal configure
-          --builddir=${{ env.cabal-build-dir }}
-          --enable-tests
-          --enable-benchmarks
-          --enable-documentation
-          --test-show-details=direct
-          --write-ghc-environment-files=always
+        run: |
+          cabal configure \
+            --enable-tests \
+            --enable-benchmarks \
+            --enable-documentation \
+            --test-show-details=direct \
+            --write-ghc-environment-files=always
+          cabal build all --dry-run
+        # The last step generates dist-newstyle/cache/plan.json for the cache key.
 
-      - name: Freeze
-        run: >
-          cabal freeze
-          --builddir=${{ env.cabal-build-dir }}
-
-      - name: Cache
-        uses: actions/cache@v3
+      # For a description of how the Caching works, see
+      # https://github.com/haskell-actions/setup?tab=readme-ov-file#model-cabal-workflow-with-caching
+      - name: Dependencies (Restore from cache)
+        uses: actions/cache/restore@v4
+        id: cache
         env:
-          hash: ${{ hashFiles('cabal.project.freeze') }}
+          key: ${{ matrix.os }}-ghc-${{ matrix.ghc }}
+          hash: ${{ hashFiles('**/plan.json') }}
         with:
-          key: ${{ matrix.os }}-ghc-${{ matrix.ghc }}-${{ env.hash }}
-          restore-keys: |
-            ${{ matrix.os }}-ghc-${{ matrix.ghc }}-
-          path: |
-            ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
-            ${{ env.cabal-build-dir }}
+          key: ${{ env.key }}-${{ env.hash }}
+          restore-keys: ${{ env.key }}-
+          path: ${{ steps.setup.outputs.cabal-store }}
 
-      - name: Dependencies
-        run: >
-          cabal build all
-          --builddir=${{ env.cabal-build-dir }}
-          --only-dependencies
+      - name: Dependencies (Install)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cabal build all --only-dependencies
+
+      # Cache dependencies already here,
+      # so that we do not have to rebuild them should the subsequent steps fail.
+      - name: Dependencies (Save cache)
+        uses: actions/cache/save@v4
+        # If we had an exact cache hit,
+        # trying to save the cache would error because of key clash.
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+          path: ${{ steps.setup.outputs.cabal-store }}
 
       - name: Build
         run: >
           cabal build all
-          --builddir=${{ env.cabal-build-dir }}
           --enable-tests
           --enable-benchmarks
-          --ghc-options=-Wall
 
       - name: Test
         run: >
           cabal test all
-          --builddir=${{ env.cabal-build-dir }}
 
       - name: Benchmark
         run: >
           cabal bench all
-          --builddir=${{ env.cabal-build-dir }}
           || true
