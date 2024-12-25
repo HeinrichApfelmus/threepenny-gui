@@ -1,5 +1,5 @@
 name:                threepenny-gui
-version:             0.9.4.1
+version:             0.9.4.2
 synopsis:            GUI framework that uses the web browser as a display.
 description:
     Threepenny-GUI is a GUI framework that uses the web browser as a display.
