@@ -1,7 +1,7 @@
-Name:                threepenny-gui
-Version:             0.9.4.1
-Synopsis:            GUI framework that uses the web browser as a display.
-Description:
+name:                threepenny-gui
+version:             0.9.4.2
+synopsis:            GUI framework that uses the web browser as a display.
+description:
     Threepenny-GUI is a GUI framework that uses the web browser as a display.
     .
     It's very easy to install because everyone has a web browser installed.
@@ -19,41 +19,45 @@ Description:
     .
     @cabal install threepenny-gui -fbuildExamples@
 
-License:             BSD3
-License-file:        LICENSE
-Author:              Heinrich Apfelmus
-Maintainer:          Heinrich Apfelmus <apfelmus at quantentunnel dot de>
-Homepage:            http://wiki.haskell.org/Threepenny-gui
+license:             BSD3
+license-file:        LICENSE
+author:              Heinrich Apfelmus
+maintainer:          Heinrich Apfelmus <apfelmus at quantentunnel dot de>
+homepage:            http://wiki.haskell.org/Threepenny-gui
 bug-reports:         https://github.com/HeinrichApfelmus/threepenny-gui/issues
-Category:            Web, GUI
-Build-type:          Simple
-Cabal-version:       >=1.10
-Tested-With:         GHC == 8.0.2
-                    ,GHC == 8.2.2
-                    ,GHC == 8.4.4
-                    ,GHC == 8.6.5
-                    ,GHC == 8.8.4
-                    ,GHC == 8.10.7
-                    ,GHC == 9.2.8
-                    ,GHC == 9.4.7
-                    ,GHC == 9.6.5
-                    ,GHC == 9.8.2
-                    ,GHC == 9.10.1
+category:            Web, GUI
+build-type:          Simple
+cabal-version:       >=1.10
+tested-with:
+      GHC == 8.0.2
+    , GHC == 8.2.2
+    , GHC == 8.4.4
+    , GHC == 8.6.5
+    , GHC == 8.8.4
+    , GHC == 8.10.7
+    , GHC == 9.2.8
+    , GHC == 9.4.7
+    , GHC == 9.6.6
+    , GHC == 9.8.4
+    , GHC == 9.10.1
+    , GHC == 9.12.1
 
-Extra-Source-Files:  CHANGELOG.md
-                    ,README.md
-                    ,samples/README.md
-                    ,js/*.html
-                    ,js/*.css
-                    ,js/*.js
-                    ,js/lib/*.js
+extra-source-Files:
+      CHANGELOG.md
+    , README.md
+    , samples/README.md
+    , js/*.html
+    , js/*.css
+    , js/*.js
+    , js/lib/*.js
 
-Data-dir:           .
-Data-files:          samples/static/css/*.css
-                    ,samples/static/css/*.png
-                    ,samples/static/*.html
-                    ,samples/static/*.png
-                    ,samples/static/*.wav
+data-dir:           .
+data-files:
+      samples/static/css/*.css
+    , samples/static/css/*.png
+    , samples/static/*.html
+    , samples/static/*.png
+    , samples/static/*.wav
 
 
 flag buildExamples
@@ -70,72 +74,72 @@ flag rebug
     default:     False
     manual:      True
 
-Source-repository head
+source-repository head
     type:               git
     location:           git://github.com/HeinrichApfelmus/threepenny-gui.git
 
-
-Library
+library
   hs-source-dirs:    src
   exposed-modules:
-                     Foreign.JavaScript
-                    ,Foreign.RemotePtr
-                    ,Graphics.UI.Threepenny
-                    ,Graphics.UI.Threepenny.Attributes
-                    ,Graphics.UI.Threepenny.Canvas
-                    ,Graphics.UI.Threepenny.Core
-                    ,Graphics.UI.Threepenny.DragNDrop
-                    ,Graphics.UI.Threepenny.Elements
-                    ,Graphics.UI.Threepenny.Events
-                    ,Graphics.UI.Threepenny.JQuery
-                    ,Graphics.UI.Threepenny.SVG
-                    ,Graphics.UI.Threepenny.SVG.Attributes
-                    ,Graphics.UI.Threepenny.SVG.Elements
-                    ,Graphics.UI.Threepenny.Timer
-                    ,Graphics.UI.Threepenny.Widgets
-                    ,Reactive.Threepenny
+    Foreign.JavaScript
+    Foreign.RemotePtr
+    Graphics.UI.Threepenny
+    Graphics.UI.Threepenny.Attributes
+    Graphics.UI.Threepenny.Canvas
+    Graphics.UI.Threepenny.Core
+    Graphics.UI.Threepenny.DragNDrop
+    Graphics.UI.Threepenny.Elements
+    Graphics.UI.Threepenny.Events
+    Graphics.UI.Threepenny.JQuery
+    Graphics.UI.Threepenny.SVG
+    Graphics.UI.Threepenny.SVG.Attributes
+    Graphics.UI.Threepenny.SVG.Elements
+    Graphics.UI.Threepenny.Timer
+    Graphics.UI.Threepenny.Widgets
+    Reactive.Threepenny
   other-modules:
-                     Foreign.JavaScript.CallBuffer
-                    ,Foreign.JavaScript.EventLoop
-                    ,Foreign.JavaScript.Include
-                    ,Foreign.JavaScript.Marshal
-                    ,Foreign.JavaScript.Resources
-                    ,Foreign.JavaScript.Server
-                    ,Foreign.JavaScript.Types
-                    ,Graphics.UI.Threepenny.Internal
-                    ,Reactive.Threepenny.Memo
-                    ,Reactive.Threepenny.Monads
-                    ,Reactive.Threepenny.PulseLatch
-                    ,Reactive.Threepenny.Types
-                    ,Paths_threepenny_gui
+    Foreign.JavaScript.CallBuffer
+    Foreign.JavaScript.EventLoop
+    Foreign.JavaScript.Include
+    Foreign.JavaScript.Marshal
+    Foreign.JavaScript.Resources
+    Foreign.JavaScript.Server
+    Foreign.JavaScript.Types
+    Graphics.UI.Threepenny.Internal
+    Reactive.Threepenny.Memo
+    Reactive.Threepenny.Monads
+    Reactive.Threepenny.PulseLatch
+    Reactive.Threepenny.Types
+    Paths_threepenny_gui
   other-extensions: CPP
   cpp-options:      -DCABAL
   if flag(rebug)
       cpp-options:  -DREBUG
       ghc-options:  -O2
-  build-depends:     base                   >= 4.8   && < 4.21
-                    ,aeson                  (>= 0.7 && < 0.10) || == 0.11.* || (>= 1.0 && < 2.3)
-                    ,async                  >= 2.0   && < 2.3
-                    ,bytestring             >= 0.9.2 && < 0.13
-                    ,containers             >= 0.4.2 && < 0.8
-                    ,data-default           >= 0.5.0 && < 0.8
-                    ,deepseq                >= 1.3.0 && < 1.6
-                    ,exceptions             >= 0.6   && < 0.11
-                    ,filepath               >= 1.3.0 && < 1.6.0
-                    ,file-embed             >= 0.0.10 && < 0.1
-                    ,hashable               >= 1.2.0 && < 1.5
-                    ,safe                   == 0.3.*
-                    ,snap-server            >= 0.9.0 && < 1.2
-                    ,snap-core              >= 0.9.0 && < 1.1
-                    ,stm                    >= 2.2    && < 2.6
-                    ,template-haskell       >= 2.7.0  && < 2.23
-                    ,text                   >= 0.11   && < 2.2
-                    ,transformers           >= 0.3.0  && < 0.7
-                    ,unordered-containers   == 0.2.*
-                    ,websockets             (>= 0.8    && < 0.12.5) || (> 0.12.5.0 && < 0.14)
-                    ,websockets-snap        >= 0.8    && < 0.11
-                    ,vault                  == 0.3.*
-                    ,vector                 >= 0.10   && < 0.14
+  build-depends:
+      base                   >= 4.8   && < 4.22
+    , aeson                  (>= 0.7 && < 0.10) || == 0.11.* || (>= 1.0 && < 2.3)
+    , async                  >= 2.0    && < 2.3
+    , bytestring             >= 0.9.2  && < 0.13
+    , containers             >= 0.4.2  && < 0.8
+    , data-default           >= 0.5.0  && < 0.8
+    , deepseq                >= 1.3.0  && < 1.6
+    , exceptions             >= 0.6    && < 0.11
+    , filepath               >= 1.3.0  && < 1.6.0
+    , file-embed             >= 0.0.10 && < 0.1
+    , hashable               >= 1.2.0  && < 1.6
+    , safe                   == 0.3.*
+    , snap-server            >= 0.9.0  && < 1.2
+    , snap-core              >= 0.9.0  && < 1.1
+    , stm                    >= 2.2    && < 2.6
+    , template-haskell       >= 2.7.0  && < 2.24
+    , text                   >= 0.11   && < 2.2
+    , transformers           >= 0.3.0  && < 0.7
+    , unordered-containers   == 0.2.*
+    , websockets             (>= 0.8    && < 0.12.5) || (> 0.12.5.0 && < 0.14)
+    , websockets-snap        >= 0.8    && < 0.11
+    , vault                  >= 0.3    && < 0.4
+    , vector                 >= 0.10   && < 0.14
   if impl(ghc >= 8.0)
       ghc-options: -Wcompat -Wnoncanonical-monad-instances
   default-language: Haskell2010

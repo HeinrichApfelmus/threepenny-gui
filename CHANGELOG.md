@@ -1,5 +1,9 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.9.4.2** – Maintenance and snapshot release
+
+* Bump dependencies for compatibility with GHC-9.12.
+
 **0.9.4.1** – Maintenance and snapshot release
 
 * Bump dependencies for compatibility with GHC-9.8.
