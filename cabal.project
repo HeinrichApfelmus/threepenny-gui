@@ -6,13 +6,16 @@ flags: +buildExamples
 package snap-server
   flags: +openssl
 
-if (impl(ghc == 9.12.1))
+if (impl(ghc >= 9.12))
   constraints:
     , hashable >= 1.5
     , template-haskell >= 2.23
+    , containers >= 0.8
+    , data-default >= 0.8
 
   allow-newer:
     , *:time
     , *:ghc-prim
     , *:template-haskell
     , *:base
+    , *:containers
