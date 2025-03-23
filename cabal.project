@@ -3,8 +3,9 @@ packages:
 
 flags: +buildExamples
 
-package snap-server
-  flags: +openssl
+if (!os(darwin) && !os(windows))
+  package snap-server
+    flags: +openssl
 
 if (impl(ghc >= 9.12))
   constraints:
