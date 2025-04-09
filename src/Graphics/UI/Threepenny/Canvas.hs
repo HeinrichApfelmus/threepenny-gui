@@ -11,7 +11,7 @@ module Graphics.UI.Threepenny.Canvas (
     , linearGradient, horizontalLinearGradient, verticalLinearGradient
     , fillRect, fillStyle, strokeStyle, lineWidth, textFont
     , TextAlign(..), textAlign
-    , beginPath, moveTo, lineTo, closePath, arc, arc'
+    , beginPath, moveTo, lineTo, closePath, arc, arc', setLineDash
     , fill, stroke, fillText, strokeText
     ) where
 
@@ -223,6 +223,11 @@ arc' :: Point -> Double -> Double -> Double -> Bool -> Canvas -> UI ()
 arc' (x,y) radius startAngle endAngle anti canvas =
     runFunction $ ffi "%1.getContext('2d').arc(%2, %3, %4, %5, %6, %7)"
         canvas x y radius startAngle endAngle anti
+
+-- | Set the 'lineDash' property for paths drawn on the canvas.
+setLineDash :: [Double] -> Canvas -> UI()
+setLineDash segments canvas =
+  runFunction $ ffi "%1.getContext('2d').setLineDash(%2)" canvas segments
 
 -- | Fills the subpaths with the current fill style.
 fill :: Canvas -> UI ()
