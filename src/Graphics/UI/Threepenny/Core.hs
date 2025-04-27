@@ -37,7 +37,7 @@ module Graphics.UI.Threepenny.Core (
 
     -- * Attributes
     -- | For a list of predefined attributes, see "Graphics.UI.Threepenny.Attributes".
-    (#), (#.),
+    (#), (#.), (#=),
     Attr, WriteAttr, ReadAttr, ReadWriteAttr(..),
     set, sink, get, mkReadWriteAttr, mkWriteAttr, mkReadAttr,
     bimapAttr, fromObjectProperty,
@@ -64,6 +64,7 @@ import Control.Monad.Fix
 import Control.Monad.IO.Class
 
 import qualified Control.Monad.Catch             as E
+import qualified Data.Foldable                   as F
 import qualified Data.Aeson                      as JSON
 import qualified Foreign.JavaScript              as JS
 import qualified Graphics.UI.Threepenny.Internal as Core
@@ -286,6 +287,10 @@ infixl 8 #.
 -- | Convenient combinator for setting the CSS class on element creation.
 (#.) :: UI Element -> String -> UI Element
 (#.) mx s = mx # set (attr "class") s
+
+-- | Convenient combinator for bulk setting of attributes on element creation.
+(#=) :: F.Foldable t => UI x -> t (ReadWriteAttr x i o, i) -> UI x
+(#=) e = ($ e) . F.foldl (\f p -> f . uncurry set p) id
 
 -- | Attributes can be 'set' and 'get'.
 type Attr x a = ReadWriteAttr x a a
