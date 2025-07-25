@@ -18,6 +18,10 @@ jobs:
     name: ${{ matrix.os }}-ghc-${{ matrix.ghc }}
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.allow-failure }}
+    defaults:
+      run:
+        # Use the `bash` shell on Windows as well
+        shell: bash
     strategy:
       matrix:
         allow-failure:
@@ -40,6 +44,11 @@ jobs:
           - '9.8'
           - '9.10'
           - '9.12'
+        include:
+          - allow-failure: false
+            os: windows-latest
+            cabal: '3.10'
+            ghc: '9.6'
         # include:
         #   - allow-failure: true
         #     os: ubuntu-latest
