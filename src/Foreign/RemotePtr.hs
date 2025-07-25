@@ -1,5 +1,6 @@
-{-# LANGUAGE RecordWildCards, CPP, ExistentialQuantification #-}
-{-# LANGUAGE MagicHash, UnboxedTuples #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE RecordWildCards#-}
 module Foreign.RemotePtr (
     -- * Synopsis
     -- | Toolbox for managing remote objects in Haskell.
@@ -16,37 +17,18 @@ module Foreign.RemotePtr (
     ) where
 
 import Prelude hiding (lookup)
-import Control.Monad
+import Control.Monad (void)
 import qualified Data.Text             as T
 import qualified Data.HashMap.Strict   as Map
 import Data.IORef
 
-import           System.Mem.Weak          hiding (addFinalizer)
-
-import qualified GHC.Base  as GHC
-import qualified GHC.Weak  as GHC
-import qualified GHC.IORef as GHC
-import qualified GHC.STRef as GHC
+import qualified Foreign.RemotePtr.Weak as Weak
 
 #if CABAL
 #if MIN_VERSION_base(4,6,0)
 #else
 atomicModifyIORef' = atomicModifyIORef
 #endif
-#endif
-
-mkWeakIORefValue :: IORef a -> value -> IO () -> IO (Weak value)
-#if CABAL
-#if MIN_VERSION_base(4,9,0)
-mkWeakIORefValue (GHC.IORef (GHC.STRef r#)) v (GHC.IO f) = GHC.IO $ \s ->
-  case GHC.mkWeak# r# v f s of (# s1, w #) -> (# s1, GHC.Weak w #)
-#else
-mkWeakIORefValue (GHC.IORef (GHC.STRef r#)) v f = GHC.IO $ \s ->
-  case GHC.mkWeak# r# v f s of (# s1, w #) -> (# s1, GHC.Weak w #)
-#endif
-#else
-mkWeakIORefValue (GHC.IORef (GHC.STRef r#)) v (GHC.IO f) = GHC.IO $ \s ->
-  case GHC.mkWeak# r# v f s of (# s1, w #) -> (# s1, GHC.Weak w #)
 #endif
 
 type Map = Map.HashMap
@@ -78,14 +60,14 @@ type Coupon = T.Text
 type RemotePtr a = IORef (RemoteData a)
 
 data RemoteData a = RemoteData
-    { self     :: Weak (RemotePtr a)
+    { self     :: Weak.Weak (RemotePtr a)
     , coupon   :: Coupon
     , value    :: a
     , children :: IORef [SomeWeak]
     }
 
 -- Existentially quantified weak pointer. We only care about its finalizer.
-data SomeWeak = forall a. SomeWeak (Weak a)
+data SomeWeak = forall a. SomeWeak (Weak.Weak a)
 
 -- | A 'Vendor' is a bijective mapping from 'Coupon' to 'RemotePtr'.
 --
@@ -93,7 +75,7 @@ data SomeWeak = forall a. SomeWeak (Weak a)
 -- A single 'RemotePtr' will always be associated with the same 'Coupon'.
 
 data Vendor a = Vendor
-    { coupons :: IORef (Map Coupon (Weak (RemotePtr a)))
+    { coupons :: IORef (Map Coupon (Weak.Weak (RemotePtr a)))
     , counter :: IORef Integer
     }
 
@@ -111,7 +93,7 @@ newVendor = do
 lookup :: Coupon -> Vendor a -> IO (Maybe (RemotePtr a))
 lookup coupon Vendor{..} = do
     w <- Map.lookup coupon <$> readIORef coupons
-    maybe (return Nothing) deRefWeak w
+    maybe (return Nothing) Weak.deRefWeak w
 
 -- | Create a new 'Coupon'.
 --
@@ -131,7 +113,7 @@ newRemotePtr coupon value Vendor{..} = do
     
     let doFinalize =
             atomicModifyIORef' coupons $ \m -> (Map.delete coupon m, ())
-    w <- mkWeakIORef ptr doFinalize
+    w <- Weak.mkWeakIORef ptr doFinalize
     atomicModifyIORef' coupons $ \m -> (Map.insert coupon w m, ())
     atomicModifyIORef' ptr $ \itemdata -> (itemdata { self = w }, ())
     return ptr
@@ -171,13 +153,13 @@ unprotectedGetCoupon ptr = coupon <$> readIORef ptr
 --
 -- The associated coupon cannot be redeemed anymore while the finalizer runs.
 addFinalizer :: RemotePtr a -> IO () -> IO ()
-addFinalizer ptr = void . mkWeakIORef ptr
+addFinalizer ptr = void . Weak.mkWeakIORef ptr
 -- | FIXME: Is this finalizer really run when 'destroy' is called?
 
 -- | Destroy a 'RemotePtr' and run all finalizers for it.
 -- 'Coupon's for this pointer can no longer be redeemed.
 destroy :: RemotePtr a -> IO ()
-destroy ptr = finalize =<< self <$> readIORef ptr
+destroy ptr = Weak.finalize =<< self <$> readIORef ptr
 
 
 -- | When dealing with several foreign objects,
@@ -193,7 +175,7 @@ destroy ptr = finalize =<< self <$> readIORef ptr
 -- as it allows all child object to be garbage collected at once.
 addReachable :: RemotePtr a -> RemotePtr b -> IO ()
 addReachable parent child = do
-    w   <- mkWeakIORefValue parent child $ return ()
+    w   <- Weak.mkWeakIORefValue parent child $ return ()
     ref <- children <$> readIORef parent
     atomicModifyIORef' ref $ \ws -> (SomeWeak w:ws, ())
 
@@ -205,4 +187,4 @@ clearReachable :: RemotePtr a -> IO ()
 clearReachable parent = do
     ref <- children <$> readIORef parent
     xs  <- atomicModifyIORef' ref $ \xs -> ([], xs)
-    sequence_ [finalize x | SomeWeak x <- xs]
+    sequence_ [Weak.finalize x | SomeWeak x <- xs]
