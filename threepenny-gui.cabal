@@ -101,6 +101,7 @@ library
     Foreign.JavaScript.CallBuffer
     Foreign.JavaScript.EventLoop
     Foreign.JavaScript.Include
+    Foreign.JavaScript.JSON
     Foreign.JavaScript.Marshal
     Foreign.JavaScript.Resources
     Foreign.JavaScript.Server
