@@ -1,12 +1,15 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, ScopedTypeVariables #-}
-{-# LANGUAGE RecordWildCards #-}
-module Foreign.JavaScript.Marshal (
-    ToJS(..), FromJS,
-    FFI, JSFunction, toCode, marshalResult, ffi,
-    IsHandler, convertArguments, handle,
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+module Foreign.JavaScript.Marshal
+    ( ToJS(..)
+    , FromJS
+    , FFI, JSFunction, toCode, marshalResult, ffi
+    , IsHandler, convertArguments, handle
 
-    NewJSObject, wrapImposeStablePtr,
+    , NewJSObject, wrapImposeStablePtr
     ) where
 
 import           Data.Aeson             as JSON
@@ -26,9 +29,11 @@ import qualified Data.Text.Lazy.Builder
 import qualified Data.Vector            as Vector
 import           Safe                             (atMay)
 
-import Foreign.JavaScript.EventLoop (fromJSStablePtr, newJSObjectFromCoupon )
+import Foreign.JavaScript.EventLoop
+    ( fromJSStablePtr, newJSObjectFromCoupon )
 import Foreign.JavaScript.Types
-import Foreign.RemotePtr
+    ( HsEvent, JSObject, NewJSObject(..), Window(Window,wJSObjects) )
+import qualified Foreign.RemotePtr as RemotePtr
 
 {-----------------------------------------------------------------------------
     Convert Haskell values to JavaScript values
@@ -63,10 +68,10 @@ instance ToJS a => ToJS [a] where
     render = renderList
 
 instance ToJS HsEvent    where
-    render x   = render =<< unprotectedGetCoupon x
+    render x   = render =<< RemotePtr.unprotectedGetCoupon x
 instance ToJS JSObject   where
     render x   = apply1 "Haskell.deRefStablePtr(%1)"
-                 <$> (render =<< unprotectedGetCoupon x)
+                 <$> (render =<< RemotePtr.unprotectedGetCoupon x)
 
 -- | Show a type in a JSON compatible way.
 showJSON :: ToJSON a => a -> String
@@ -125,8 +130,8 @@ instance FromJS NewJSObject where
 --   In this way, JSObject can be created without waiting for the browser
 --   to return a result.
 wrapImposeStablePtr :: Window -> JSFunction NewJSObject -> IO (JSFunction JSObject)
-wrapImposeStablePtr (Window{..}) f = do
-    coupon  <- newCoupon wJSObjects
+wrapImposeStablePtr (Window{wJSObjects}) f = do
+    coupon  <- RemotePtr.newCoupon wJSObjects
     rcoupon <- render coupon
     rcode   <- code f
     return $ JSFunction

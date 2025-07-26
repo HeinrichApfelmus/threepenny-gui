@@ -1,5 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
-module Foreign.JavaScript (
+module Foreign.JavaScript
+    (
     -- * Synopsis
     -- | A JavaScript foreign function interface (FFI).
     --
@@ -17,18 +18,18 @@ module Foreign.JavaScript (
           jsPort, jsAddr
         , jsCustomHTML, jsStatic, jsLog
         , jsWindowReloadOnDisconnect, jsCallBufferMode
-        , jsUseSSL),
-    ConfigSSL (..),
-    Server, MimeType, URI, loadFile, loadDirectory,
-    Window, getServer, getCookies, root,
+        , jsUseSSL)
+    , ConfigSSL (..)
+    , Server, MimeType, URI, loadFile, loadDirectory
+    , Window, getServer, getCookies, root
 
     -- * JavaScript FFI
-    ToJS(..), FromJS, JSFunction, JSObject, JavaScriptException,
-    FFI, ffi, runFunction, callFunction,
-    NewJSObject, unsafeCreateJSObject,
-    CallBufferMode(..), setCallBufferMode, getCallBufferMode, flushCallBuffer,
-    IsHandler, exportHandler, onDisconnect,
-    debug, timestamp,
+    , ToJS(..), FromJS, JSFunction, JSObject, JavaScriptException
+    , FFI, ffi, runFunction, callFunction
+    , NewJSObject, unsafeCreateJSObject
+    , CallBufferMode(..), setCallBufferMode, getCallBufferMode, flushCallBuffer
+    , IsHandler, exportHandler, onDisconnect
+    , debug, timestamp
     ) where
 
 import           Foreign.JavaScript.CallBuffer

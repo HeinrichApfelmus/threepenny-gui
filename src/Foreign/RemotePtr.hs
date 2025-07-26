@@ -6,14 +6,14 @@ module Foreign.RemotePtr (
     -- | Toolbox for managing remote objects in Haskell.
     
     -- * RemotePtr
-    RemotePtr,
-    withRemotePtr, addFinalizer, destroy, addReachable, clearReachable,
-    unprotectedGetCoupon,
+      RemotePtr
+    , withRemotePtr, addFinalizer, destroy, addReachable, clearReachable
+    , unprotectedGetCoupon
 
     -- * Coupons and Vendors
-    Coupon, newCoupon,
-    Vendor, newVendor, lookup,
-    newRemotePtr,
+    , Coupon, newCoupon
+    , Vendor, newVendor, lookup
+    , newRemotePtr
     ) where
 
 import Prelude hiding (lookup)
