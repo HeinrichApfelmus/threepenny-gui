@@ -18,20 +18,21 @@ module Foreign.RemotePtr (
 
 import Prelude hiding (lookup)
 import Control.Monad (void)
-import qualified Data.Text             as T
-import qualified Data.HashMap.Strict   as Map
 import Data.IORef
-
+import qualified Data.Text              as T
 import qualified Foreign.RemotePtr.Weak as Weak
 
-#if CABAL
-#if MIN_VERSION_base(4,6,0)
+#if defined(__MHS__)
+import qualified Data.Map              as Map
+type Map = Map.Map
 #else
-atomicModifyIORef' = atomicModifyIORef
-#endif
+import qualified Data.HashMap.Strict   as Map
+type Map = Map.HashMap
 #endif
 
-type Map = Map.HashMap
+#if (CABAL && !MIN_VERSION_base(4,6,0)) || defined(__MHS__)
+atomicModifyIORef' = atomicModifyIORef
+#endif
 
 {-----------------------------------------------------------------------------
     Types
