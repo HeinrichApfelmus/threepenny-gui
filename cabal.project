@@ -1,5 +1,6 @@
 packages:
-  .
+  lib/javascript-ffi-threepenny
+  lib/threepenny-gui
 
 flags: +buildExamples
 
