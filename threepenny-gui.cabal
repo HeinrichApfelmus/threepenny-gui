@@ -1,5 +1,5 @@
 name:                threepenny-gui
-version:             0.9.4.2
+version:             0.9.4.3
 synopsis:            GUI framework that uses the web browser as a display.
 description:
     Threepenny-GUI is a GUI framework that uses the web browser as a display.
@@ -101,10 +101,12 @@ library
     Foreign.JavaScript.CallBuffer
     Foreign.JavaScript.EventLoop
     Foreign.JavaScript.Include
+    Foreign.JavaScript.JSON
     Foreign.JavaScript.Marshal
     Foreign.JavaScript.Resources
     Foreign.JavaScript.Server
     Foreign.JavaScript.Types
+    Foreign.RemotePtr.Weak
     Graphics.UI.Threepenny.Internal
     Reactive.Threepenny.Memo
     Reactive.Threepenny.Monads

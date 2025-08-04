@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Foreign.JavaScript.Types where
 
 import Control.Concurrent.STM

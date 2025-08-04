@@ -1,9 +1,9 @@
-{-# LANGUAGE RecordWildCards, CPP #-}
-{-# LANGUAGE RecursiveDo #-}
-module Foreign.JavaScript.EventLoop (
-    eventLoop,
-    runEval, callEval, debug, onDisconnect,
-    newHandler, fromJSStablePtr, newJSObjectFromCoupon
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE NamedFieldPuns #-}
+module Foreign.JavaScript.EventLoop
+    ( eventLoop
+    , runEval, callEval, debug, onDisconnect
+    , newHandler, fromJSStablePtr, newJSObjectFromCoupon
     ) where
 
 import           Control.Concurrent
@@ -32,7 +32,7 @@ rebug = return ()
 ------------------------------------------------------------------------------}
 -- | Handle a single event
 handleEvent :: Window -> (Coupon, JSON.Value) -> IO ()
-handleEvent Window{..} (name, args) = do
+handleEvent Window{wEventHandlers} (name, args) = do
     mhandler <- Foreign.lookup name wEventHandlers
     case mhandler of
         Nothing -> return ()
@@ -172,7 +172,7 @@ flushCallBufferPeriodically w =
 ------------------------------------------------------------------------------}
 -- | Turn a Haskell function into an event handler.
 newHandler :: Window -> ([JSON.Value] -> IO ()) -> IO HsEvent
-newHandler Window{..} handler = do
+newHandler Window{wEventHandlers} handler = do
     coupon <- newCoupon wEventHandlers
     newRemotePtr coupon (handler . parseArgs) wEventHandlers
     where
@@ -185,7 +185,7 @@ newHandler Window{..} handler = do
 
 -- | Retrieve 'JSObject' associated with a JavaScript stable pointer.
 fromJSStablePtr :: JSON.Value -> Window -> IO JSObject
-fromJSStablePtr js w@(Window{..}) = do
+fromJSStablePtr js w@(Window{wJSObjects}) = do
     let JSON.Success coupon = JSON.fromJSON js
     mhs <- Foreign.lookup coupon wJSObjects
     case mhs of
@@ -194,7 +194,7 @@ fromJSStablePtr js w@(Window{..}) = do
 
 -- | Create a new JSObject by registering a new coupon.
 newJSObjectFromCoupon :: Window -> Foreign.Coupon -> IO JSObject
-newJSObjectFromCoupon w@(Window{..}) coupon = do
+newJSObjectFromCoupon w@(Window{wJSObjects}) coupon = do
     ptr <- newRemotePtr coupon (JSPtr coupon) wJSObjects
     addFinalizer ptr $
         bufferRunEval w ("Haskell.freeStablePtr('" ++ T.unpack coupon ++ "')")

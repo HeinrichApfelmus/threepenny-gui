@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Foreign.JavaScript.CallBuffer where
 
 import Control.Concurrent.STM as STM
@@ -16,7 +16,8 @@ setCallBufferMode w new =
 
 -- | Get the call buffering mode for the given browser window.
 getCallBufferMode :: Window -> IO CallBufferMode
-getCallBufferMode Window{..} = atomically $ readTVar wCallBufferMode
+getCallBufferMode Window{wCallBufferMode} =
+    atomically $ readTVar wCallBufferMode
 
 -- | Flush the call buffer,
 -- i.e. send all outstanding JavaScript to the client in one single message.
@@ -25,7 +26,7 @@ flushCallBuffer w = flushCallBufferWithAtomic w $ return ()
 
 -- | Flush the call buffer, and atomically perform an additional action
 flushCallBufferWithAtomic :: Window -> STM a -> IO a
-flushCallBufferWithAtomic Window{..} action = do
+flushCallBufferWithAtomic Window{wCallBuffer,runEval} action = do
     -- by taking the call buffer, we ensure that no further code
     -- is added to the buffer while we execute the current buffer's code.
     code' <- atomically $ takeTMVar wCallBuffer
@@ -38,7 +39,7 @@ flushCallBufferWithAtomic Window{..} action = do
 -- | Schedule a piece of JavaScript code to be run with `runEval`,
 -- depending on the buffering mode
 bufferRunEval :: Window -> String -> IO ()
-bufferRunEval Window{..} code = do
+bufferRunEval Window{wCallBufferMode,wCallBuffer,runEval} code = do
     action <- atomically $ do
         mode <- readTVar wCallBufferMode
         case mode of

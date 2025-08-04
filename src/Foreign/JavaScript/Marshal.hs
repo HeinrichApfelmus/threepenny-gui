@@ -1,34 +1,26 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, ScopedTypeVariables #-}
-{-# LANGUAGE RecordWildCards #-}
-module Foreign.JavaScript.Marshal (
-    ToJS(..), FromJS,
-    FFI, JSFunction, toCode, marshalResult, ffi,
-    IsHandler, convertArguments, handle,
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+module Foreign.JavaScript.Marshal
+    ( ToJS(..)
+    , FromJS
+    , FFI, JSFunction, toCode, marshalResult, ffi
+    , IsHandler, convertArguments, handle
 
-    NewJSObject, wrapImposeStablePtr,
+    , NewJSObject, wrapImposeStablePtr
     ) where
 
-import           Data.Aeson             as JSON
-#if defined(CABAL)
-#if MIN_VERSION_aeson(1,0,0)
-import qualified Data.Aeson.Text        as JSON   (encodeToTextBuilder)
-#else
-import qualified Data.Aeson.Encode      as JSON   (encodeToTextBuilder)
-#endif
-#else
-import qualified Data.Aeson.Text        as JSON   (encodeToTextBuilder)
-#endif
 import           Data.List                        (intercalate)
 import qualified Data.Text              as T
-import qualified Data.Text.Lazy
-import qualified Data.Text.Lazy.Builder
-import qualified Data.Vector            as Vector
-import           Safe                             (atMay)
 
-import Foreign.JavaScript.EventLoop (fromJSStablePtr, newJSObjectFromCoupon )
+import Foreign.JavaScript.EventLoop
+    ( fromJSStablePtr, newJSObjectFromCoupon )
 import Foreign.JavaScript.Types
-import Foreign.RemotePtr
+    ( HsEvent, JSObject, NewJSObject(..), Window(Window,wJSObjects) )
+import qualified Foreign.JavaScript.JSON as JSON
+import qualified Foreign.RemotePtr as RemotePtr
 
 {-----------------------------------------------------------------------------
     Convert Haskell values to JavaScript values
@@ -53,27 +45,21 @@ instance ToJS Float      where render   = render . JSON.toJSON
 instance ToJS Double     where render   = render . JSON.toJSON
 instance ToJS Int        where render   = jsCode . show
 instance ToJS Bool       where render b = jsCode $ if b then "true" else "false"
-instance ToJS JSON.Value where render   = jsCode . showJSON
-instance ToJS T.Text     where render   = render . JSON.String
+instance ToJS JSON.Value where render   = jsCode . JSON.showJSON
+instance ToJS T.Text     where render   = render . JSON.string
 instance ToJS Char       where
     render x   = renderList [x]
-    renderList = render . JSON.String . T.pack
+    renderList = render . JSON.string . T.pack
 
 instance ToJS a => ToJS [a] where
     render = renderList
 
 instance ToJS HsEvent    where
-    render x   = render =<< unprotectedGetCoupon x
+    render x = render =<< RemotePtr.unprotectedGetCoupon x
 instance ToJS JSObject   where
-    render x   = apply1 "Haskell.deRefStablePtr(%1)"
-                 <$> (render =<< unprotectedGetCoupon x)
-
--- | Show a type in a JSON compatible way.
-showJSON :: ToJSON a => a -> String
-showJSON
-    = Data.Text.Lazy.unpack
-    . Data.Text.Lazy.Builder.toLazyText
-    . JSON.encodeToTextBuilder . JSON.toJSON
+    render x =
+        apply1 "Haskell.deRefStablePtr(%1)"
+            <$> (render =<< RemotePtr.unprotectedGetCoupon x)
 
 {-----------------------------------------------------------------------------
     Convert JavaScript values to Haskell values
@@ -88,17 +74,17 @@ class FromJS a where
     fromJS   :: FromJS' a
 
 -- | Marshal a simple type to Haskell.
-simple :: FromJSON a => (JSCode -> JSCode) -> FromJS' a
+simple :: JSON.FromJSON a => (JSCode -> JSCode) -> FromJS' a
 simple f =
     FromJS' { wrapCode = f , marshal = \_ -> fromSuccessIO . JSON.fromJSON }
     where
     fromSuccessIO (JSON.Success a) = return a
 
-instance FromJS String     where fromJS = simple $ apply1 "%1.toString()"
-instance FromJS T.Text     where fromJS = simple $ apply1 "%1.toString()"
-instance FromJS Int        where fromJS = simple id
 instance FromJS Double     where fromJS = simple id
 instance FromJS Float      where fromJS = simple id
+instance FromJS Int        where fromJS = simple id
+instance FromJS String     where fromJS = simple $ apply1 "%1.toString()"
+instance FromJS T.Text     where fromJS = simple $ apply1 "%1.toString()"
 instance FromJS JSON.Value where fromJS = simple id
 
 instance FromJS ()         where
@@ -114,8 +100,8 @@ instance FromJS JSObject   where
 instance FromJS [JSObject] where
     fromJS = FromJS'
         { wrapCode = apply1 "Haskell.map(Haskell.getStablePtr, %1)"
-        , marshal  = \w (JSON.Array vs) -> do
-            mapM (\v -> fromJSStablePtr v w) (Vector.toList vs)
+        , marshal  = \w vs -> do
+            mapM (\v -> fromJSStablePtr v w) (JSON.fromArray vs)
         }
 
 instance FromJS NewJSObject where
@@ -125,8 +111,8 @@ instance FromJS NewJSObject where
 --   In this way, JSObject can be created without waiting for the browser
 --   to return a result.
 wrapImposeStablePtr :: Window -> JSFunction NewJSObject -> IO (JSFunction JSObject)
-wrapImposeStablePtr (Window{..}) f = do
-    coupon  <- newCoupon wJSObjects
+wrapImposeStablePtr (Window{wJSObjects}) f = do
+    coupon  <- RemotePtr.newCoupon wJSObjects
     rcoupon <- render coupon
     rcode   <- code f
     return $ JSFunction
@@ -249,3 +235,13 @@ apply code args = JSCode $ go code
 -- | Apply string substitution that expects a single argument.
 apply1 :: String -> JSCode -> JSCode
 apply1 s x = apply s [x]
+
+-- | Helper function, inlined here. Index a list, return 'Maybe'.
+atMay :: [a] -> Int -> Maybe a
+atMay xs o
+    | o < 0 = Nothing
+    | otherwise = f o xs
+  where
+    f 0 (x:xs) = Just x
+    f i (x:xs) = f (i-1) xs
+    f i []     = Nothing
