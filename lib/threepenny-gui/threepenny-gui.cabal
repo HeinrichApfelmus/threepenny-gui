@@ -1,5 +1,5 @@
 name:                threepenny-gui
-version:             0.9.4.3
+version:             0.10.0.0
 synopsis:            GUI framework that uses the web browser as a display.
 description:
     Threepenny-GUI is a GUI framework that uses the web browser as a display.
@@ -23,7 +23,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Heinrich Apfelmus
 maintainer:          Heinrich Apfelmus <apfelmus at quantentunnel dot de>
-homepage:            http://wiki.haskell.org/Threepenny-gui
+homepage:            https://heinrichapfelmus.github.io/threepenny-gui/
 bug-reports:         https://github.com/HeinrichApfelmus/threepenny-gui/issues
 category:            Web, GUI
 build-type:          Simple
@@ -65,24 +65,13 @@ flag buildExamples
     default:     False
     manual:      True
 
-flag rebug
-    description: The library uses some techniques that are highly
-                 non-deterministic, for example garbage collection
-                 and concurrency.
-                 Bugs in these subsystems are harder to find.
-                 Activating this flag will expose more of them.
-    default:     False
-    manual:      True
-
 source-repository head
     type:               git
-    location:           git://github.com/HeinrichApfelmus/threepenny-gui.git
+    location:           https://github.com/HeinrichApfelmus/threepenny-gui.git
 
 library
   hs-source-dirs:    src
   exposed-modules:
-    Foreign.JavaScript
-    Foreign.RemotePtr
     Graphics.UI.Threepenny
     Graphics.UI.Threepenny.Attributes
     Graphics.UI.Threepenny.Canvas
@@ -98,15 +87,6 @@ library
     Graphics.UI.Threepenny.Widgets
     Reactive.Threepenny
   other-modules:
-    Foreign.JavaScript.CallBuffer
-    Foreign.JavaScript.EventLoop
-    Foreign.JavaScript.Include
-    Foreign.JavaScript.JSON
-    Foreign.JavaScript.Marshal
-    Foreign.JavaScript.Resources
-    Foreign.JavaScript.Server
-    Foreign.JavaScript.Types
-    Foreign.RemotePtr.Weak
     Graphics.UI.Threepenny.Internal
     Reactive.Threepenny.Memo
     Reactive.Threepenny.Monads
@@ -115,9 +95,6 @@ library
     Paths_threepenny_gui
   other-extensions: CPP
   cpp-options:      -DCABAL
-  if flag(rebug)
-      cpp-options:  -DREBUG
-      ghc-options:  -O2
   build-depends:
       base                   >= 4.8   && < 4.22
     , aeson                  (>= 0.7 && < 0.10) || == 0.11.* || (>= 1.0 && < 2.3)
@@ -128,29 +105,23 @@ library
     , deepseq                >= 1.3.0  && < 1.6
     , exceptions             >= 0.6    && < 0.11
     , filepath               >= 1.3.0  && < 1.6.0
-    , file-embed             >= 0.0.10 && < 0.1
     , hashable               >= 1.2.0  && < 1.6
-    , safe                   == 0.3.*
-    , snap-server            >= 0.9.0  && < 1.2
-    , snap-core              >= 0.9.0  && < 1.1
+    , javascript-ffi-threepenny == 0.1.*
     , stm                    >= 2.2    && < 2.6
-    , template-haskell       >= 2.7.0  && < 2.24
     , text                   >= 0.11   && < 2.2
     , transformers           >= 0.3.0  && < 0.7
     , unordered-containers   == 0.2.*
-    , websockets             (>= 0.8    && < 0.12.5) || (> 0.12.5.0 && < 0.14)
-    , websockets-snap        >= 0.8    && < 0.11
     , vault                  >= 0.3    && < 0.4
     , vector                 >= 0.10   && < 0.14
-  if impl(ghc >= 8.0)
-      ghc-options: -Wcompat -Wnoncanonical-monad-instances
   default-language: Haskell2010
+  ghc-options: -Wcompat -Wnoncanonical-monad-instances
 
 Executable threepenny-examples-bartab
     if flag(buildExamples)
         cpp-options:       -DCABAL
-        build-depends:     base                      >= 4     && < 5
-                          ,threepenny-gui
+        build-depends:
+            base                      >= 4     && < 5
+          , threepenny-gui
     else
         buildable: False
     main-is:           BarTab.hs
@@ -160,9 +131,10 @@ Executable threepenny-examples-bartab
 Executable threepenny-examples-buttons
     if flag(buildExamples)
         cpp-options:       -DCABAL
-        build-depends:     base                      >= 4     && < 5
-                          ,threepenny-gui
-                          ,filepath
+        build-depends:
+            base                      >= 4     && < 5
+          , threepenny-gui
+          , filepath
     else
         buildable: False
     main-is:           Buttons.hs
@@ -173,9 +145,10 @@ Executable threepenny-examples-buttons
 Executable threepenny-examples-canvas
     if flag(buildExamples)
         cpp-options:       -DCABAL
-        build-depends:     base                      >= 4     && < 5
-                          ,filepath
-                          ,threepenny-gui
+        build-depends:
+            base                      >= 4     && < 5
+          , filepath
+          , threepenny-gui
     else
         buildable: False
     main-is:           Canvas.hs
@@ -186,10 +159,11 @@ Executable threepenny-examples-canvas
 Executable threepenny-examples-chat
     if flag(buildExamples)
         cpp-options:       -DCABAL
-        build-depends:     base                      >= 4     && < 5
-                          ,threepenny-gui
-                          ,filepath
-                          ,time
+        build-depends:
+            base                      >= 4     && < 5
+          , threepenny-gui
+          , filepath
+          , time
     else
         buildable: False
     main-is:           Chat.hs
@@ -200,9 +174,10 @@ Executable threepenny-examples-chat
 Executable threepenny-examples-crud
     if flag(buildExamples)
         cpp-options:       -DCABAL
-        build-depends:     base                      >= 4     && < 5
-                          ,containers
-                          ,threepenny-gui
+        build-depends:
+            base                      >= 4     && < 5
+          , containers
+          , threepenny-gui
     else
         buildable: False
     main-is:           CRUD.hs
@@ -212,9 +187,10 @@ Executable threepenny-examples-crud
 Executable threepenny-examples-currencyconverter
     if flag(buildExamples)
         cpp-options:       -DCABAL
-        build-depends:     base                      >= 4     && < 5
-                          ,threepenny-gui
-                          ,safe
+        build-depends:
+            base                      >= 4     && < 5
+          , threepenny-gui
+          , safe
     else
         buildable: False
     main-is:           CurrencyConverter.hs
@@ -224,9 +200,10 @@ Executable threepenny-examples-currencyconverter
 Executable threepenny-examples-dragndropexample
     if flag(buildExamples)
         cpp-options:       -DCABAL
-        build-depends:     base                      >= 4     && < 5
-                          ,threepenny-gui
-                          ,filepath
+        build-depends:
+            base                      >= 4     && < 5
+          , threepenny-gui
+          , filepath
     else
         buildable: False
     main-is:           DragNDropExample.hs
@@ -237,9 +214,10 @@ Executable threepenny-examples-dragndropexample
 Executable threepenny-examples-drummachine
     if flag(buildExamples)
         cpp-options:       -DCABAL
-        build-depends:     base                      >= 4     && < 5
-                          ,threepenny-gui
-                          ,filepath
+        build-depends:
+            base                      >= 4     && < 5
+          , threepenny-gui
+          , filepath
     else
         buildable: False
     main-is:           DrumMachine.hs
@@ -250,8 +228,9 @@ Executable threepenny-examples-drummachine
 Executable threepenny-examples-svg
     if flag(buildExamples)
         cpp-options:       -DCABAL
-        build-depends:     base                      >= 4     && < 5
-                          ,threepenny-gui
+        build-depends:
+            base                      >= 4     && < 5
+          , threepenny-gui
     else
         buildable: False
     main-is:           Svg.hs

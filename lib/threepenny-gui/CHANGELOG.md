@@ -1,5 +1,13 @@
 ## Changelog for the `threepenny-gui` package
 
+**0.10.0.0** – Snapshot release
+
+* Split off JavaScript FFI to `javascript-ffi-threepenny`.
+
+**0.9.4.2** – Maintenance and snapshot release
+
+* Bump dependencies for compatibility with GHC-9.12.
+
 **0.9.4.2** – Maintenance and snapshot release
 
 * Bump dependencies for compatibility with GHC-9.12.
