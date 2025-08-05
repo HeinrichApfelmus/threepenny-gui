@@ -35,6 +35,7 @@ module Foreign.JavaScript
     , debug, timestamp
     ) where
 
+import           Foreign.JavaScript.CallHaskell
 import           Foreign.JavaScript.CallBuffer
 import           Foreign.JavaScript.EventLoop
 import           Foreign.JavaScript.Marshal

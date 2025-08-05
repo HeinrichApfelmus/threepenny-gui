@@ -3,7 +3,6 @@
 module Foreign.JavaScript.EventLoop
     ( eventLoop
     , runEval, callEval, debug, onDisconnect
-    , newHandler
     ) where
 
 import           Control.Concurrent
@@ -165,19 +164,3 @@ eventLoop initialize server info comm = void $ do
 flushCallBufferPeriodically :: Window -> IO ()
 flushCallBufferPeriodically w =
     forever $ threadDelay (flushPeriod*1000) >> flushCallBuffer w
-
-
-{-----------------------------------------------------------------------------
-    Exports, Imports and garbage collection
-------------------------------------------------------------------------------}
--- | Turn a Haskell function into an event handler.
-newHandler :: Window -> ([JSON.Value] -> IO ()) -> IO HsEvent
-newHandler Window{wEventHandlers} handler = do
-    coupon <- newCoupon wEventHandlers
-    newRemotePtr coupon (handler . parseArgs) wEventHandlers
-    where
-    fromSuccess (JSON.Success x) = x
-    -- parse a genuine JavaScript array
-    parseArgs x = fromSuccess (JSON.fromJSON x) :: [JSON.Value]
-    -- parse a JavaScript arguments object
-    -- parseArgs x = Map.elems (fromSuccess (JSON.fromJSON x) :: Map.Map String JSON.Value)
