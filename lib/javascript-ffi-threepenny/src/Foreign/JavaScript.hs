@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {- | A Foreign Function Interface (FFI) for JavaScript.
 
 This module allows you to call JavaScript from Haskell, and vice-versa.
@@ -12,8 +13,10 @@ This module consists of two parts:
 -}
 module Foreign.JavaScript
     (
-    -- * Server    
-    serve, defaultConfig, Config(
+#if !defined(__MHS__)
+    -- * Server
+    withBrowserWindow
+    , serve, defaultConfig, Config(
           jsPort, jsAddr
         , jsCustomHTML, jsStatic, jsLog
         , jsWindowReloadOnDisconnect, jsCallBufferMode
@@ -21,10 +24,15 @@ module Foreign.JavaScript
     , ConfigSSL (..)
     , Server, MimeType, URI, loadFile, loadDirectory
     , Window, getServer, getCookies, root
-
+#else
+    withBrowserWindow, Window
+#endif
     -- * JavaScript FFI
     -- ** Types
-    , ToJS(..), FromJS, JSFunction, JSObject, JavaScriptException
+    , ToJS(..), FromJS, JSFunction, JSObject
+#if !defined(__MHS__)
+    , JavaScriptException
+#endif
     -- ** Calling JavaScript from Haskell
     , FFI, ffi, runFunction, callFunction
     , NewJSObject, unsafeCreateJSObject
@@ -35,17 +43,28 @@ module Foreign.JavaScript
     , debug, timestamp
     ) where
 
-import           Foreign.JavaScript.CallHaskell
-import           Foreign.JavaScript.CallBuffer
-import           Foreign.JavaScript.EventLoop
-import           Foreign.JavaScript.Marshal
-import           Foreign.JavaScript.Server
-import           Foreign.JavaScript.Types
-import           Foreign.RemotePtr            as Foreign
+import Foreign.JavaScript.CallHaskell
+import Foreign.JavaScript.CallBuffer
+import Foreign.JavaScript.Marshal
+import Foreign.JavaScript.Types
+import Foreign.RemotePtr            as RemotePtr
 
 {-----------------------------------------------------------------------------
     Server
 ------------------------------------------------------------------------------}
+#if defined(__MHS__)
+import qualified Foreign.JavaScript.MicroHs
+
+withBrowserWindow :: (Window -> IO ()) -> IO ()
+withBrowserWindow = Foreign.JavaScript.MicroHs.withBrowserWindow
+
+#else
+import Foreign.JavaScript.EventLoop
+import Foreign.JavaScript.Server
+
+withBrowserWindow :: (Window -> IO ()) -> IO ()
+withBrowserWindow = serve defaultConfig
+
 -- | Run a "Foreign.JavaScript" server.
 serve
     :: Config               -- ^ Configuration options.
@@ -58,6 +77,8 @@ serve config initialize = httpComm config $ eventLoop $ \w -> do
     flushCallBuffer w   -- make sure that all `runEval` commands are executed
     initialize w
     flushCallBuffer w   -- make sure that all `runEval` commands are executed
+
+#endif
 
 {-----------------------------------------------------------------------------
     JavaScript
@@ -81,7 +102,7 @@ unsafeCreateJSObject w f = do
     g <- wrapImposeStablePtr w f
     bufferRunEval w =<< toCode g
     marshalResult g w err
-    where
+  where
     err = error "unsafeCreateJSObject: marshal does not take arguments"
 
 -- | Call a JavaScript function and wait for the result.
@@ -112,5 +133,5 @@ exportHandler w f = do
     g <- newHandler w (\args -> handle f w args >> flushCallBuffer w)
     h <- unsafeCreateJSObject w $
         ffi "Haskell.newEvent(%1,%2)" g (convertArguments f)
-    Foreign.addReachable h g
+    RemotePtr.addReachable h g
     return h
