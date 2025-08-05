@@ -3,7 +3,7 @@
 module Foreign.JavaScript.EventLoop
     ( eventLoop
     , runEval, callEval, debug, onDisconnect
-    , newHandler, fromJSStablePtr, newJSObjectFromCoupon
+    , newHandler
     ) where
 
 import           Control.Concurrent
@@ -181,22 +181,3 @@ newHandler Window{wEventHandlers} handler = do
     parseArgs x = fromSuccess (JSON.fromJSON x) :: [JSON.Value]
     -- parse a JavaScript arguments object
     -- parseArgs x = Map.elems (fromSuccess (JSON.fromJSON x) :: Map.Map String JSON.Value)
-
-
--- | Retrieve 'JSObject' associated with a JavaScript stable pointer.
-fromJSStablePtr :: JSON.Value -> Window -> IO JSObject
-fromJSStablePtr js w@(Window{wJSObjects}) = do
-    let JSON.Success coupon = JSON.fromJSON js
-    mhs <- Foreign.lookup coupon wJSObjects
-    case mhs of
-        Just hs -> return hs
-        Nothing -> newJSObjectFromCoupon w coupon
-
--- | Create a new JSObject by registering a new coupon.
-newJSObjectFromCoupon :: Window -> Foreign.Coupon -> IO JSObject
-newJSObjectFromCoupon w@(Window{wJSObjects}) coupon = do
-    ptr <- newRemotePtr coupon (JSPtr coupon) wJSObjects
-    addFinalizer ptr $
-        bufferRunEval w ("Haskell.freeStablePtr('" ++ T.unpack coupon ++ "')")
-    return ptr
-

@@ -15,7 +15,7 @@ module Foreign.JavaScript.Marshal
 import           Data.List                        (intercalate)
 import qualified Data.Text              as T
 
-import Foreign.JavaScript.EventLoop
+import Foreign.JavaScript.CallJavaScript
     ( fromJSStablePtr, newJSObjectFromCoupon )
 import Foreign.JavaScript.Types
     ( HsEvent, JSObject, NewJSObject(..), Window(Window,wJSObjects) )

@@ -73,6 +73,7 @@ library
     Foreign.RemotePtr
   other-modules:
     Foreign.JavaScript.CallBuffer
+    Foreign.JavaScript.CallJavaScript
     Foreign.JavaScript.EventLoop
     Foreign.JavaScript.Include
     Foreign.JavaScript.JSON
