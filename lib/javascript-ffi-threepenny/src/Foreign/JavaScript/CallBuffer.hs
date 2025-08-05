@@ -1,14 +1,38 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Foreign.JavaScript.CallBuffer where
 
-import Control.Concurrent.STM as STM
-import Control.Monad
+module Foreign.JavaScript.CallBuffer
+    ( setCallBufferMode
+    , getCallBufferMode
+    , flushCallBuffer
+    , bufferRunEval
+    ) where
 
 import Foreign.JavaScript.Types
 
+#if defined(__MHS__)
 {-----------------------------------------------------------------------------
-    Call Buffer
+    MicroHs
 ------------------------------------------------------------------------------}
+setCallBufferMode :: Window -> CallBufferMode -> IO ()
+setCallBufferMode _ _ = pure ()
+
+getCallBufferMode :: Window -> IO CallBufferMode
+getCallBufferMode _ = pure NoBuffering
+
+flushCallBuffer :: Window -> IO ()
+flushCallBuffer _ = pure ()
+
+bufferRunEval :: Window -> String -> IO ()
+bufferRunEval Window{runEval} code = runEval code
+
+#else
+{-----------------------------------------------------------------------------
+   GHC
+------------------------------------------------------------------------------}
+import Control.Concurrent.STM as STM
+import Control.Monad
+
 -- | Set the call buffering mode for the given browser window.
 setCallBufferMode :: Window -> CallBufferMode -> IO ()
 setCallBufferMode w new =
@@ -22,7 +46,7 @@ getCallBufferMode Window{wCallBufferMode} =
 -- | Flush the call buffer,
 -- i.e. send all outstanding JavaScript to the client in one single message.
 flushCallBuffer :: Window -> IO ()
-flushCallBuffer w = flushCallBufferWithAtomic w $ return ()
+flushCallBuffer w = flushCallBufferWithAtomic w $ pure ()
 
 -- | Flush the call buffer, and atomically perform an additional action
 flushCallBufferWithAtomic :: Window -> STM a -> IO a
@@ -50,5 +74,7 @@ bufferRunEval Window{wCallBufferMode,wCallBuffer,runEval} code = do
                 putTMVar wCallBuffer (msg . (\s -> ";" ++ code ++ s))
                 return Nothing
     case action of
-        Nothing    -> return ()
+        Nothing    -> pure ()
         Just code1 -> runEval code1
+
+#endif

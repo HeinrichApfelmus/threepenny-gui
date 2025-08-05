@@ -1,20 +1,22 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE CPP #-}
+{- | A Foreign Function Interface (FFI) for JavaScript.
+
+This module allows you to call JavaScript from Haskell, and vice-versa.
+
+This module consists of two parts:
+
+* When compiled with GHC, a web server implementation.
+  This server communicates with a web browser window
+  and uses the JavaScript in that window to execute JavaScript code.
+* An interface for calling JavaScript functions from Haskell and vice-versa.
+  The main functions are 'ffi', 'runFunction', and 'callFunction'.
+-}
 module Foreign.JavaScript
     (
-    -- * Synopsis
-    -- | A JavaScript foreign function interface (FFI).
-    --
-    -- This module implements a web server that communicates with
-    -- a web browser and allows you to execute arbitrary JavaScript code on it.
-    --
-    -- NOTE: This module is used internally by the "Graphics.UI.Threepenny"
-    -- library, but the types are /not/ compatible directly
-    -- (although some escape hatches are provided).
-    -- Use "Foreign.JavaScript" only if you want to roll your own
-    -- interface to the web browser.
-
+#if !defined(__MHS__)
     -- * Server
-    serve, defaultConfig, Config(
+    withBrowserWindow
+    , serve, defaultConfig, Config(
           jsPort, jsAddr
         , jsCustomHTML, jsStatic, jsLog
         , jsWindowReloadOnDisconnect, jsCallBufferMode
@@ -22,26 +24,47 @@ module Foreign.JavaScript
     , ConfigSSL (..)
     , Server, MimeType, URI, loadFile, loadDirectory
     , Window, getServer, getCookies, root
-
+#else
+    withBrowserWindow, Window
+#endif
     -- * JavaScript FFI
-    , ToJS(..), FromJS, JSFunction, JSObject, JavaScriptException
+    -- ** Types
+    , ToJS(..), FromJS, JSFunction, JSObject
+#if !defined(__MHS__)
+    , JavaScriptException
+#endif
+    -- ** Calling JavaScript from Haskell
     , FFI, ffi, runFunction, callFunction
     , NewJSObject, unsafeCreateJSObject
     , CallBufferMode(..), setCallBufferMode, getCallBufferMode, flushCallBuffer
+    -- ** Calling Haskell from JavaScript
     , IsHandler, exportHandler, onDisconnect
+    -- ** Debugging
     , debug, timestamp
     ) where
 
-import           Foreign.JavaScript.CallBuffer
-import           Foreign.JavaScript.EventLoop
-import           Foreign.JavaScript.Marshal
-import           Foreign.JavaScript.Server
-import           Foreign.JavaScript.Types
-import           Foreign.RemotePtr            as Foreign
+import Foreign.JavaScript.CallHaskell
+import Foreign.JavaScript.CallBuffer
+import Foreign.JavaScript.Marshal
+import Foreign.JavaScript.Types
+import Foreign.RemotePtr            as RemotePtr
 
 {-----------------------------------------------------------------------------
     Server
 ------------------------------------------------------------------------------}
+#if defined(__MHS__)
+import qualified Foreign.JavaScript.MicroHs
+
+withBrowserWindow :: (Window -> IO ()) -> IO ()
+withBrowserWindow = Foreign.JavaScript.MicroHs.withBrowserWindow
+
+#else
+import Foreign.JavaScript.EventLoop
+import Foreign.JavaScript.Server
+
+withBrowserWindow :: (Window -> IO ()) -> IO ()
+withBrowserWindow = serve defaultConfig
+
 -- | Run a "Foreign.JavaScript" server.
 serve
     :: Config               -- ^ Configuration options.
@@ -54,6 +77,8 @@ serve config initialize = httpComm config $ eventLoop $ \w -> do
     flushCallBuffer w   -- make sure that all `runEval` commands are executed
     initialize w
     flushCallBuffer w   -- make sure that all `runEval` commands are executed
+
+#endif
 
 {-----------------------------------------------------------------------------
     JavaScript
@@ -77,7 +102,7 @@ unsafeCreateJSObject w f = do
     g <- wrapImposeStablePtr w f
     bufferRunEval w =<< toCode g
     marshalResult g w err
-    where
+  where
     err = error "unsafeCreateJSObject: marshal does not take arguments"
 
 -- | Call a JavaScript function and wait for the result.
@@ -108,5 +133,5 @@ exportHandler w f = do
     g <- newHandler w (\args -> handle f w args >> flushCallBuffer w)
     h <- unsafeCreateJSObject w $
         ffi "Haskell.newEvent(%1,%2)" g (convertArguments f)
-    Foreign.addReachable h g
+    RemotePtr.addReachable h g
     return h
