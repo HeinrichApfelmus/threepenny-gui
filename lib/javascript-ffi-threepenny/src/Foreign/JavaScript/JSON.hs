@@ -4,7 +4,7 @@
 -- | 'JSON' utilities needed for marshaling to/from JavaScript.
 module Foreign.JavaScript.JSON
     ( -- * Type
-      Value
+      Value (..)
 
     -- * Construction
     , string
@@ -26,6 +26,7 @@ import qualified Data.Text as T
 data Value
     = Raw T.Text    -- Unparsed textual representation.
     | Array [Value] -- FIXME: Actually parse this.
+    | Null
 
 string :: T.Text -> Value
 string t = Raw ("\"" <> t <> "\"")

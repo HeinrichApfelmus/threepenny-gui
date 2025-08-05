@@ -1,52 +1,43 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Foreign.JavaScript.Types where
 
-import Control.Concurrent.STM
-    ( STM
-    , TMVar
-    , TQueue
-    , TVar
-    )
-import Control.DeepSeq
-    ( NFData (..)
-    , force
-    )
-import Data.Aeson
-    ( toJSON
-    , (.=)
-    , (.:)
-    )
-import Data.ByteString.Char8
-    ( ByteString
-    )
 import Data.Map
-    ( Map
-    )
-import Data.String
-    ( fromString
-    )
+    ( Map )
 import Data.Text
-    ( Text
-    )
+    ( Text )
+
+import qualified Foreign.RemotePtr  as RemotePtr
+import qualified Data.Map           as Map
+
+#if defined(__MHS__)
+import qualified Foreign.JavaScript.JSON    as JSON ( Value (..) )
+
+#else
+import Control.Concurrent.MVar
+    ( MVar )
+import Control.Concurrent.STM
+    ( STM, TMVar, TQueue, TVar )
+import Control.DeepSeq
+    ( NFData (..), force )
+import Data.Aeson
+    ( toJSON, (.=), (.:) )
+import Data.ByteString.Char8
+    ( ByteString )
+import Data.String
+    ( fromString )
 import Data.Typeable
-    ( Typeable
-    )
+    ( Typeable )
 import Snap.Core
-    ( Cookie(..)
-    )
+    ( Cookie(..) )
 import System.IO
-    ( stderr
-    )
+    ( stderr )
 
 import qualified Control.Concurrent.STM  as STM
 import qualified Control.Exception       as E
-import qualified Data.Aeson as JSON
-import qualified Data.ByteString.Char8  as BS   (hPutStrLn)
-import qualified Data.Map as Map
-
-import Control.Concurrent.MVar
-import Foreign.RemotePtr
+import qualified Data.Aeson              as JSON
+import qualified Data.ByteString.Char8   as BS   ( hPutStrLn )
 
 {-----------------------------------------------------------------------------
     Server Configuration -- Static
@@ -221,7 +212,7 @@ readComm c = STM.readTQueue (commIn c)
 ------------------------------------------------------------------------------}
 -- | Messages received from the JavaScript client.
 data ClientMsg
-    = Event Coupon JSON.Value
+    = Event RemotePtr.Coupon JSON.Value
     | Result JSON.Value
     | Exception String
     | Quit
@@ -234,7 +225,7 @@ instance JSON.FromJSON ClientMsg where
             "Event"     -> Event     <$> (msg .: "name") <*> (msg .: "arguments")
             "Result"    -> Result    <$> (msg .: "contents")
             "Exception" -> Exception <$> (msg .: "contents")
-            "Quit"      -> return Quit
+            "Quit"      -> pure Quit
 
 readClient :: Comm -> STM ClientMsg
 readClient c = do
@@ -302,16 +293,19 @@ data JavaScriptException = JavaScriptException String deriving Typeable
 instance E.Exception JavaScriptException
 
 instance Show JavaScriptException where
-    showsPrec _ (JavaScriptException err) = showString $ "JavaScript error: " ++ err
+    showsPrec _ (JavaScriptException err) =
+        showString $ "JavaScript error: " ++ err
+
+#endif
 
 {-----------------------------------------------------------------------------
     Window & Event Loop
 ------------------------------------------------------------------------------}
 -- | An event sent from the browser window to the server.
-type Event        = (Coupon, JSON.Value)
+type Event        = (RemotePtr.Coupon, JSON.Value)
 
 -- | An event handler that can be passed to the JavaScript client.
-type HsEvent      = RemotePtr (JSON.Value -> IO ())
+type HsEvent      = RemotePtr.RemotePtr (JSON.Value -> IO ())
 
 quit :: Event
 quit = ("quit", JSON.Null)
@@ -338,24 +332,30 @@ data CallBufferMode
     -- ^ The same as 'BufferRun', except that the buffer will also be flushed
     -- every 300ms.
 
-flushPeriod = 300 :: Int
+flushPeriod :: Int
+flushPeriod = 300
 
+#if !defined(__MHS__)
 -- | Action that the server will run when a browser window connects.
 type EventLoop   = Server -> RequestInfo -> Comm -> IO ()
 type RequestInfo = [Cookie]
+#endif
 
 -- | Representation of a browser window.
 data Window = Window
-    { getServer      :: Server
+    {
+#if !defined(__MHS__)
+      getServer      :: Server
     -- ^ Server that the browser window communicates with.
     , getCookies     :: [Cookie]
     -- ^ Cookies that the browser window has sent to the server when connecting.
 
-    , runEval        :: String -> IO ()
-    , callEval       :: String -> IO JSON.Value
-
     , wCallBuffer     :: TMVar (String -> String)
     , wCallBufferMode :: TVar CallBufferMode
+    ,
+#endif
+      runEval        :: String -> IO ()
+    , callEval       :: String -> IO JSON.Value
 
     , timestamp      :: IO ()
     -- ^ Print a timestamp and the time difference to the previous one
@@ -364,32 +364,44 @@ data Window = Window
     -- ^ Send a debug message to the JavaScript console.
     , onDisconnect   :: IO () -> IO ()
     -- ^ Register an action to be performed when the client disconnects.
-    , wRoot          :: RemotePtr ()
-    , wEventHandlers :: Vendor (JSON.Value -> IO ())
-    , wJSObjects     :: Vendor JSPtr
+    , wRoot          :: RemotePtr.RemotePtr ()
+    , wEventHandlers :: RemotePtr.Vendor (JSON.Value -> IO ())
+    , wJSObjects     :: RemotePtr.Vendor JSPtr
     }
 
+#if defined(__MHS__)
 newPartialWindow :: IO Window
 newPartialWindow = do
-    ptr <- newRemotePtr "" () =<< newVendor
+    ptr <- RemotePtr.newRemotePtr "" () =<< RemotePtr.newVendor
+    let nop :: a -> IO ()
+        nop = const $ pure ()
+    Window nop undefined (pure ()) nop nop ptr
+        <$> RemotePtr.newVendor <*> RemotePtr.newVendor
+#else
+newPartialWindow :: IO Window
+newPartialWindow = do
+    ptr <- RemotePtr.newRemotePtr "" () =<< RemotePtr.newVendor
     b1  <- STM.newTMVarIO id
     b2  <- STM.newTVarIO NoBuffering
-    let nop = const $ return ()
-    Window undefined [] nop undefined b1 b2 (return ()) nop nop ptr <$> newVendor <*> newVendor
+    let nop :: a -> IO ()
+        nop = const $ pure ()
+    Window undefined [] b1 b2 nop undefined (pure ()) nop nop ptr
+        <$> RemotePtr.newVendor <*> RemotePtr.newVendor
+#endif
 
 -- | For the purpose of controlling garbage collection,
 -- every 'Window' as an associated 'RemotePtr' that is alive
 -- as long as the external JavaScript connection is alive.
-root :: Window -> RemotePtr ()
+root :: Window -> RemotePtr.RemotePtr ()
 root = wRoot
 
 {-----------------------------------------------------------------------------
     Marshalling
 ------------------------------------------------------------------------------}
-newtype JSPtr = JSPtr { unsJSPtr :: Coupon }
+newtype JSPtr = JSPtr { unsJSPtr :: RemotePtr.Coupon }
 
 -- | A mutable JavaScript object.
-type JSObject = RemotePtr JSPtr
+type JSObject = RemotePtr.RemotePtr JSPtr
 
 -- | A mutable JavaScript object that has just been created.
 -- This a dummy type used for additional type safety.
