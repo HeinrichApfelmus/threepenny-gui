@@ -13,8 +13,8 @@ module Foreign.JavaScript.CallHaskell
 import Foreign.JavaScript.Types
     ( HsEvent, Window(Window,wEventHandlers) )
 
-import qualified Data.Aeson         as JSON
-import qualified Foreign.RemotePtr  as RemotePtr
+import qualified Foreign.JavaScript.JSON  as JSON
+import qualified Foreign.RemotePtr        as RemotePtr
 
 {-----------------------------------------------------------------------------
     Exports, Imports and garbage collection

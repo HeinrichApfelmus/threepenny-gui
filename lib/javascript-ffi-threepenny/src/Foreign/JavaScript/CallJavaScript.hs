@@ -10,9 +10,9 @@ import Foreign.JavaScript.CallBuffer
 import Foreign.JavaScript.Types
     ( JSObject, JSPtr (..), Window(Window,wJSObjects) )
 
-import qualified Data.Aeson         as JSON
-import qualified Data.Text          as T
-import qualified Foreign.RemotePtr  as RemotePtr
+import qualified Data.Text                  as T
+import qualified Foreign.JavaScript.JSON    as JSON
+import qualified Foreign.RemotePtr          as RemotePtr
 
 {-----------------------------------------------------------------------------
     Create JSObject
