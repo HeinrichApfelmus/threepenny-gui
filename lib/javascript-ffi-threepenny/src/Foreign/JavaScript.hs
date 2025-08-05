@@ -1,19 +1,18 @@
-{-# LANGUAGE RecordWildCards #-}
+{- | A Foreign Function Interface (FFI) for JavaScript.
+
+This module allows you to call JavaScript from Haskell, and vice-versa.
+
+This module consists of two parts:
+
+* When compiled with GHC, a web server implementation.
+  This server communicates with a web browser window
+  and uses the JavaScript in that window to execute JavaScript code.
+* An interface for calling JavaScript functions from Haskell and vice-versa.
+  The main functions are 'ffi', 'runFunction', and 'callFunction'.
+-}
 module Foreign.JavaScript
     (
-    -- * Synopsis
-    -- | A JavaScript foreign function interface (FFI).
-    --
-    -- This module implements a web server that communicates with
-    -- a web browser and allows you to execute arbitrary JavaScript code on it.
-    --
-    -- NOTE: This module is used internally by the "Graphics.UI.Threepenny"
-    -- library, but the types are /not/ compatible directly
-    -- (although some escape hatches are provided).
-    -- Use "Foreign.JavaScript" only if you want to roll your own
-    -- interface to the web browser.
-
-    -- * Server
+    -- * Server    
     serve, defaultConfig, Config(
           jsPort, jsAddr
         , jsCustomHTML, jsStatic, jsLog
@@ -24,11 +23,15 @@ module Foreign.JavaScript
     , Window, getServer, getCookies, root
 
     -- * JavaScript FFI
+    -- ** Types
     , ToJS(..), FromJS, JSFunction, JSObject, JavaScriptException
+    -- ** Calling JavaScript from Haskell
     , FFI, ffi, runFunction, callFunction
     , NewJSObject, unsafeCreateJSObject
     , CallBufferMode(..), setCallBufferMode, getCallBufferMode, flushCallBuffer
+    -- ** Calling Haskell from JavaScript
     , IsHandler, exportHandler, onDisconnect
+    -- ** Debugging
     , debug, timestamp
     ) where
 

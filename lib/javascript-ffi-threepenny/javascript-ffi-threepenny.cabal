@@ -2,17 +2,27 @@ name:                javascript-ffi-threepenny
 version:             0.1.0.0
 synopsis:            JavaScript FFI, used by threepenny-gui
 description:
-    Foreign Function Interface for JavaScript.
+    This package implements a Foreign Function Interface (FFI) for JavaScript.
     .
-    This JavaScript FFI implements a small web server.
-    When a web browser connects to this web server,
-    this library allows you to communicate with
-    the JavaScript environment in the browser.
+    This JavaScript FFI allows you to call JavaScript code from Haskell,
+    and (more limited) Haskell code from JavaScript.    
     .
-    NOTE: This library contains examples, but they are not built by default.
-    To build and install the example, use the @buildExamples@ flag like this
+    This JavaScript FFI is implemented in multiple ways:
     .
-    @cabal install threepenny-gui -fbuildExamples@
+    * When compiled to native code via GHC, this package implements a small web server.
+      Loading a page will open a WebSocket connection
+      between browser window and server.
+      Then, you can call JavaScript functions in the browser window
+      from the server code.
+    .
+    * When compiled to WebAssembly
+      via [MicroHs](https://github.com/augustss/MicroHs) and emscripten,
+      this package allows you to call JavaScript functions in the same runtime environment
+      — using the same API as the use case above.
+    .
+    This package is tailored to the needs of the
+    [threepenny-gui](https://heinrichapfelmus.github.io/threepenny-gui/)
+    package, but can be used independently.
 
 license:             BSD3
 author:              Heinrich Apfelmus
@@ -42,11 +52,6 @@ extra-source-Files:
     , js/*.css
     , js/*.js
     , js/lib/*.js
-
-flag buildExamples
-    description: Build example executables.
-    default:     False
-    manual:      True
 
 flag rebug
     description: The library uses some techniques that are highly

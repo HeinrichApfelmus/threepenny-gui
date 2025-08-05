@@ -1,10 +1,9 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE RecordWildCards#-}
+
+-- | Toolbox for managing remote objects in Haskell.
 module Foreign.RemotePtr (
-    -- * Synopsis
-    -- | Toolbox for managing remote objects in Haskell.
-    
     -- * RemotePtr
       RemotePtr
     , withRemotePtr, addFinalizer, destroy, addReachable, clearReachable
@@ -48,13 +47,15 @@ type Coupon = T.Text
 
 -- | A 'RemotePtr' is a pointer to a foreign object.
 -- 
--- Like a 'ForeignPtr', it refers to an object managed by an environment
+-- Like a 'Foreign.ForeignPtr.ForeignPtr',
+-- it refers to an object managed by an environment
 -- external to the Haskell runtime.
 -- Likewise, you can assign finalizers to a 'RemotePtr'. The finalizers
 -- will be run when the Haskell runtime garbage collects this value.
 -- They can perform some cleanup operations, like freeing memory.
 --
--- Unlike a 'ForeignPtr', the object referenced by a 'RemotePtr' is not
+-- Unlike a 'Foreign.ForeignPtr.ForeignPtr',
+-- the object referenced by a 'RemotePtr' is not
 -- necessarily a block of RAM. Instead, it can refer to things like an object
 -- managed by a remote program.
 
