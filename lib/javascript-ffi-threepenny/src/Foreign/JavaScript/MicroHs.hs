@@ -13,6 +13,8 @@ import Data.Text
     ( grabCString, useAsCString, pack, unpack )
 import Foreign.C.String
     ( CString )
+import Foreign.JavaScript.JSON.Parser
+    ( decodeJSON )
 import System.IO.Unsafe
     ( unsafePerformIO )
 
@@ -41,9 +43,11 @@ withBrowserWindow action = do
             { debug    = \s -> useAsCString (pack s) ffiDebug
             , runEval  = \s -> useAsCString (pack s) ffiRunEval
             , callEval = \s -> do
+                -- wdebug s
                 t <- useAsCString (pack s) $
                     \p -> ffiCallEval p >>= grabCString
-                pure $ JSON.Raw t
+                -- wdebug (show $ decodeJSON t)
+                pure $ case decodeJSON t of JSON.Success x -> x
             }
     writeIORef refWindow w1
     action w1
@@ -54,7 +58,7 @@ callbackHs cname cargs = do
     name <- grabCString cname
     args <- grabCString cargs
     w <- readIORef refWindow
-    handleEvent w (name, JSON.Raw args)
+    handleEvent w (name, JSON.string args)
 
 -- | Handle a single event
 handleEvent :: Window -> (RemotePtr.Coupon, JSON.Value) -> IO ()

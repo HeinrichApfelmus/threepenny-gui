@@ -5,7 +5,7 @@ description:
     This package implements a Foreign Function Interface (FFI) for JavaScript.
     .
     This JavaScript FFI allows you to call JavaScript code from Haskell,
-    and (more limited) Haskell code from JavaScript.    
+    and (more limited) Haskell code from JavaScript.
     .
     This JavaScript FFI is implemented in multiple ways:
     .
@@ -78,6 +78,8 @@ library
     Foreign.JavaScript.EventLoop
     Foreign.JavaScript.Include
     Foreign.JavaScript.JSON
+    Foreign.JavaScript.JSON.Parser
+    Foreign.JavaScript.JSON.Types
     Foreign.JavaScript.Marshal
     Foreign.JavaScript.Resources
     Foreign.JavaScript.Server
