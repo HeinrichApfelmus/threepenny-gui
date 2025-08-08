@@ -15,6 +15,8 @@ import Foreign.C.String
     ( CString )
 import Foreign.JavaScript.JSON.Parser
     ( decodeJSON )
+import Foreign.StablePtr
+    ( StablePtr, newStablePtr )
 import System.IO.Unsafe
     ( unsafePerformIO )
 
@@ -25,8 +27,8 @@ foreign import javascript "eval(UTF8ToString($0))"
 foreign import javascript "return stringToNewUTF8(JSON.stringify(eval(UTF8ToString($0))))"
     ffiCallEval :: CString -> IO CString
 
-foreign export javascript callbackHs
-    :: CString -> CString -> IO ()
+foreign import javascript "_haskellCallback = $0"
+    setHaskellCallback :: StablePtr (CString -> IO CString) -> IO ()
 
 {-----------------------------------------------------------------------------
     Server
@@ -49,16 +51,21 @@ withBrowserWindow action = do
                 -- wdebug (show $ decodeJSON t)
                 pure $ case decodeJSON t of JSON.Success x -> x
             }
+    callback <- newStablePtr haskellCallback
+    setHaskellCallback callback
     writeIORef refWindow w1
     action w1
 
--- Module._callbackHs(stringToNewUTF8('hello'))
-callbackHs :: CString -> CString -> IO ()
-callbackHs cname cargs = do
-    name <- grabCString cname
-    args <- grabCString cargs
+haskellCallback :: CString -> IO CString
+haskellCallback cs = grabCString cs >>= \s -> do
     w <- readIORef refWindow
-    handleEvent w (name, JSON.string args)
+    let JSON.Success x = decodeJSON s
+    let (name, args) = case x of
+            JSON.Object [("name", JSON.String n), ("args", a)] -> (n, a)
+            JSON.Object [("args", a), ("name", JSON.String n)] -> (n, a)
+            _ -> error "haskellCallback: cannot parse arguments"
+    handleEvent w (name, args)
+    useAsCString (pack "") pure
 
 -- | Handle a single event
 handleEvent :: Window -> (RemotePtr.Coupon, JSON.Value) -> IO ()
