@@ -21,14 +21,14 @@ import System.IO.Unsafe
     ( unsafePerformIO )
 
 foreign import javascript "console.log(UTF8ToString($0))"
-    ffiDebug :: CString -> IO ()
+    jsDebug :: CString -> IO ()
 foreign import javascript "eval(UTF8ToString($0))"
-    ffiRunEval :: CString -> IO ()
+    jsEvalRun :: CString -> IO ()
 foreign import javascript "return stringToNewUTF8(JSON.stringify(eval(UTF8ToString($0))))"
-    ffiCallEval :: CString -> IO CString
+    jsEvalCall :: CString -> IO CString
 
 foreign import javascript "_haskellCallback = $0"
-    setHaskellCallback :: StablePtr (CString -> IO CString) -> IO ()
+    jsSetHaskellCallback :: StablePtr (CString -> IO CString) -> IO ()
 
 {-----------------------------------------------------------------------------
     Server
@@ -40,19 +40,19 @@ refWindow = unsafePerformIO (newPartialWindow >>= newIORef)
 withBrowserWindow :: (Window -> IO ()) -> IO ()
 withBrowserWindow action = do
     w0 <- readIORef refWindow
-    let wdebug = \s -> useAsCString (pack s) ffiDebug
+    let wdebug = \s -> useAsCString (pack s) jsDebug
     let w1 = w0
-            { debug    = \s -> useAsCString (pack s) ffiDebug
-            , runEval  = \s -> useAsCString (pack s) ffiRunEval
+            { debug    = \s -> useAsCString (pack s) jsDebug
+            , runEval  = \s -> useAsCString (pack s) jsEvalRun
             , callEval = \s -> do
                 -- wdebug s
                 t <- useAsCString (pack s) $
-                    \p -> ffiCallEval p >>= grabCString
+                    \p -> jsEvalCall p >>= grabCString
                 -- wdebug (show $ decodeJSON t)
                 pure $ case decodeJSON t of JSON.Success x -> x
             }
     callback <- newStablePtr haskellCallback
-    setHaskellCallback callback
+    jsSetHaskellCallback callback
     writeIORef refWindow w1
     action w1
 
