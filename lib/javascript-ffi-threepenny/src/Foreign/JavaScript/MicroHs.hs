@@ -20,14 +20,10 @@ import Foreign.StablePtr
 import System.IO.Unsafe
     ( unsafePerformIO )
 
-foreign import javascript "console.log(UTF8ToString($0))"
-    jsDebug :: CString -> IO ()
-foreign import javascript "eval(UTF8ToString($0))"
-    jsEvalRun :: CString -> IO ()
-foreign import javascript "return stringToNewUTF8(JSON.stringify(eval(UTF8ToString($0))))"
-    jsEvalCall :: CString -> IO CString
-
-foreign import javascript "_haskellCallback = $0"
+foreign import ccall "js_debug"     jsDebug    :: CString -> IO ()
+foreign import ccall "js_eval_run"  jsEvalRun  :: CString -> IO ()
+foreign import ccall "js_eval_call" jsEvalCall :: CString -> IO CString
+foreign import ccall "js_set_haskellCallback"
     jsSetHaskellCallback :: StablePtr (CString -> IO CString) -> IO ()
 
 {-----------------------------------------------------------------------------
