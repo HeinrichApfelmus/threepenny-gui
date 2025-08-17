@@ -46,12 +46,16 @@ tested-with:
     , GHC == 9.10.1
     , GHC == 9.12.2
 
-extra-source-Files:
+extra-source-files:
       CHANGELOG.md
     , js/*.html
     , js/*.css
     , js/*.js
     , js/lib/*.js
+    , example/Example.hs
+    , example/ExampleMicroHs.html
+    , example/build-microhs.sh
+    , example/mhseval.js
 
 flag rebug
     description: The library uses some techniques that are highly
