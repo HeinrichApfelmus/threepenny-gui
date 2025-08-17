@@ -13,18 +13,18 @@ import Data.Text
     ( grabCString, useAsCString, pack, unpack )
 import Foreign.C.String
     ( CString )
+import Foreign.JavaScript.JSON.Parser
+    ( decodeJSON )
+import Foreign.StablePtr
+    ( StablePtr, newStablePtr )
 import System.IO.Unsafe
     ( unsafePerformIO )
 
-foreign import javascript "console.log(UTF8ToString($0))"
-    ffiDebug :: CString -> IO ()
-foreign import javascript "eval(UTF8ToString($0))"
-    ffiRunEval :: CString -> IO ()
-foreign import javascript "return stringToNewUTF8(JSON.stringify(eval(UTF8ToString($0))))"
-    ffiCallEval :: CString -> IO CString
-
-foreign export javascript callbackHs
-    :: CString -> CString -> IO ()
+foreign import ccall "js_debug"     jsDebug    :: CString -> IO ()
+foreign import ccall "js_eval_run"  jsEvalRun  :: CString -> IO ()
+foreign import ccall "js_eval_call" jsEvalCall :: CString -> IO CString
+foreign import ccall "js_set_haskellCallback"
+    jsSetHaskellCallback :: StablePtr (CString -> IO CString) -> IO ()
 
 {-----------------------------------------------------------------------------
     Server
@@ -36,25 +36,32 @@ refWindow = unsafePerformIO (newPartialWindow >>= newIORef)
 withBrowserWindow :: (Window -> IO ()) -> IO ()
 withBrowserWindow action = do
     w0 <- readIORef refWindow
-    let wdebug = \s -> useAsCString (pack s) ffiDebug
+    let wdebug = \s -> useAsCString (pack s) jsDebug
     let w1 = w0
-            { debug    = \s -> useAsCString (pack s) ffiDebug
-            , runEval  = \s -> useAsCString (pack s) ffiRunEval
+            { debug    = \s -> useAsCString (pack s) jsDebug
+            , runEval  = \s -> useAsCString (pack s) jsEvalRun
             , callEval = \s -> do
+                -- wdebug s
                 t <- useAsCString (pack s) $
-                    \p -> ffiCallEval p >>= grabCString
-                pure $ JSON.Raw t
+                    \p -> jsEvalCall p >>= grabCString
+                -- wdebug (show $ decodeJSON t)
+                pure $ case decodeJSON t of JSON.Success x -> x
             }
+    callback <- newStablePtr haskellCallback
+    jsSetHaskellCallback callback
     writeIORef refWindow w1
     action w1
 
--- Module._callbackHs(stringToNewUTF8('hello'))
-callbackHs :: CString -> CString -> IO ()
-callbackHs cname cargs = do
-    name <- grabCString cname
-    args <- grabCString cargs
+haskellCallback :: CString -> IO CString
+haskellCallback cs = grabCString cs >>= \s -> do
     w <- readIORef refWindow
-    handleEvent w (name, JSON.Raw args)
+    let JSON.Success x = decodeJSON s
+    let (name, args) = case x of
+            JSON.Object [("name", JSON.String n), ("args", a)] -> (n, a)
+            JSON.Object [("args", a), ("name", JSON.String n)] -> (n, a)
+            _ -> error "haskellCallback: cannot parse arguments"
+    handleEvent w (name, args)
+    useAsCString (pack "") pure
 
 -- | Handle a single event
 handleEvent :: Window -> (RemotePtr.Coupon, JSON.Value) -> IO ()

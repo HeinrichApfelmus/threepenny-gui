@@ -1,7 +1,7 @@
 {-----------------------------------------------------------------------------
     Quick test of Foreign.JavaScript
 ------------------------------------------------------------------------------}
-module Foreign.TestJavaScript where
+module Example where
 
 import Data.IORef
 import Foreign.JavaScript

@@ -5,7 +5,7 @@ description:
     This package implements a Foreign Function Interface (FFI) for JavaScript.
     .
     This JavaScript FFI allows you to call JavaScript code from Haskell,
-    and (more limited) Haskell code from JavaScript.    
+    and (more limited) Haskell code from JavaScript.
     .
     This JavaScript FFI is implemented in multiple ways:
     .
@@ -46,12 +46,16 @@ tested-with:
     , GHC == 9.10.1
     , GHC == 9.12.2
 
-extra-source-Files:
+extra-source-files:
       CHANGELOG.md
     , js/*.html
     , js/*.css
     , js/*.js
     , js/lib/*.js
+    , example/Example.hs
+    , example/ExampleMicroHs.html
+    , example/build-microhs.sh
+    , example/mhseval.js
 
 flag rebug
     description: The library uses some techniques that are highly
@@ -67,7 +71,9 @@ source-repository head
     location:           https://github.com/HeinrichApfelmus/threepenny-gui.git
 
 library
-  hs-source-dirs:    src
+  default-language: Haskell2010
+  other-extensions: CPP
+  hs-source-dirs:   src
   exposed-modules:
     Foreign.JavaScript
     Foreign.RemotePtr
@@ -75,41 +81,51 @@ library
     Foreign.JavaScript.CallBuffer
     Foreign.JavaScript.CallHaskell
     Foreign.JavaScript.CallJavaScript
-    Foreign.JavaScript.EventLoop
-    Foreign.JavaScript.Include
     Foreign.JavaScript.JSON
+    Foreign.JavaScript.JSON.Parser
+    Foreign.JavaScript.JSON.Types
     Foreign.JavaScript.Marshal
-    Foreign.JavaScript.Resources
-    Foreign.JavaScript.Server
     Foreign.JavaScript.Types
     Foreign.RemotePtr.Weak
-  other-extensions: CPP
   cpp-options:      -DCABAL
   if flag(rebug)
       cpp-options:  -DREBUG
       ghc-options:  -O2
-  build-depends:
-      base                   >= 4.8   && < 4.22
-    , aeson                  (>= 0.7 && < 0.10) || == 0.11.* || (>= 1.0 && < 2.3)
-    , async                  >= 2.0    && < 2.3
-    , bytestring             >= 0.9.2  && < 0.13
-    , containers             >= 0.4.2  && < 0.9
-    , data-default           >= 0.5.0  && < 0.9
-    , deepseq                >= 1.3.0  && < 1.6
-    , exceptions             >= 0.6    && < 0.11
-    , filepath               >= 1.3.0  && < 1.6.0
-    , file-embed             >= 0.0.10 && < 0.1
-    , hashable               >= 1.2.0  && < 1.6
-    , safe                   == 0.3.*
-    , snap-server            >= 0.9.0  && < 1.2
-    , snap-core              >= 0.9.0  && < 1.1
-    , stm                    >= 2.2    && < 2.6
-    , template-haskell       >= 2.7.0  && < 2.24
-    , text                   >= 0.11   && < 2.2
-    , transformers           >= 0.3.0  && < 0.7
-    , unordered-containers   == 0.2.*
-    , websockets             (>= 0.8    && < 0.12.5) || (> 0.12.5.0 && < 0.14)
-    , websockets-snap        >= 0.8    && < 0.11
-    , vector                 >= 0.10   && < 0.14
-  default-language: Haskell2010
-  ghc-options: -Wcompat -Wnoncanonical-monad-instances
+
+  if impl(ghc)
+    other-modules:
+      Foreign.JavaScript.Include
+      Foreign.JavaScript.Resources
+      Foreign.JavaScript.Server
+      Foreign.JavaScript.EventLoop
+    build-depends:
+        base                   >= 4.8   && < 4.22
+      , aeson                  (>= 0.7 && < 0.10) || == 0.11.* || (>= 1.0 && < 2.3)
+      , async                  >= 2.0    && < 2.3
+      , bytestring             >= 0.9.2  && < 0.13
+      , containers             >= 0.4.2  && < 0.9
+      , data-default           >= 0.5.0  && < 0.9
+      , deepseq                >= 1.3.0  && < 1.6
+      , exceptions             >= 0.6    && < 0.11
+      , filepath               >= 1.3.0  && < 1.6.0
+      , file-embed             >= 0.0.10 && < 0.1
+      , hashable               >= 1.2.0  && < 1.6
+      , safe                   == 0.3.*
+      , snap-server            >= 0.9.0  && < 1.2
+      , snap-core              >= 0.9.0  && < 1.1
+      , stm                    >= 2.2    && < 2.6
+      , template-haskell       >= 2.7.0  && < 2.24
+      , text                   >= 0.11   && < 2.2
+      , transformers           >= 0.3.0  && < 0.7
+      , unordered-containers   == 0.2.*
+      , websockets             (>= 0.8    && < 0.12.5) || (> 0.12.5.0 && < 0.14)
+      , websockets-snap        >= 0.8    && < 0.11
+      , vector                 >= 0.10   && < 0.14
+    ghc-options: -Wcompat -Wnoncanonical-monad-instances
+
+  if impl(mhs)
+    other-modules:
+      Foreign.JavaScript.MicroHs
+    build-depends:
+        base                   >= 4.8   && < 4.22
+      , containers             >= 0.4.2  && < 0.9

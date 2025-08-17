@@ -22,59 +22,77 @@ import qualified Data.Text as T
 {-----------------------------------------------------------------------------
     MicroHs
 ------------------------------------------------------------------------------}
--- JSON Values.
-data Value
-    = Raw T.Text    -- Unparsed textual representation.
-    | Array [Value] -- FIXME: Actually parse this.
-    | Null
+import Data.List
+    ( intersperse )
+import Foreign.JavaScript.JSON.Parser
+    ( Result (..) )
+import Foreign.JavaScript.JSON.Types
+    ( Value (..), Number (..) )
 
 string :: T.Text -> Value
-string t = Raw ("\"" <> t <> "\"")
+string = String
 
 class ToJSON a where
     toJSON :: a -> Value
 
-instance ToJSON Bool   where toJSON b = Raw $ if b then "true" else "false"
-instance ToJSON Float  where toJSON = Raw . T.pack . show -- FIXME!
-instance ToJSON Double where toJSON = Raw . T.pack . show -- FIXME!
+instance ToJSON Bool   where toJSON = Bool
+instance ToJSON Float  where
+    toJSON = Number . Double . uncurry encodeFloat . decodeFloat
+instance ToJSON Double where toJSON = Number . Double
 instance ToJSON Value  where toJSON = id
-instance ToJSON T.Text where toJSON = string
+instance ToJSON T.Text where toJSON = String
 
 showJSON :: ToJSON a => a -> String
-showJSON x = case toJSON x of Raw y -> T.unpack y
+showJSON = T.unpack . showValue . toJSON
+
+showValue :: Value -> T.Text
+showValue (Object xys) =
+    "{" <> (mconcat . intersperse ", ")
+        [ showValue (String name) <> ": " <> showValue value
+        | (name, value) <- xys
+        ] <> "}"
+showValue (Array xs) =
+    "[" <> (mconcat . intersperse ", ") (map showValue xs) <> "]"
+showValue (String s) = T.pack $ "\"" <> concatMap escape (T.unpack s) <> "\""
+  where
+    escape '\"' = "\\\""
+    escape x = [x] -- FIXME: Escape more characters!
+showValue (Number (Integer i)) = T.pack $ show i
+showValue (Number (Double  d)) = T.pack $ show d
+showValue (Bool b)   = if b then "true" else "false"
+showValue Null       = "null"
 
 fromArray :: Value -> [Value]
 fromArray (Array vs) = vs
 fromArray _ = error "fromArray: JSON Value is not an array."
 
-data Result a = Error String | Success a
-
-instance Functor Result where
-    fmap f (Error   e) = Error e
-    fmap f (Success x) = Success (f x)
-
 class FromJSON a where
     fromJSON :: Value -> Result a
 
-fromJSONUsingRead :: Read a => Value -> Result a
-fromJSONUsingRead (Raw s) =
-    case [ x | (x,"") <- readsPrec 0 (T.unpack s) ] of
-        [x] -> Success x
-        []  -> Error "fromJSONUsingRead: no parse"
-        _   -> Error "fromJSONUsingRead: ambiguous parse"
-fromJSONUsingRead _ = Error "fromJSONUsingRead: FIXME: Read list" 
-
 instance FromJSON Bool   where
-    fromJSON (Raw "true")  = Success True
-    fromJSON (Raw "false") = Success False
-    fromJSON _ = Error "fromJSON: Not a valid Bool"
-instance FromJSON Int     where fromJSON = fromJSONUsingRead
-instance FromJSON Double  where fromJSON = fromJSONUsingRead
-instance FromJSON Float   where fromJSON = fromJSONUsingRead
-instance FromJSON String  where fromJSON = fromJSONUsingRead
-instance FromJSON T.Text  where fromJSON x = T.pack <$> fromJSONUsingRead x
-instance FromJSON Value   where fromJSON = Success
-instance FromJSON [Value] where fromJSON x = Success [x] -- FIXME! Parse array!
+    fromJSON (Bool b) = Success b
+    fromJSON _ = Error "fromJSON: Value is not a Bool"
+instance FromJSON Int     where
+    fromJSON (Number (Integer x)) = Success $ fromIntegral x
+    fromJSON _ = Error "fromJSON: Value is not a Int"
+instance FromJSON Double  where
+    fromJSON (Number (Integer x)) = Success $ fromIntegral x
+    fromJSON (Number (Double  x)) = Success x
+    fromJSON _ = Error "fromJSON: Value is not a Double"
+instance FromJSON Float   where
+    fromJSON v = fmap (uncurry encodeFloat . decodeFloat) md
+      where md = fromJSON v :: Result Double
+instance FromJSON String  where
+    fromJSON (String s) = Success $ T.unpack s
+    fromJSON _ = Error "fromJSON: Value is not a String"
+instance FromJSON T.Text  where
+    fromJSON (String s) = Success s
+    fromJSON _ = Error "fromJSON: Value is not a Text"
+instance FromJSON Value   where
+    fromJSON = Success
+instance FromJSON [Value] where
+    fromJSON (Array xs) = Success xs
+    fromJSON _ = Error "fromJSON: Value is not a list of Value"
 
 #else
 {-----------------------------------------------------------------------------
