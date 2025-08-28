@@ -2,7 +2,11 @@
 
 **0.10.0.0** – Snapshot release
 
+Changed
+
 * Split off JavaScript FFI to `javascript-ffi-threepenny`.
+* Remove dependency on `aeson` and use `JSON` type from JavaScript FFI instead.
+  * Change `EventData`, `unsafeFromJSON`.
 
 **0.9.4.2** – Maintenance and snapshot release
 

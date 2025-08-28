@@ -19,7 +19,7 @@ module Graphics.UI.Threepenny.Attributes (
     target, text_, title__, type_, usemap, valign, version, vlink, vspace, width,
     ) where
 
-import qualified Data.Aeson                  as JSON
+import qualified Foreign.JavaScript.JSON        as JSON
 import           Graphics.UI.Threepenny.Core
 
 {-----------------------------------------------------------------------------

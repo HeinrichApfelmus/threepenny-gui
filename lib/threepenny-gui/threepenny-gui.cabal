@@ -99,8 +99,7 @@ library
 
   if impl(ghc)
     build-depends:
-        aeson                      >=0.7   && <0.10  || >=0.11 && <0.12 || >=1.0 && <2.3
-      , data-default               >=0.5.0 && <0.9
+        data-default               >=0.5.0 && <0.9
       , exceptions                 >=0.6   && <0.11
       , hashable                   >=1.2.0 && <1.6
       , stm                        >=2.2   && <2.6

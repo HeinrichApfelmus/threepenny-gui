@@ -64,8 +64,8 @@ import Control.Monad.Fix
 import Control.Monad.IO.Class
 
 import qualified Control.Monad.Catch             as E
-import qualified Data.Aeson                      as JSON
 import qualified Foreign.JavaScript              as JS
+import qualified Foreign.JavaScript.JSON         as JSON
 import qualified Graphics.UI.Threepenny.Internal as Core
 import qualified Reactive.Threepenny             as Reactive
 

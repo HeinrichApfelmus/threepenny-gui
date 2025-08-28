@@ -28,8 +28,8 @@ import           Control.Monad.IO.Class
 import qualified Control.Monad.Trans.RWS.Lazy as Monad
 import           Data.Dynamic                          (Typeable)
 
-import qualified Data.Aeson              as JSON
 import qualified Foreign.JavaScript      as JS
+import qualified Foreign.JavaScript.JSON as JSON
 import qualified Foreign.RemotePtr       as Foreign
 
 import qualified Reactive.Threepenny     as RB
@@ -180,7 +180,7 @@ getEvents el window@Window{ wEvents = wEvents } = do
             Just p  -> Foreign.withRemotePtr p $ \_ -> return
 
 -- | Events may carry data. At the moment, they may return
--- a single JSON value, as defined in the "Data.Aeson" module.
+-- a single JSON value, as defined in the "Foreign.JavaScript.JSON" module.
 type EventData = JSON.Value
 
 -- | Convert event data to a Haskell value.
