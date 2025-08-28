@@ -59,8 +59,8 @@ withBrowserWindow :: (Window -> IO ()) -> IO ()
 withBrowserWindow = Foreign.JavaScript.MicroHs.withBrowserWindow
 
 #else
-import Foreign.JavaScript.EventLoop
-import Foreign.JavaScript.Server
+import Foreign.JavaScript.Server.EventLoop
+import Foreign.JavaScript.Server.HTTP
 
 withBrowserWindow :: (Window -> IO ()) -> IO ()
 withBrowserWindow = serve defaultConfig

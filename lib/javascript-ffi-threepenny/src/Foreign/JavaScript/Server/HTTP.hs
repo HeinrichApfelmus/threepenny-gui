@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-module Foreign.JavaScript.Server
+module Foreign.JavaScript.Server.HTTP
     ( httpComm, loadFile, loadDirectory,
     ) where
 
@@ -29,7 +29,7 @@ import qualified Snap.Http.Server              as Snap
 import           Snap.Util.FileServe
 
 -- import internal modules
-import Foreign.JavaScript.Resources
+import Foreign.JavaScript.Server.Resources
 import Foreign.JavaScript.Types
 
 {-----------------------------------------------------------------------------

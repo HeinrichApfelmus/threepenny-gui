@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Foreign.JavaScript.EventLoop
+module Foreign.JavaScript.Server.EventLoop
     ( eventLoop
     , runEval, callEval, debug, onDisconnect
     ) where
