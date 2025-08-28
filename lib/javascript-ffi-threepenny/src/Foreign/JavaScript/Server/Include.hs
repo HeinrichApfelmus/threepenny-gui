@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Foreign.JavaScript.Include (include) where
+module Foreign.JavaScript.Server.Include (include) where
 
 import           Data.FileEmbed      (makeRelativeToProject)
 import           Language.Haskell.TH

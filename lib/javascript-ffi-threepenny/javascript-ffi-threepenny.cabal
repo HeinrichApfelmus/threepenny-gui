@@ -76,12 +76,13 @@ library
   hs-source-dirs:   src
   exposed-modules:
     Foreign.JavaScript
+    Foreign.JavaScript.Functions
+    Foreign.JavaScript.JSON
     Foreign.RemotePtr
   other-modules:
     Foreign.JavaScript.CallBuffer
     Foreign.JavaScript.CallHaskell
     Foreign.JavaScript.CallJavaScript
-    Foreign.JavaScript.JSON
     Foreign.JavaScript.JSON.Parser
     Foreign.JavaScript.JSON.Types
     Foreign.JavaScript.Marshal
@@ -93,11 +94,13 @@ library
       ghc-options:  -O2
 
   if impl(ghc)
-    other-modules:
-      Foreign.JavaScript.Include
-      Foreign.JavaScript.Resources
+    exposed-modules:
       Foreign.JavaScript.Server
-      Foreign.JavaScript.EventLoop
+    other-modules:
+      Foreign.JavaScript.Server.Include
+      Foreign.JavaScript.Server.Resources
+      Foreign.JavaScript.Server.HTTP
+      Foreign.JavaScript.Server.EventLoop
     build-depends:
         base                   >= 4.8   && < 4.22
       , aeson                  (>= 0.7 && < 0.10) || == 0.11.* || (>= 1.0 && < 2.3)
