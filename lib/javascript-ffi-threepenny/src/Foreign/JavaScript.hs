@@ -1,137 +1,49 @@
 {-# LANGUAGE CPP #-}
+
 {- | A Foreign Function Interface (FFI) for JavaScript.
 
 This module allows you to call JavaScript from Haskell, and vice-versa.
-
-This module consists of two parts:
-
-* When compiled with GHC, a web server implementation.
-  This server communicates with a web browser window
-  and uses the JavaScript in that window to execute JavaScript code.
-* An interface for calling JavaScript functions from Haskell and vice-versa.
-  The main functions are 'ffi', 'runFunction', and 'callFunction'.
 -}
 module Foreign.JavaScript
-    (
+    ( withBrowserWindow, Window
 #if !defined(__MHS__)
-    -- * Server
-    withBrowserWindow
-    , serve, defaultConfig, Config(
-          jsPort, jsAddr
-        , jsCustomHTML, jsStatic, jsLog
-        , jsWindowReloadOnDisconnect, jsCallBufferMode
-        , jsUseSSL)
-    , ConfigSSL (..)
-    , Server, MimeType, URI, loadFile, loadDirectory
-    , Window, getServer, getCookies, root
-#else
-    withBrowserWindow, Window
+    , module Foreign.JavaScript.Server
 #endif
-    -- * JavaScript FFI
-    -- ** Types
-    , ToJS(..), FromJS, JSFunction, JSObject
-#if !defined(__MHS__)
-    , JavaScriptException
-#endif
-    -- ** Calling JavaScript from Haskell
-    , FFI, ffi, runFunction, callFunction
-    , NewJSObject, unsafeCreateJSObject
-    , CallBufferMode(..), setCallBufferMode, getCallBufferMode, flushCallBuffer
-    -- ** Calling Haskell from JavaScript
-    , IsHandler, exportHandler, onDisconnect
-    -- ** Debugging
-    , debug, timestamp
+    , module Foreign.JavaScript.Functions
+    , module Foreign.JavaScript.JSON
     ) where
 
-import Foreign.JavaScript.CallHaskell
-import Foreign.JavaScript.CallBuffer
-import Foreign.JavaScript.Marshal
-import Foreign.JavaScript.Types
-import Foreign.RemotePtr            as RemotePtr
+import Foreign.JavaScript.Functions
+import Foreign.JavaScript.JSON
 
 {-----------------------------------------------------------------------------
     Server
 ------------------------------------------------------------------------------}
+import Foreign.JavaScript.Types (Window)
+
 #if defined(__MHS__)
 import qualified Foreign.JavaScript.MicroHs
-
-withBrowserWindow :: (Window -> IO ()) -> IO ()
-withBrowserWindow = Foreign.JavaScript.MicroHs.withBrowserWindow
-
 #else
-import Foreign.JavaScript.Server.EventLoop
-import Foreign.JavaScript.Server.HTTP
-
-withBrowserWindow :: (Window -> IO ()) -> IO ()
-withBrowserWindow = serve defaultConfig
-
--- | Run a "Foreign.JavaScript" server.
-serve
-    :: Config               -- ^ Configuration options.
-    -> (Window -> IO ())    -- ^ Initialization whenever a client connects.
-    -> IO ()
-serve config initialize = httpComm config $ eventLoop $ \w -> do
-    setCallBufferMode w (jsCallBufferMode config)
-    runFunction w $
-        ffi "connection.setReloadOnDisconnect(%1)" $ jsWindowReloadOnDisconnect config
-    flushCallBuffer w   -- make sure that all `runEval` commands are executed
-    initialize w
-    flushCallBuffer w   -- make sure that all `runEval` commands are executed
-
+import Foreign.JavaScript.Server
 #endif
 
-{-----------------------------------------------------------------------------
-    JavaScript
-------------------------------------------------------------------------------}
--- | Run a JavaScript function, but do not wait for a result.
---
--- NOTE: The JavaScript function need not be executed immediately,
--- it can be buffered and sent to the browser window at a later time.
--- See 'setCallBufferMode' and 'flushCallBuffer' for more.
-runFunction :: Window -> JSFunction () -> IO ()
-runFunction w f = bufferRunEval w =<< toCode f
+{- | Execute Haskell code when the browser window is first loaded.
+The 'Window' argument allows you to call JavaScript functions.
 
--- | Run a JavaScript function that creates a new object.
--- Return a corresponding 'JSObject' without waiting for the browser
--- to send a result.
---
--- WARNING: This function assumes that the supplied JavaScript code does,
--- in fact, create an object that is new.
-unsafeCreateJSObject :: Window -> JSFunction NewJSObject -> IO JSObject
-unsafeCreateJSObject w f = do
-    g <- wrapImposeStablePtr w f
-    bufferRunEval w =<< toCode g
-    marshalResult g w err
-  where
-    err = error "unsafeCreateJSObject: marshal does not take arguments"
+This functions behaves differently for different compilers:
 
--- | Call a JavaScript function and wait for the result.
-callFunction :: Window -> JSFunction a -> IO a
-callFunction w f = do
-    -- FIXME: Add the code of f to the buffer as well!
-    -- However, we have to pay attention to the semantics of exceptions in this case.
-    flushCallBuffer w
+* When compiled with GHC, this function starts a web server on port @8023@.
+  Whenever a web browser loads the main page, the argument is executed
+  with 'Window' representing the browser that has connected.
+  For custom configuration of the server, use "Foreign.JavaScript.Server".
 
-    resultJS <- callEval w =<< toCode f
-    marshalResult f w resultJS
-
--- | Export a Haskell function as an event handler.
---
--- The result is a JavaScript @Function@ object that can be called
--- from JavaScript like a regular function. However,
--- the corresponding Haskell function will /not/ be run immediately,
--- rather it will be added to the event queue and processed
--- like an event. In other words, this the Haskell code is only called
--- asynchronously.
---
--- WARNING: The event handler will be garbage collected unless you
--- keep a reference to it /on the Haskell side/!
--- Registering it with a JavaScript function will generally /not/
--- keep it alive.
-exportHandler :: IsHandler a => Window -> a -> IO JSObject
-exportHandler w f = do
-    g <- newHandler w (\args -> handle f w args >> flushCallBuffer w)
-    h <- unsafeCreateJSObject w $
-        ffi "Haskell.newEvent(%1,%2)" g (convertArguments f)
-    RemotePtr.addReachable h g
-    return h
+* When compiled with MicroHs, this function is embeded into the web page
+  and executes its argument when the web page is loaded.
+  In this case, the "Foreign.JavaScript.Server" module is not available.
+-}
+withBrowserWindow :: (Window -> IO ()) -> IO ()
+#if defined(__MHS__)
+withBrowserWindow = Foreign.JavaScript.MicroHs.withBrowserWindow
+#else
+withBrowserWindow = serve defaultConfig
+#endif

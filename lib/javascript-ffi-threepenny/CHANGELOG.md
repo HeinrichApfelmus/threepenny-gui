@@ -2,4 +2,5 @@
 
 **0.1.0.0** – Initial release
 
-* Initial release of the JavaScript FFI.
+* Split off JavaScript FFI from `threepenny-gui` as standalone package.
+* Integrate with MicroHs to support compilation to JavaScript/WebAssembly.
