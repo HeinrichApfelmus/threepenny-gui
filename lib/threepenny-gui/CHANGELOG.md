@@ -8,6 +8,11 @@ Changed
 * Remove dependency on `aeson` and use `JSON` type from JavaScript FFI instead.
   * Change `EventData`, `unsafeFromJSON`.
 
+Removed
+
+* Dependency on `data-default` package.
+  * Remove instance `Default Easing`.
+
 **0.9.4.2** – Maintenance and snapshot release
 
 * Bump dependencies for compatibility with GHC-9.12.

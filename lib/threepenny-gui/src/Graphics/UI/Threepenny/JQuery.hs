@@ -1,7 +1,6 @@
 module Graphics.UI.Threepenny.JQuery where
 
 import Data.Char
-import Data.Default
 
 import Graphics.UI.Threepenny.Core
 
@@ -10,8 +9,6 @@ import Graphics.UI.Threepenny.Core
 ------------------------------------------------------------------------------}
 data Easing = Swing | Linear
   deriving (Eq,Enum,Show)
-
-instance Default Easing where def = Linear
 
 -- | Fade in an element.
 fadeIn :: Element -> Int -> Easing -> IO () -> UI ()
