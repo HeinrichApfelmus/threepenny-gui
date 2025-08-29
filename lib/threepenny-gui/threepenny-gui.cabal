@@ -99,8 +99,7 @@ library
 
   if impl(ghc)
     build-depends:
-        exceptions                 >=0.6   && <0.11
-      , hashable                   >=1.2.0 && <1.6
+        hashable                   >=1.2.0 && <1.6
       , stm                        >=2.2   && <2.6
       , text                       >=0.11  && <2.2
       , unordered-containers       >=0.2   && <0.3

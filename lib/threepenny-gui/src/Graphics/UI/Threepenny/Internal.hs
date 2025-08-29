@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 module Graphics.UI.Threepenny.Internal (
     -- * Synopsis
@@ -8,7 +9,8 @@ module Graphics.UI.Threepenny.Internal (
     Window, disconnect,
     startGUI, loadFile, loadDirectory,
 
-    UI, runUI, MonadUI(..), liftIOLater, askWindow, liftJSWindow,
+    UI, runUI, MonadUI(..), throwUI, catchUI, handleUI,
+    liftIOLater, askWindow, liftJSWindow,
 
     FFI, FromJS, ToJS, JSFunction, JSObject, ffi,
     runFunction, callFunction,
@@ -21,8 +23,8 @@ module Graphics.UI.Threepenny.Internal (
     EventData, domEvent, unsafeFromJSON,
     ) where
 
+import           Control.Exception (Exception, catch, throwIO)
 import           Control.Monad
-import           Control.Monad.Catch
 import           Control.Monad.Fix
 import           Control.Monad.IO.Class
 import qualified Control.Monad.Trans.RWS.Lazy as Monad
@@ -300,11 +302,25 @@ instance MonadIO UI where
 instance MonadFix UI where
     mfix f = UI $ mfix (unUI . f)
 
-instance MonadThrow UI where
-    throwM = UI . throwM
+-- | Throw an exception in the 'UI' monad.
+-- See "Control.Exception"'s 'Control.Exception.throwIO'.
+throwUI :: Exception e => e -> UI a
+throwUI = liftIO . throwIO
 
-instance MonadCatch UI where
-    catch m f = UI $ catch (unUI m) (unUI . f)
+-- | Catch an exception in the 'UI' monad.
+-- See "Control.Exception"'s 'Control.Exception.catch'.
+--
+-- Should obey the law
+--
+-- > catch (throwM e) h = h e
+catchUI :: Exception e => UI a -> (e -> UI a) -> UI a
+catchUI (UI (Monad.RWST m)) h = UI $ Monad.RWST $ \r s ->
+    catch (m r s) $ \e -> Monad.runRWST (unUI (h e)) r s
+
+-- | Catch an exception in the 'UI' monad, flip of 'catch'.
+-- See "Control.Exception"'s 'Control.Exception.handle'.
+handleUI :: Exception e => (e -> UI a) -> UI a -> UI a
+handleUI = flip catchUI
 
 -- | Execute an 'UI' action in a particular browser window.
 -- Also runs all scheduled 'IO' actions.

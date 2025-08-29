@@ -10,7 +10,8 @@ module Graphics.UI.Threepenny.Core (
 
     -- * UI monad
     -- $ui
-    UI, runUI, MonadUI(..), askWindow, liftIOLater,
+    UI, runUI, MonadUI(..), throwUI, catchUI, handleUI,
+    askWindow, liftIOLater,
     module Control.Monad.IO.Class,
     module Control.Monad.Fix,
 
@@ -63,7 +64,6 @@ import Control.Monad          (forM_, forM, void)
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 
-import qualified Control.Monad.Catch             as E
 import qualified Foreign.JavaScript              as JS
 import qualified Foreign.JavaScript.JSON         as JSON
 import qualified Graphics.UI.Threepenny.Internal as Core
@@ -176,7 +176,7 @@ getElementById
     -> String              -- ^ The ID string.
     -> UI (Maybe Element)  -- ^ Element (if any) with given ID.
 getElementById _ ident =
-    E.handle (\(_ :: JS.JavaScriptException) -> return Nothing) $
+    handleUI (\(_ :: JS.JavaScriptException) -> return Nothing) $
         fmap Just . fromJSObject
             =<< callFunction (ffi "document.getElementById(%1)" ident)
 
