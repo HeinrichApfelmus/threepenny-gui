@@ -2,16 +2,23 @@
 
 **0.10.0.0** – Snapshot release
 
+Added
+
+* Specialized functions for exceptions: `throwUI`, `catchUI`, `handleUI`.
+
 Changed
 
 * Split off JavaScript FFI to `javascript-ffi-threepenny`.
 * Remove dependency on `aeson` and use `JSON` type from JavaScript FFI instead.
-  * Change `EventData`, `unsafeFromJSON`.
+  * Change type `EventData`, function `unsafeFromJSON`.
 
 Removed
 
-* Dependency on `data-default` package.
+* Remove dependency on `data-default` package.
   * Remove instance `Default Easing`.
+* Remove dependency on `exceptions` package.
+  * Remove instances `MonadThrow UI` and `MonadCatch UI`.
+    Use newly added specialized functions such as `throwUI` instead.
 
 **0.9.4.2** – Maintenance and snapshot release
 
