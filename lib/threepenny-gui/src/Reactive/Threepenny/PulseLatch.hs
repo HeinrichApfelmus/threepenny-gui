@@ -64,23 +64,23 @@ newPulse :: Build (Pulse a, a -> IO ())
 newPulse = do
     key         <- Vault.newKey
     handlersRef <- newIORef Map.empty      -- map of handlers
-    
+
     let
         -- add handler to map
-        addHandlerP :: ((Unique, Priority), Handler) -> Build (IO ())
-        addHandlerP (uid,m) = do
-            modifyIORef' handlersRef (Map.insert uid m)
+        addHandlerP :: (Unique, Priority, Handler) -> Build (IO ())
+        addHandlerP (uid,p,m) = do
+            modifyIORef' handlersRef (Map.insert uid (p, m))
             return $ modifyIORef' handlersRef (Map.delete uid)
-        
+
         -- evaluate all handlers attached to this input pulse
         fireP a = do
             let pulses = Vault.insert key (Just a) $ Vault.empty
             handlers <- readIORef handlersRef
             (ms, _)  <- runEvalP pulses $ sequence $ 
-                   [m | ((_,DoLatch),m) <- Map.toList handlers]
-                ++ [m | ((_,DoIO   ),m) <- Map.toList handlers]  
+                   [m | (DoLatch, m) <- Map.elems handlers]
+                ++ [m | (DoIO   , m) <- Map.elems handlers]  
             sequence_ ms
-        
+
         evalP = join . Vault.lookup key <$> Monad.get
 
     return (Pulse {..}, fireP)
@@ -89,7 +89,7 @@ newPulse = do
 addHandler :: Pulse a -> (a -> IO ()) -> Build (IO ())
 addHandler p f = do
     uid <- newUnique
-    addHandlerP p ((uid, DoIO), whenPulse p f)
+    addHandlerP p (uid, DoIO, whenPulse p f)
 
 -- | Read the value of a 'Latch' at a particular moment in Build.
 readLatch :: Latch a -> Build a
@@ -159,7 +159,7 @@ accumL a p1 = do
     -- register handler to update latch
     uid <- newUnique
     let handler = whenPulse p2 $ (writeIORef latch $!)
-    void $ addHandlerP p2 ((uid, DoLatch), handler)
+    void $ addHandlerP p2 (uid, DoLatch, handler)
     
     return (l1,p2)
 
