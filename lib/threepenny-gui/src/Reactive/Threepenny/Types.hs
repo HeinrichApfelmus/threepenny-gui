@@ -3,7 +3,6 @@ module Reactive.Threepenny.Types where
 import Control.Monad.Trans.RWS.Lazy
 import Data.Functor.Identity ()
 
-import           Data.Hashable
 import qualified Data.Vault.Strict   as Vault.Strict
 import           Data.Unique.Really
 
@@ -16,13 +15,9 @@ type Handler  = EvalP (IO ())
 data Priority = DoLatch | DoIO deriving (Eq,Show,Ord,Enum)
 
 data Pulse a = Pulse
-    { addHandlerP :: ((Unique, Priority), Handler) -> Build (IO ())
+    { addHandlerP :: (Unique, Priority, Handler) -> Build (IO ())
     , evalP       :: EvalP (Maybe a)
     }
-
-instance Hashable Priority where
-    hashWithSalt = hashUsing fromEnum
-    hash         = fromEnum
 
 data Latch a = Latch { readL :: EvalL a }
 
