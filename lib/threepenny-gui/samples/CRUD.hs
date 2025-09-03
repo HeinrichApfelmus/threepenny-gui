@@ -24,7 +24,8 @@ main :: IO ()
 main = startBrowserGUI setup
 
 setup :: Window -> UI ()
-setup window = void $ mdo
+setup window = void $ do
+  rec
     pure window # set title "CRUD Example (Simple)"
 
     -- GUI elements
@@ -60,7 +61,8 @@ setup window = void $ mdo
 
     -- database
     -- bDatabase :: Behavior (Database DataItem)
-    let update' mkey x = flip update x <$> mkey
+    let update' :: Maybe DatabaseKey -> DataItem -> Maybe (Database DataItem -> Database DataItem)
+        update' mkey x = flip update x <$> mkey
     bDatabase <- accumB emptydb $ concatenate <$> unions
         [ create ("Emil","Example") <$ eCreate
         , filterJust $ update' <$> bSelection <@> eDataItemIn
@@ -100,6 +102,7 @@ setup window = void $ mdo
     element deleteBtn # sink UI.enabled bDisplayItem
     element firstname # sink UI.enabled bDisplayItem
     element lastname  # sink UI.enabled bDisplayItem
+  pure ()
 
 
 {-----------------------------------------------------------------------------
