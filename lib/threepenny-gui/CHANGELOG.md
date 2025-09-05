@@ -19,6 +19,7 @@ Removed
 * Remove dependency on `exceptions` package.
   * Remove instances `MonadThrow UI` and `MonadCatch UI`.
     Use newly added specialized functions such as `throwUI` instead.
+* Remove support for GHC 8.0 and 8.2.
 
 **0.9.4.2** – Maintenance and snapshot release
 

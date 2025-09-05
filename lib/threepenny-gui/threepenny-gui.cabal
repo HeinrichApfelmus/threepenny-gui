@@ -29,17 +29,16 @@ category:           Web, GUI
 build-type:         Simple
 cabal-version:      >=1.10
 tested-with:
-  GHC ==8.0.2
-   || ==8.2.2
-   || ==8.4.4
+  GHC ==8.4.4
    || ==8.6.5
    || ==8.8.4
    || ==8.10.7
+   || ==9.0.2
    || ==9.2.8
-   || ==9.4.7
-   || ==9.6.6
+   || ==9.4.8
+   || ==9.6.7
    || ==9.8.4
-   || ==9.10.1
+   || ==9.10.2
    || ==9.12.2
 
 extra-source-files:
@@ -90,9 +89,9 @@ library
     Reactive.Threepenny.PulseLatch
     Reactive.Threepenny.Types
   cpp-options:      -DCABAL
-  
+
   build-depends:
-        base                       >=4.8   && <4.22
+        base                       >=4.11  && <4.22
       , containers                 >=0.4.2 && <0.9
       , javascript-ffi-threepenny  >=0.1   && <0.2
       , transformers               >=0.3.0 && <0.7
