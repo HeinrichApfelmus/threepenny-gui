@@ -1,8 +1,8 @@
-{-# LANGUAGE RecursiveDo #-}
 module Reactive.Threepenny.Memo (
     Memo, fromPure, memoize, at, liftMemo1, liftMemo2,
     ) where
 
+import Control.Monad.Fix (mfix)
 import Data.IORef
 import System.IO.Unsafe
 
@@ -24,8 +24,8 @@ at (Memoized r) = do
     memo <- readIORef r
     case memo of
         Right a -> return a
-        Left ma -> mdo
-            writeIORef r $ Right a
+        Left ma -> mfix $ \a' -> do
+            writeIORef r $ Right a'
             a <- ma    -- allow some recursion
             return a
 

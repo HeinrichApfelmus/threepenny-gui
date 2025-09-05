@@ -2,6 +2,11 @@ packages:
   lib/javascript-ffi-threepenny
   lib/threepenny-gui
 
+source-repository-package
+   type:     git
+   location: https://github.com/HeinrichApfelmus/vault.git
+   tag:      597f33f50723e786694a4dd8d10147e602f8d827
+
 flags: +buildExamples
 
 if (!os(darwin) && !os(windows))

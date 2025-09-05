@@ -1,4 +1,6 @@
-{-# LANGUAGE RecordWildCards, RecursiveDo #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecursiveDo #-}
 module Reactive.Threepenny.PulseLatch (
     Pulse, newPulse, addHandler,
     neverP, mapP, filterJustP, unionWithP, unsafeMapIOP,
@@ -18,12 +20,17 @@ import Control.Monad.Trans.RWS     as Monad
 
 import Data.IORef
 
-import qualified Data.HashMap.Strict as Map
-import qualified Data.Vault.Strict   as Vault
+import qualified Data.Vault.Strict      as Vault
 import           Data.Unique.Really
+import qualified Data.Unique.Really.Map as Map
 
 import Reactive.Threepenny.Monads
 import Reactive.Threepenny.Types
+
+#if defined(__MHS__)
+modifyIORef' :: IORef a -> (a -> a) -> IO ()
+modifyIORef' ref f = atomicModifyIORef ref (\a -> (f a, ()))
+#endif
 
 {-----------------------------------------------------------------------------
     Pulse
@@ -193,11 +200,13 @@ test = do
     return fire
 
 test_recursion1 :: IO (IO ())
-test_recursion1 = mdo
+test_recursion1 = do
     (p1, fire) <- newPulse
-    p2      <- applyP l2 p1
-    p3      <- mapP (const (+1)) p2
-    ~(l1,_) <- accumL (0::Int) p3
-    let l2  =  mapL const l1
+    rec {
+        p2      <- applyP l2 p1;
+        p3      <- mapP (const (+1)) p2;
+        ~(l1,_) <- accumL (0::Int) p3;
+        l2      <- pure (mapL const l1);
+    }
     void $ addHandler p2 print
     return $ fire ()
