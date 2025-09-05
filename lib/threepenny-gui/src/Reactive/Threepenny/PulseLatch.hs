@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RecursiveDo #-}
 module Reactive.Threepenny.PulseLatch (
@@ -25,6 +26,11 @@ import qualified Data.Unique.Really.Map as Map
 
 import Reactive.Threepenny.Monads
 import Reactive.Threepenny.Types
+
+#if defined(__MHS__)
+modifyIORef' :: IORef a -> (a -> a) -> IO ()
+modifyIORef' ref f = atomicModifyIORef ref (\a -> (f a, ()))
+#endif
 
 {-----------------------------------------------------------------------------
     Pulse
