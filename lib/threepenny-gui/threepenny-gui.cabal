@@ -78,7 +78,6 @@ library
     Graphics.UI.Threepenny.SVG
     Graphics.UI.Threepenny.SVG.Attributes
     Graphics.UI.Threepenny.SVG.Elements
-    Graphics.UI.Threepenny.Timer
     Graphics.UI.Threepenny.Widgets
     Reactive.Threepenny
   other-modules:
@@ -98,6 +97,8 @@ library
       , vault                      >=0.3.2 && <0.4
 
   if impl(ghc)
+    exposed-modules:
+      Graphics.UI.Threepenny.Timer
     build-depends:
         stm                        >=2.2   && <2.6
       , text                       >=0.11  && <2.2
