@@ -29,10 +29,6 @@ import qualified Data.HashMap.Strict   as Map
 type Map = Map.HashMap
 #endif
 
-#if (CABAL && !MIN_VERSION_base(4,6,0)) || defined(__MHS__)
-atomicModifyIORef' = atomicModifyIORef
-#endif
-
 {-----------------------------------------------------------------------------
     Types
 ------------------------------------------------------------------------------}

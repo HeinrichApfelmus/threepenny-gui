@@ -1,4 +1,4 @@
-name: Build cabal project
+name: Haskell CI
 on:
   workflow_dispatch:
   pull_request:
@@ -32,8 +32,6 @@ jobs:
         # Cabal 3.12 does not work due to 'entropy' dependency.
           - '3.10'
         ghc:
-          - '8.0'
-          - '8.2'
           - '8.4'
           - '8.6'
           - '8.8'
