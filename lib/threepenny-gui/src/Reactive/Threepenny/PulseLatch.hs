@@ -18,9 +18,9 @@ import Control.Monad.Trans.RWS     as Monad
 
 import Data.IORef
 
-import qualified Data.HashMap.Strict as Map
-import qualified Data.Vault.Strict   as Vault
+import qualified Data.Vault.Strict      as Vault
 import           Data.Unique.Really
+import qualified Data.Unique.Really.Map as Map
 
 import Reactive.Threepenny.Monads
 import Reactive.Threepenny.Types
