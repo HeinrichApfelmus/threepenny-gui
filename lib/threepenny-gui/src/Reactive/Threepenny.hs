@@ -1,4 +1,3 @@
-{-# LANGUAGE RecursiveDo  #-}
 module Reactive.Threepenny (
     -- * Synopsis
     -- | Functional reactive programming.
@@ -49,6 +48,7 @@ module Reactive.Threepenny (
 
 import Control.Applicative
 import Control.Monad (void)
+import Control.Monad.Fix (mfix)
 import Control.Monad.IO.Class
 import Data.IORef
 import qualified Data.Map as Map
@@ -386,13 +386,13 @@ test = do
     return fire
 
 test_recursion1 :: IO (IO ())
-test_recursion1 = mdo
+test_recursion1 = do
     (e1, fire) <- newEvent
-    let e2 :: Event Int
-        e2 = apply (const <$> b) e1
-    b  <- accumB 0 $ (+1) <$ e2
+    (_, e2)    <- mfix $ \ ~(b', e2') -> do
+        let e2 :: Event Int
+            e2 = apply (const <$> b') e1
+        b <- accumB 0 $ (+1) <$ e2'
+        pure (b, e2)
     _  <- register e2 print
 
     return $ fire ()
-
-
