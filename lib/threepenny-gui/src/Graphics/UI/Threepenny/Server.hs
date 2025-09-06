@@ -8,10 +8,12 @@ module Graphics.UI.Threepenny.Server (
     loadFile, loadDirectory,
     ) where
 
-import Foreign.JavaScript
+import qualified Foreign.JavaScript.Server as JS
+
+import Foreign.JavaScript.Server
     ( Config(..), ConfigSSL (..), defaultConfig )
 import Graphics.UI.Threepenny.Internal
-    ( loadDirectory, loadFile, startGUI )
+    ( Window, UI, liftJSWindow, setupWindow )
 
 {-----------------------------------------------------------------------------
     Server
@@ -33,3 +35,20 @@ See 'CallBufferMode' for more information.
 
 -}
 
+-- | Start server for GUI sessions.
+startGUI
+    :: Config               -- ^ Server configuration.
+    -> (Window -> UI ())    -- ^ Action to run whenever a client browser connects.
+    -> IO ()
+startGUI config = JS.serve config . setupWindow
+
+-- | Begin to serve a local file with a given 'MimeType' under a relative URI.
+loadFile
+    :: String    -- ^ MIME type
+    -> FilePath  -- ^ Local path to the file
+    -> UI String -- ^ Relative URI under which this file is now accessible
+loadFile x y = liftJSWindow $ \w -> JS.loadFile (JS.getServer w) x y
+
+-- | Make a local directory available under a relative URI.
+loadDirectory :: FilePath -> UI String
+loadDirectory x = liftJSWindow $ \w -> JS.loadDirectory (JS.getServer w) x

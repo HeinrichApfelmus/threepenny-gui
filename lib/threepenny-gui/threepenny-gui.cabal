@@ -75,7 +75,6 @@ library
     Graphics.UI.Threepenny.Elements
     Graphics.UI.Threepenny.Events
     Graphics.UI.Threepenny.JQuery
-    Graphics.UI.Threepenny.Server
     Graphics.UI.Threepenny.SVG
     Graphics.UI.Threepenny.SVG.Attributes
     Graphics.UI.Threepenny.SVG.Elements
@@ -99,6 +98,7 @@ library
 
   if impl(ghc)
     exposed-modules:
+      Graphics.UI.Threepenny.Server
       Graphics.UI.Threepenny.Timer
     build-depends:
         stm                        >=2.2   && <2.6

@@ -1,13 +1,11 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-module Graphics.UI.Threepenny.Internal (
-    -- * Synopsis
-    -- | Internal core:
-    -- 'UI' monad, integrating FRP and JavaScript FFI. garbage collection
 
-    -- * Documentation
-    Window, disconnect,
-    startBrowserGUI, startGUI, loadFile, loadDirectory,
+-- | Internal core:
+-- 'UI' monad, integrating FRP and JavaScript FFI. garbage collection
+module Graphics.UI.Threepenny.Internal (
+    Window(..), setupWindow,
+    startBrowserGUI, disconnect,
 
     UI, runUI, MonadUI(..), throwUI, catchUI, handleUI,
     liftIOLater, askWindow, liftJSWindow,
@@ -36,9 +34,8 @@ import qualified Foreign.RemotePtr       as Foreign
 
 import qualified Reactive.Threepenny     as RB
 
-import Foreign.JavaScript hiding
-    (runFunction, callFunction, setCallBufferMode, flushCallBuffer
-    ,debug, timestamp, Window, loadFile, loadDirectory)
+import Foreign.JavaScript.Functions
+    ( CallBufferMode(..), FFI, FromJS, ToJS(..), JSFunction, JSObject, ffi )
 
 {-----------------------------------------------------------------------------
     Custom Window type
@@ -53,18 +50,9 @@ data Window = Window
                      -- children reachable from 'Element's
     }
 
--- | Start a GUI session in a browser window.
-startBrowserGUI
-    :: (Window -> UI ()) -- ^ Run when the browser window is initialized.
-    -> IO ()
-startBrowserGUI = startGUI defaultConfig
-
--- | Start server for GUI sessions.
-startGUI
-    :: Config               -- ^ Server configuration.
-    -> (Window -> UI ())    -- ^ Action to run whenever a client browser connects.
-    -> IO ()
-startGUI config initialize = JS.serve config $ \w -> do
+-- | Given a JavaScript Window, set up a "Graphics.UI.Threepenny" Window.
+setupWindow :: (Window -> UI a) -> JS.Window -> IO a
+setupWindow initialize w = do
     -- set up disconnect event
     (eDisconnect, handleDisconnect) <- RB.newEvent
     JS.onDisconnect w $ handleDisconnect ()
@@ -82,6 +70,12 @@ startGUI config initialize = JS.serve config $ \w -> do
     -- run initialization
     runUI window $ initialize window
 
+-- | Start a GUI session in a browser window.
+startBrowserGUI
+    :: (Window -> UI ()) -- ^ Run when the browser window is initialized.
+    -> IO ()
+startBrowserGUI = JS.withBrowserWindow . setupWindow
+
 -- | Event that occurs whenever the client has disconnected,
 -- be it by closing the browser window or by exception.
 --
@@ -90,16 +84,6 @@ startGUI config initialize = JS.serve config $ \w -> do
 disconnect :: Window -> RB.Event ()
 disconnect = eDisconnect
 
--- | Begin to serve a local file with a given 'MimeType' under a relative URI.
-loadFile
-    :: String    -- ^ MIME type
-    -> FilePath  -- ^ Local path to the file
-    -> UI String -- ^ Relative URI under which this file is now accessible
-loadFile x y = liftJSWindow $ \w -> JS.loadFile (JS.getServer w) x y
-
--- | Make a local directory available under a relative URI.
-loadDirectory :: FilePath -> UI String
-loadDirectory x = liftJSWindow $ \w -> JS.loadDirectory (JS.getServer w) x
 
 {-----------------------------------------------------------------------------
     Elements
