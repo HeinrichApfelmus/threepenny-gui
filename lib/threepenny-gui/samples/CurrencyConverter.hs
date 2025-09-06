@@ -9,7 +9,7 @@ import Graphics.UI.Threepenny.Core
     Main
 ------------------------------------------------------------------------------}
 main :: IO ()
-main = startGUI defaultConfig setup
+main = startBrowserGUI setup
 
 setup :: Window -> UI ()
 setup window = void $ do
