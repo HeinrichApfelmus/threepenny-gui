@@ -45,7 +45,7 @@ httpComm Config{..} worker = do
                $ maybe (configureHTTP env) configureSSL jsUseSSL
                $ Snap.defaultConfig
 
-    server <- Server <$> newMVar newFilepaths <*> newMVar newFilepaths <*> return jsLog
+    server <- Server <$> newMVar newFilepaths <*> newMVar newFilepaths <*> pure jsLog
 
     Snap.httpServe config . route $
         routeResources server jsCustomHTML jsStatic
@@ -123,7 +123,7 @@ communicationFromWebSocket request = do
             allExceptions _ = Just ()
         E.tryJust allExceptions $ WS.sendClose connection $ LBS.pack "close"
 
-    return $ Comm {..}
+    pure $ Comm {..}
 
 {-----------------------------------------------------------------------------
     Resources
@@ -163,7 +163,7 @@ writeTextMime text mime = do
 withFilepath :: MVar Filepaths -> (FilePath -> ByteString -> Snap a) -> Snap a
 withFilepath rDict cont = do
     mName    <- getParam "name"
-    (_,dict) <- liftIO $ withMVar rDict return
+    (_,dict) <- liftIO $ withMVar rDict pure
     case (\key -> M.lookup key dict) =<< mName of
         Just (path,mimetype) -> cont path (BS.pack mimetype)
         Nothing              -> error $ "File not loaded: " ++ show mName
@@ -177,17 +177,17 @@ newAssociation rDict (path,mimetype) = do
     (old, dict) <- takeMVar rDict
     let new = old + 1; key = show new ++ takeFileName path
     putMVar rDict $ (new, M.insert (BS.pack key) (path,mimetype) dict)
-    return key
+    pure key
 
 -- | Begin to serve a local file with a given 'MimeType' under a URI.
 loadFile :: Server -> MimeType -> FilePath -> IO String
 loadFile server mimetype path = do
     key <- newAssociation (sFiles server) (path, mimetype)
-    return $ "/file/" ++ key
+    pure $ "/file/" ++ key
 
 -- | Begin to serve a local directory under a URI.
 loadDirectory :: Server -> FilePath -> IO String
 loadDirectory server path = do
     key <- newAssociation (sDirs server) (path,"")
-    return $ "/dir/" ++ key
+    pure $ "/dir/" ++ key
 

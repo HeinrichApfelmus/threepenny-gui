@@ -23,7 +23,7 @@ fromJSStablePtr js w@(Window{wJSObjects}) = do
     let JSON.Success coupon = JSON.fromJSON js
     mhs <- RemotePtr.lookup coupon wJSObjects
     case mhs of
-        Just hs -> return hs
+        Just hs -> pure hs
         Nothing -> newJSObjectFromCoupon w coupon
 
 -- | Create a new JSObject by registering a new coupon.
@@ -32,4 +32,4 @@ newJSObjectFromCoupon w@(Window{wJSObjects}) coupon = do
     ptr <- RemotePtr.newRemotePtr coupon (JSPtr coupon) wJSObjects
     RemotePtr.addFinalizer ptr $
         bufferRunEval w ("Haskell.freeStablePtr('" ++ T.unpack coupon ++ "')")
-    return ptr
+    pure ptr
