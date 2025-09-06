@@ -39,6 +39,7 @@ instance ToJSON Bool   where toJSON = Bool
 instance ToJSON Float  where
     toJSON = Number . Double . uncurry encodeFloat . decodeFloat
 instance ToJSON Double where toJSON = Number . Double
+instance ToJSON Int    where toJSON = Number . Integer . fromIntegral
 instance ToJSON Value  where toJSON = id
 instance ToJSON T.Text where toJSON = String
 
@@ -90,8 +91,8 @@ instance FromJSON T.Text  where
     fromJSON _ = Error "fromJSON: Value is not a Text"
 instance FromJSON Value   where
     fromJSON = Success
-instance FromJSON [Value] where
-    fromJSON (Array xs) = Success xs
+instance FromJSON a => FromJSON [a] where
+    fromJSON (Array xs) = mapM fromJSON xs
     fromJSON _ = Error "fromJSON: Value is not a list of Value"
 
 #else
