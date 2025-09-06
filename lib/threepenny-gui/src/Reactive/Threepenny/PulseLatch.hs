@@ -14,7 +14,7 @@ module Reactive.Threepenny.PulseLatch (
     ) where
 
 
-import Control.Monad
+import Control.Monad (join, void)
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.RWS     as Monad
 

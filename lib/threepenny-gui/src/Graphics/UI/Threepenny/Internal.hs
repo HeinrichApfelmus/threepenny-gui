@@ -24,7 +24,7 @@ module Graphics.UI.Threepenny.Internal (
     ) where
 
 import           Control.Exception (Exception, catch, throwIO)
-import           Control.Monad
+import           Control.Monad (ap, void)
 import           Control.Monad.Fix
 import           Control.Monad.IO.Class
 import qualified Control.Monad.Trans.RWS.Lazy as Monad

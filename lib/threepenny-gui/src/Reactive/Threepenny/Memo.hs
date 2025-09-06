@@ -4,7 +4,7 @@ module Reactive.Threepenny.Memo (
 
 import Control.Monad.Fix (mfix)
 import Data.IORef
-import System.IO.Unsafe
+import System.IO.Unsafe (unsafePerformIO)
 
 {-----------------------------------------------------------------------------
     Memoize time-varying values / computations
