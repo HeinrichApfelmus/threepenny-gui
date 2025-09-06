@@ -73,7 +73,7 @@ It builds the initial HTML page.
 
 First, set the title of the HTML document
 
->     return window # set UI.title "Hello World!"
+>     pure window # set UI.title "Hello World!"
 
 Then create a button element
 

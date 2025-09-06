@@ -59,7 +59,7 @@ entry bValue = do -- single text entry
 
     let _elementTE = input
         _userTE    = tidings bValue $ UI.valueChange input 
-    return TextEntry {..}
+    pure TextEntry {..}
 
 {-----------------------------------------------------------------------------
     List box
@@ -110,11 +110,11 @@ listBox bitems bsel bdisplay = do
             lookupIndex <$> bindices2 <@> UI.selectionChange list
         _elementLB   = list
 
-    return ListBox {..}
+    pure ListBox {..}
 
 items :: WriteAttr Element [UI Element]
 items = mkWriteAttr $ \i x -> void $ do
-    return x # set children [] #+ map (\j -> UI.option #+ [j]) i
+    pure x # set children [] #+ map (\j -> UI.option #+ [j]) i
 
 
 

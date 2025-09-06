@@ -19,15 +19,15 @@ fromPure :: a -> Memo a
 fromPure = Const
 
 at :: Memo a -> IO a
-at (Const a)    = return a
+at (Const a)    = pure a
 at (Memoized r) = do
     memo <- readIORef r
     case memo of
-        Right a -> return a
+        Right a -> pure a
         Left ma -> mfix $ \a' -> do
             writeIORef r $ Right a'
             a <- ma    -- allow some recursion
-            return a
+            pure a
 
 memoize :: IO a -> Memo a
 memoize m = unsafePerformIO $ Memoized <$> newIORef (Left m)

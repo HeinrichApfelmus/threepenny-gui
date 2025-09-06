@@ -112,7 +112,7 @@ title = mkWriteAttr $ \s _ ->
     x  <- mx
     ys <- sequence mys
     mapM_ (Core.appendChild x) ys
-    return x
+    pure x
 
 -- | Child elements of a given element.
 children :: WriteAttr Element [Element]
@@ -176,7 +176,7 @@ getElementById
     -> String              -- ^ The ID string.
     -> UI (Maybe Element)  -- ^ Element (if any) with given ID.
 getElementById _ ident =
-    handleUI (\(_ :: JS.JavaScriptException) -> return Nothing) $
+    handleUI (\(_ :: JS.JavaScriptException) -> pure Nothing) $
         fmap Just . fromJSObject
             =<< callFunction (ffi "document.getElementById(%1)" ident)
 
@@ -253,9 +253,9 @@ onEvent e h = do
             mode <- JS.getCallBufferMode w
             case mode of
                 FlushOften -> JS.flushCallBuffer w
-                _          -> return ()
+                _          -> pure ()
     unregister <- liftIO $ register e (void . runUI window . (>> flush) . h)
-    return (liftIO unregister)
+    pure (liftIO unregister)
 
 -- | Execute a 'UI' action whenever a 'Behavior' changes.
 -- Use sparingly, it is recommended that you use 'sink' instead.
@@ -316,7 +316,7 @@ bimapAttr from to attribute = attribute
 -- | Set value of an attribute in the 'UI' monad.
 -- Best used in conjunction with '#'.
 set :: ReadWriteAttr x i o -> i -> UI x -> UI x
-set attr i mx = do { x <- mx; set' attr i x; return x; }
+set attr i mx = do { x <- mx; set' attr i x; pure x; }
 
 -- | Set the value of an attribute to a 'Behavior', that is a time-varying value.
 --
@@ -330,7 +330,7 @@ sink attribute bi mx = do
         i0 <- currentValue bi
         runUI window $ set' attribute i0 x
         Reactive.onChange bi  $ \i -> runUI window $ set' attribute i x
-    return x
+    pure x
 
 -- | Get attribute value.
 get :: ReadWriteAttr x i o -> x -> UI o
@@ -345,11 +345,11 @@ mkReadWriteAttr geti seto = ReadWriteAttr { get' = geti, set' = seto }
 
 -- | Build attribute from a getter.
 mkReadAttr :: (x -> UI o) -> ReadAttr x o
-mkReadAttr geti = mkReadWriteAttr geti (\_ _ -> return ())
+mkReadAttr geti = mkReadWriteAttr geti (\_ _ -> pure ())
 
 -- | Build attribute from a setter.
 mkWriteAttr :: (i -> x -> UI ()) -> WriteAttr x i
-mkWriteAttr seto = mkReadWriteAttr (\_ -> return ()) seto
+mkWriteAttr seto = mkReadWriteAttr (\_ -> pure ()) seto
 
 -- | Turn a jQuery property @.prop()@ into an attribute.
 fromJQueryProp :: String -> (JSON.Value -> a) -> (a -> JSON.Value) -> Attr Element a
@@ -375,7 +375,7 @@ class Widget w where
 instance Widget Element where
     getElement = id
 
--- | Convenience synonym for 'return' to make elements work well with 'set'.
+-- | Convenience synonym for 'pure' to make elements work well with 'set'.
 -- Also works on 'Widget's.
 --
 -- Example usage.
@@ -383,8 +383,8 @@ instance Widget Element where
 -- > e <- mkElement "button"
 -- > element e # set text "Ok"
 element :: MonadIO m => Widget w => w -> m Element
-element = return . getElement
+element = pure . getElement
 
--- | Convenience synonym for 'return' to make widgets work well with 'set'.
+-- | Convenience synonym for 'pure' to make widgets work well with 'set'.
 widget  :: Widget w => w -> UI w
-widget  = return
+widget  = pure
