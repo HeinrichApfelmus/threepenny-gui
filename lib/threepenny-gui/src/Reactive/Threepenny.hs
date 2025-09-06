@@ -13,7 +13,6 @@ module Reactive.Threepenny (
 
     -- * Core Combinators
     -- | Minimal set of combinators for programming with 'Event' and 'Behavior'.
-    module Control.Applicative,
     never, filterJust, unionWith,
     accumE, apply, stepper,
     -- $classes
@@ -46,10 +45,9 @@ module Reactive.Threepenny (
     test, test_recursion1
     ) where
 
-import Control.Applicative
 import Control.Monad (void)
 import Control.Monad.Fix (mfix)
-import Control.Monad.IO.Class
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.IORef
 import qualified Data.Map as Map
 
@@ -243,6 +241,10 @@ accumE a e = liftIO $ do
 instance Functor Behavior where
     fmap f ~(B l e) = B (Prim.mapL f l) e
 
+-- | Think of it as
+--
+-- > pure x   = \time -> x
+-- > bf <*> bg = \time -> bf time (bg time)
 instance Applicative Behavior where
     pure a  = B (Prim.pureL a) never
     ~(B lf ef) <*> ~(B lx ex) =
