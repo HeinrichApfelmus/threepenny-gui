@@ -18,7 +18,7 @@ canvasSize = 400
 
 setup :: Window -> UI ()
 setup window = do
-    return window # set title "Canvas - Examples"
+    pure window # set title "Canvas - Examples"
 
     canvas <- UI.canvas
         # set UI.height canvasSize
@@ -74,7 +74,7 @@ setup window = do
         foldM (\start (delta, col) -> do
             let end = start+delta
             drawSlice (radian start) (radian end) col
-            return end) 0 pieData
+            pure end) 0 pieData
         UI.timestamp
 
 
@@ -91,7 +91,7 @@ setup window = do
 
     -- draw some text
     on UI.click drawText $ const $ do
-        return canvas
+        pure canvas
             # set UI.textFont    "30px sans-serif"
             # set UI.strokeStyle "gray"
             # set UI.fillStyle   (UI.htmlColor "black")

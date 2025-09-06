@@ -20,7 +20,7 @@ bpm2ms bpm = ceiling $ 1000*60 / (fromIntegral bpm :: Double)
 
 instruments = words "kick snare hihat"
 
-loadInstrumentSample name = return $ "static/" ++ name ++ ".wav"
+loadInstrumentSample name = pure $ "static/" ++ name ++ ".wav"
 
 {-----------------------------------------------------------------------------
     Main
@@ -32,7 +32,7 @@ main = do
 
 setup :: Window -> UI ()
 setup w = void $ do
-    return w # set title "Ha-ha-ha-ks-ks-ks-ha-ha-ha-ell-ell-ell"
+    pure w # set title "Ha-ha-ha-ks-ks-ks-ha-ha-ha-ell-ell-ell"
 
     elBpm  <- UI.input # set value (show defaultBpm)
     elTick <- UI.span
@@ -53,7 +53,7 @@ setup w = void $ do
     -- allow user to set BPM
     on UI.keydown elBpm $ \keycode -> when (keycode == 13) $ void $ do
         bpm <- read <$> get value elBpm
-        return timer # set UI.interval (bpm2ms bpm)
+        pure timer # set UI.interval (bpm2ms bpm)
 
     -- start the timer
     UI.start timer
@@ -88,5 +88,5 @@ mkInstrument name = do
     elInstrument <- UI.div #. "instrument"
         #+ (element elAudio : UI.string name : elGroups)
 
-    return (beats, elInstrument)
+    pure (beats, elInstrument)
 

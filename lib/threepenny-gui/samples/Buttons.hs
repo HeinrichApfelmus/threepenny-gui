@@ -17,7 +17,7 @@ main = do
 
 setup :: Window -> UI ()
 setup w = void $ do
-    return w # set title "Buttons"
+    pure w # set title "Buttons"
     UI.addStyleSheet w "buttons.css"
 
     buttons <- mkButtons
@@ -35,7 +35,7 @@ mkButton :: String -> UI (Element, Element)
 mkButton title = do
     button <- UI.button #. "button" #+ [string title]
     view   <- UI.p #+ [element button]
-    return (button, view)
+    pure (button, view)
 
 mkButtons :: UI [Element]
 mkButtons = do
@@ -62,7 +62,7 @@ mkButtons = do
         element button2 # set text (button2Title ++ " [pressed]")
         element list    #+ [UI.li # set html "Zap! Quick result!"]
     
-    return [list, view1, view2]
+    pure [list, view1, view2]
 
   where button1Title = "Click me, I delay a bit"
         button2Title = "Click me, I work immediately"

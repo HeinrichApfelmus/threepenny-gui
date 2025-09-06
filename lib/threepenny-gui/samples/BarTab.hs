@@ -16,7 +16,7 @@ main = startGUI defaultConfig setup
 setup :: Window -> UI ()
 setup w = do
     -- active elements
-    return w # set title "BarTab"
+    pure w # set title "BarTab"
 
     elAdd    <- UI.button # set UI.text "Add"
     elRemove <- UI.button # set UI.text "Remove"

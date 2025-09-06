@@ -11,7 +11,7 @@ main = startGUI defaultConfig setup
 
 setup :: Window -> UI ()
 setup w = do
-    return w # set title "Mouse"
+    pure w # set title "Mouse"
     
     out  <- UI.span # set text "Coordinates: "
     wrap <- UI.div #. "wrap"

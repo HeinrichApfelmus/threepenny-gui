@@ -7,4 +7,4 @@ main = startGUI defaultConfig $ \w -> do
         [ UI.button # set UI.id_ "me" # set UI.text "Hello"
         , UI.a # set UI.href "#me" # set UI.text "Click me"
         ]
-    return ()
+    pure ()
