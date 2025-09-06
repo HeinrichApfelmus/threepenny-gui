@@ -4,7 +4,7 @@ import Paths
 
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
-
+import Graphics.UI.Threepenny.Server
 
 {-----------------------------------------------------------------------------
     Main
@@ -100,7 +100,7 @@ setup window = do
         canvas # UI.fillText   "is awesome" (140,60)
 
     -- draw the haskell logo
-    url <- UI.loadFile "image/png" "static/haskell-logo.png"
+    url <- loadFile "image/png" "static/haskell-logo.png"
     img <- UI.img # set UI.src url
 
     on UI.click drawImage $ const $ do

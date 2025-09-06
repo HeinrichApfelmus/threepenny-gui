@@ -11,7 +11,7 @@ import Graphics.UI.Threepenny.Core
 
 -- | Main entry point.
 main :: IO ()
-main = startGUI defaultConfig setup
+main = startBrowserGUI setup
 
 setup :: Window -> UI ()
 setup w = do

@@ -7,7 +7,7 @@ module Graphics.UI.Threepenny.Internal (
 
     -- * Documentation
     Window, disconnect,
-    startGUI, loadFile, loadDirectory,
+    startBrowserGUI, startGUI, loadFile, loadDirectory,
 
     UI, runUI, MonadUI(..), throwUI, catchUI, handleUI,
     liftIOLater, askWindow, liftJSWindow,
@@ -52,6 +52,12 @@ data Window = Window
     , wChildren   :: Foreign.Vendor ()
                      -- children reachable from 'Element's
     }
+
+-- | Start a GUI session in a browser window.
+startBrowserGUI
+    :: (Window -> UI ()) -- ^ Run when the browser window is initialized.
+    -> IO ()
+startBrowserGUI = startGUI defaultConfig
 
 -- | Start server for GUI sessions.
 startGUI

@@ -10,6 +10,7 @@ import Paths
 
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core hiding (text)
+import Graphics.UI.Threepenny.Server
 
 {-----------------------------------------------------------------------------
     Chat

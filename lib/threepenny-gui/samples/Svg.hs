@@ -8,7 +8,7 @@ import qualified Graphics.UI.Threepenny.SVG  as SVG
     SVG
 ------------------------------------------------------------------------------}
 main :: IO ()
-main = startGUI defaultConfig setup
+main = startBrowserGUI setup
 
 setup :: Window -> UI ()
 setup w = void $ do

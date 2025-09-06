@@ -5,6 +5,7 @@ import Paths
 
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
+import Graphics.UI.Threepenny.Server
 
 {-----------------------------------------------------------------------------
     Buttons
