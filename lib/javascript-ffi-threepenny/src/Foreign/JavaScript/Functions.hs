@@ -10,7 +10,7 @@ module Foreign.JavaScript.Functions
     , JavaScriptException
 #endif
     -- * Calling JavaScript from Haskell
-    , FFI, ffi, runFunction, callFunction
+    , FFI, ffi, runFunction, callFunction, root
     , NewJSObject, unsafeCreateJSObject
     , CallBufferMode(..), setCallBufferMode, getCallBufferMode, flushCallBuffer
     -- * Calling Haskell from JavaScript

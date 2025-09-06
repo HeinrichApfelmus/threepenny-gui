@@ -10,7 +10,7 @@ module Foreign.JavaScript.Server
         , jsUseSSL)
     , ConfigSSL (..)
     , Server, MimeType, URI, loadFile, loadDirectory
-    , getServer, getCookies, root
+    , getServer, getCookies
     ) where
 
 import Foreign.JavaScript.CallHaskell
