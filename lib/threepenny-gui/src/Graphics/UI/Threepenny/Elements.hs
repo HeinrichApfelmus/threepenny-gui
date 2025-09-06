@@ -22,7 +22,7 @@ module Graphics.UI.Threepenny.Elements (
     underline, variable, video,
     ) where
 
-import           Control.Monad
+import           Control.Monad (void)
 import           Graphics.UI.Threepenny.Core
 import           Prelude                     hiding (div, map, span)
 

@@ -24,7 +24,7 @@ module Graphics.UI.Threepenny.Internal (
     ) where
 
 import           Control.Exception (Exception, catch, throwIO)
-import           Control.Monad
+import           Control.Monad (ap, void)
 import           Control.Monad.Fix
 import           Control.Monad.IO.Class
 import qualified Control.Monad.Trans.RWS.Lazy as Monad
@@ -115,7 +115,7 @@ instance ToJS Element where
     render = render . toJSObject
 
 getWindow :: Element -> IO Window
-getWindow = return . elWindow
+getWindow = pure . elWindow
 
 -- | Lookup or create reachability information for the children of
 -- an element that is represented by a JavaScript object.
@@ -128,10 +128,10 @@ getChildren el Window{ wChildren = wChildren } =
                 -- Create new pointer for reachability information.
                 ptr <- Foreign.newRemotePtr coupon () wChildren
                 Foreign.addReachable el ptr
-                return ptr
+                pure ptr
             Just p  ->
                 -- Return existing information
-                return p
+                pure p
 
 -- | Convert JavaScript object into an Element by attaching relevant information.
 -- The JavaScript object may still be subject to garbage collection.
@@ -139,7 +139,7 @@ fromJSObject0 :: JS.JSObject -> Window -> IO Element
 fromJSObject0 el window = do
     events   <- getEvents   el window
     children <- getChildren el window
-    return $ Element el events children window
+    pure $ Element el events children window
 
 -- | Convert JavaScript object into an element.
 --
@@ -170,7 +170,7 @@ addEvents el Window{ jsWindow = w, wEvents = wEvents } = do
         ptr <- Foreign.newRemotePtr coupon events wEvents
         Foreign.addReachable el ptr
 
-    return events
+    pure events
 
 -- | Lookup or create lazy events for a JavaScript object.
 getEvents :: JS.JSObject -> Window -> IO Events
@@ -179,7 +179,7 @@ getEvents el window@Window{ wEvents = wEvents } = do
         mptr <- Foreign.lookup coupon wEvents
         case mptr of
             Nothing -> addEvents el window
-            Just p  -> Foreign.withRemotePtr p $ \_ -> return
+            Just p  -> Foreign.withRemotePtr p $ \_ -> pure
 
 -- | Events may carry data. At the moment, they may return
 -- a single JSON value, as defined in the "Foreign.JavaScript.JSON" module.
@@ -293,7 +293,6 @@ instance Applicative UI where
     (<*>) = ap
 
 instance Monad UI where
-    return  = pure
     m >>= k = UI $ unUI m >>= unUI . k
 
 instance MonadIO UI where
@@ -328,7 +327,7 @@ runUI :: Window -> UI a -> IO a
 runUI window m = do
     (a, _, actions) <- Monad.runRWST (unUI m) window ()
     sequence_ actions
-    return a
+    pure a
 
 -- | Retrieve current 'Window' context in the 'UI' monad.
 askWindow :: UI Window
@@ -385,7 +384,7 @@ ffiExport :: JS.IsHandler a => a -> UI JSObject
 ffiExport fun = liftJSWindow $ \w -> do
     handlerPtr <- JS.exportHandler w fun
     Foreign.addReachable (JS.root w) handlerPtr
-    return handlerPtr
+    pure handlerPtr
 
 -- | Print a message on the client console if the client has debugging enabled.
 debug :: String -> UI ()

@@ -23,7 +23,7 @@ rebug :: IO ()
 #ifdef REBUG
 rebug = System.Mem.performGC
 #else
-rebug = return ()
+rebug = pure ()
 #endif
 
 {-----------------------------------------------------------------------------
@@ -34,7 +34,7 @@ handleEvent :: Window -> (Coupon, JSON.Value) -> IO ()
 handleEvent Window{wEventHandlers} (name, args) = do
     mhandler <- Foreign.lookup name wEventHandlers
     case mhandler of
-        Nothing -> return ()
+        Nothing -> pure ()
         Just f  -> withRemotePtr f (\_ g -> g args)
 
 
@@ -62,9 +62,9 @@ eventLoop initialize server info comm = void $ do
     let atomicallyIfOpen stm = do
             r <- atomically $ do
                 b <- readTVar $ commOpen comm
-                if b then fmap Right stm else return (Left ())
+                if b then fmap Right stm else pure (Left ())
             case r of
-                Right a -> return a
+                Right a -> pure a
                 Left  _ -> throwIO $ ErrorCall "Foreign.JavaScript: Browser <-> Server communication broken."
 
     -- FFI calls are made by writing to the `calls` queue.
@@ -76,12 +76,12 @@ eventLoop initialize server info comm = void $ do
             er  <- atomicallyIfOpen $ takeTMVar ref
             case er of
                 Left  e -> E.throwIO $ JavaScriptException e
-                Right x -> return x
+                Right x -> pure x
         debug s  = s `deepseq` do       -- see [ServerMsg strictness]
             atomicallyIfOpen $ writeServer comm $ Debug s
 
     -- We also send a separate event when the client disconnects.
-    disconnect <- newTVarIO $ return ()
+    disconnect <- newTVarIO $ pure ()
     -- FIXME: Make it possible to store *multiple* event handlers
     let onDisconnect m = atomically $ writeTVar disconnect m
 
@@ -111,13 +111,13 @@ eventLoop initialize server info comm = void $ do
             mref <- atomically $ do
                 (mref, msg) <- readTQueue calls
                 writeServer comm msg
-                return mref
+                pure mref
             atomically $
                 case mref of
                     Just ref -> do
                         result <- readTQueue results
                         putTMVar ref result
-                    Nothing  -> return ()
+                    Nothing  -> pure ()
 
     -- Receive events from client and handle them in order.
     let handleEvents = do
@@ -125,9 +125,9 @@ eventLoop initialize server info comm = void $ do
                 open <- readTVar $ commOpen comm
                 if open
                     then Just <$> readTQueue events
-                    else return Nothing -- channel is closed
+                    else pure Nothing -- channel is closed
             case me of
-                Nothing -> return ()    -- channel is closed, we're done
+                Nothing -> pure ()    -- channel is closed, we're done
                 Just e  -> do
                     handleEvent w e
                         `E.onException` commClose comm -- close channel in case of exception

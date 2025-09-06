@@ -13,10 +13,10 @@ main = startGUI defaultConfig { jsWindowReloadOnDisconnect = False } $ \w -> do
     case err of
             -- FIXME: This function should produce a useful error message
         1 -> runFunction $ ffi "alert(%1)" (error ("ouch " ++ show err) :: String)
-        2 -> UI.div # set UI.text (error ("ouch " ++ show err) :: String) >> return ()
+        2 -> UI.div # set UI.text (error ("ouch " ++ show err) :: String) >> pure ()
         3 -> error $ "ouch " ++ show err
         4 -> liftIO . ioError . userError $ "ouch " ++ show err
         5 -> runFunction $ ffi "throw('ouch')"
 
     getBody w #+ [UI.h1 # set UI.text "after error"]
-    return ()
+    pure ()

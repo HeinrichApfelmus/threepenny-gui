@@ -68,11 +68,11 @@ bufferRunEval Window{wCallBufferMode,wCallBuffer,runEval} code = do
         mode <- readTVar wCallBufferMode
         case mode of
             NoBuffering -> do
-                return $ Just code
+                pure $ Just code
             _ -> do
                 msg <- takeTMVar wCallBuffer
                 putTMVar wCallBuffer (msg . (\s -> ";" ++ code ++ s))
-                return Nothing
+                pure Nothing
     case action of
         Nothing    -> pure ()
         Just code1 -> runEval code1

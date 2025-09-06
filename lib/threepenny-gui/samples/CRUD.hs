@@ -25,7 +25,7 @@ main = startGUI defaultConfig setup
 
 setup :: Window -> UI ()
 setup window = void $ mdo
-    return window # set title "CRUD Example (Simple)"
+    pure window # set title "CRUD Example (Simple)"
 
     -- GUI elements
     createBtn   <- UI.button #+ [string "Create"]
@@ -130,6 +130,6 @@ dataItem bItem = do
     entry1 <- UI.entry $ fst . maybe ("","") id <$> bItem
     entry2 <- UI.entry $ snd . maybe ("","") id <$> bItem
     
-    return ( (getElement entry1, getElement entry2)
+    pure ( (getElement entry1, getElement entry2)
            , (,) <$> UI.userText entry1 <*> UI.userText entry2
            )

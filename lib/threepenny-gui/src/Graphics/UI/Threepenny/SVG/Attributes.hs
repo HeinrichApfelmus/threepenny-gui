@@ -80,11 +80,9 @@ module Graphics.UI.Threepenny.SVG.Attributes (
     unicode_bidi, visibility, word_spacing, writing_mode
     ) where
 
-
-import           Graphics.UI.Threepenny.Core (Element, WriteAttr, attr,
-                                              mkWriteAttr, set')
-import           Prelude                     hiding (exponent, filter, id, max,
-                                              min)
+import Prelude hiding (exponent, filter, id, max, min)
+import Graphics.UI.Threepenny.Core
+    ( Element, WriteAttr, attr, mkWriteAttr, set' )
 
 strAttr :: String -> WriteAttr Element String
 strAttr n = mkWriteAttr (set' (attr n))

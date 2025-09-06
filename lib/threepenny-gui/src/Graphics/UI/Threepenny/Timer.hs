@@ -45,7 +45,7 @@ timer = liftIO $ do
     let tRunning  = fromTVar tvRunning
         tInterval = fromTVar tvInterval 
     
-    return $ Timer {..}
+    pure $ Timer {..}
 
 -- | Timer event.
 tick :: Timer -> Event ()
@@ -84,7 +84,7 @@ fromGetSet f = mkReadWriteAttr (liftIO . fst . f) (\i x -> liftIO $ snd (f x) i)
 testTimer = do
     t <- timer
     void $ register (tick t) $ const $ putStr "Hello"
-    return t
+    pure t
         # set interval 1000
         # set running True
 -}

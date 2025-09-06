@@ -39,7 +39,7 @@ class ToJS a where
         jsCode $ "[" ++ intercalate "," (map unJSCode ys) ++ "]"
 
 jsCode :: String -> IO JSCode
-jsCode = return . JSCode
+jsCode = pure . JSCode
 
 instance ToJS Float      where render   = render . JSON.toJSON
 instance ToJS Double     where render   = render . JSON.toJSON
@@ -78,7 +78,7 @@ simple :: JSON.FromJSON a => (JSCode -> JSCode) -> FromJS' a
 simple f =
     FromJS' { wrapCode = f , marshal = \_ -> fromSuccessIO . JSON.fromJSON }
     where
-    fromSuccessIO (JSON.Success a) = return a
+    fromSuccessIO (JSON.Success a) = pure a
 
 instance FromJS Double     where fromJS = simple id
 instance FromJS Float      where fromJS = simple id
@@ -88,7 +88,7 @@ instance FromJS T.Text     where fromJS = simple $ apply1 "%1.toString()"
 instance FromJS JSON.Value where fromJS = simple id
 
 instance FromJS ()         where
-    fromJS = FromJS' { wrapCode = id, marshal = \_ _ -> return () }
+    fromJS = FromJS' { wrapCode = id, marshal = \_ _ -> pure () }
 
 instance FromJS JSObject   where
     fromJS = FromJS'
@@ -105,7 +105,7 @@ instance FromJS [JSObject] where
         }
 
 instance FromJS NewJSObject where
-    fromJS = FromJS' { wrapCode = id, marshal = \_ _ -> return NewJSObject }
+    fromJS = FromJS' { wrapCode = id, marshal = \_ _ -> pure NewJSObject }
 
 -- | Impose a JS stable pointer upon a newly created JavaScript object.
 --   In this way, JSObject can be created without waiting for the browser
@@ -115,8 +115,8 @@ wrapImposeStablePtr (Window{wJSObjects}) f = do
     coupon  <- RemotePtr.newCoupon wJSObjects
     rcoupon <- render coupon
     rcode   <- code f
-    return $ JSFunction
-        { code = return $ apply "Haskell.imposeStablePtr(%1,%2)" [rcode, rcoupon]
+    pure $ JSFunction
+        { code = pure $ apply "Haskell.imposeStablePtr(%1,%2)" [rcode, rcoupon]
         , marshalResult = \w _ -> newJSObjectFromCoupon w coupon
         }
 
@@ -174,7 +174,7 @@ instance FromJS b        => FFI (JSFunction b) where
 -- The class instances for the 'FFI' class show which conversions are supported.
 --
 ffi :: FFI a => String -> a
-ffi macro = fancy (return . apply macro)
+ffi macro = fancy (pure . apply macro)
 
 testFFI :: String -> Int -> JSFunction String
 testFFI = ffi "$(%1).prop('checked',%2)"

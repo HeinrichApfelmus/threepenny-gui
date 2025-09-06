@@ -14,7 +14,7 @@ main = startGUI defaultConfig setup
 
 setup :: Window -> UI ()
 setup window = void $ do
-    return window # set title "Test Speed"
+    pure window # set title "Test Speed"
 
     let msg = "This program tries to measure the speed at which HTML elements can be built."
     getBody window #+ [UI.string msg, UI.br]

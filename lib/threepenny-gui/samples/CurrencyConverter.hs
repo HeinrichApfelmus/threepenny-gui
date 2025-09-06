@@ -13,7 +13,7 @@ main = startGUI defaultConfig setup
 
 setup :: Window -> UI ()
 setup window = void $ do
-    return window # set title "Currency Converter"
+    pure window # set title "Currency Converter"
 
     dollar <- UI.input
     euro   <- UI.input

@@ -15,7 +15,7 @@ getStaticDir = (</> "samples/static") `liftM` Paths_threepenny_gui.getDataDir
 -- using GHCi
 
 getStaticDir :: IO FilePath
-getStaticDir = return "static"
+getStaticDir = pure "static"
 
 #endif
 

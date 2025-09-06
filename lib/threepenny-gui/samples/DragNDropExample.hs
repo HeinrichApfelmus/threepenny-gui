@@ -16,7 +16,7 @@ main = do
 
 setup :: Window -> UI ()
 setup w = void $ do
-    return w # set title "Drag 'N' Drop Example"
+    pure w # set title "Drag 'N' Drop Example"
     UI.addStyleSheet w "DragNDropExample.css"
     
     pairs <- sequence $
@@ -57,5 +57,5 @@ mkDragPair color position = do
             # set text "Dropped!"
             # set UI.droppable False
     
-    return (elDrag, elDrop)
+    pure (elDrag, elDrop)
 

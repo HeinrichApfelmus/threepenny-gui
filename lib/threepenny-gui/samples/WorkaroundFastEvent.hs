@@ -16,7 +16,7 @@ main = do
 
 setup :: Window -> UI ()
 setup window = do
-    return window # set title "Workaround for slow registering of event handlers"
+    pure window # set title "Workaround for slow registering of event handlers"
 
     button <- UI.button
         # set UI.text "Click me"
@@ -35,5 +35,5 @@ onElementId
     -> UI ()
 onElementId elid event handler = do
     window   <- askWindow
-    exported <- ffiExport (runUI window handler >> return ())
+    exported <- ffiExport (runUI window handler >> pure ())
     runFunction $ ffi "$(%1).on(%2,%3)" ("#"++elid) event exported

@@ -12,7 +12,7 @@ main = startGUI defaultConfig setup
 
 setup :: Window -> UI ()
 setup w = void $ do
-    return w # set title "SVG"
+    pure w # set title "SVG"
 
     heading <- UI.h1 # set text "SVG Two Ways"
 
@@ -34,7 +34,7 @@ svgElems = do
         # set SVG.stroke "green"
         # set SVG.stroke_width "4"
         # set SVG.fill "yellow"
-    return context #+ [element elemCircle]
+    pure context #+ [element elemCircle]
 
 
 strCircle :: String

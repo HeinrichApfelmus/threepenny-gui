@@ -85,13 +85,13 @@ newVendor :: IO (Vendor a)
 newVendor = do
     counter <- newIORef 0
     coupons <- newIORef Map.empty
-    return $ Vendor {..}
+    pure $ Vendor {..}
 
 -- | Take a 'Coupon' to a 'Vendor' and maybe you'll get a 'RemotePtr' for it.
 lookup :: Coupon -> Vendor a -> IO (Maybe (RemotePtr a))
 lookup coupon Vendor{..} = do
     w <- Map.lookup coupon <$> readIORef coupons
-    maybe (return Nothing) Weak.deRefWeak w
+    maybe (pure Nothing) Weak.deRefWeak w
 
 -- | Create a new 'Coupon'.
 --
@@ -114,7 +114,7 @@ newRemotePtr coupon value Vendor{..} = do
     w <- Weak.mkWeakIORef ptr doFinalize
     atomicModifyIORef' coupons $ \m -> (Map.insert coupon w m, ())
     atomicModifyIORef' ptr $ \itemdata -> (itemdata { self = w }, ())
-    return ptr
+    pure ptr
 
 {-----------------------------------------------------------------------------
     RemotePtr
@@ -129,7 +129,7 @@ withRemotePtr ptr0 f = do
         RemoteData{..} <- readIORef ptr0
         b <- f coupon value
         touch ptr0
-        return b
+        pure b
     where
     -- make sure that the pointer is alive at this point in the code
     touch ptr = void $ readIORef ptr
@@ -173,7 +173,7 @@ destroy ptr = Weak.finalize =<< self <$> readIORef ptr
 -- as it allows all child object to be garbage collected at once.
 addReachable :: RemotePtr a -> RemotePtr b -> IO ()
 addReachable parent child = do
-    w   <- Weak.mkWeakIORefValue parent child $ return ()
+    w   <- Weak.mkWeakIORefValue parent child $ pure ()
     ref <- children <$> readIORef parent
     atomicModifyIORef' ref $ \ws -> (SomeWeak w:ws, ())
 

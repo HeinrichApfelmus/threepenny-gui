@@ -31,7 +31,7 @@ setup :: Chan Message -> Window -> UI ()
 setup globalMsgs window = do
     msgs <- liftIO $ Chan.dupChan globalMsgs
 
-    return window # set title "Chat"
+    pure window # set title "Chat"
     
     (nickRef, nickname) <- mkNickname
     messageArea         <- mkMessageArea msgs nickRef
@@ -87,7 +87,7 @@ mkNickname = do
     
     nick <- liftIO $ newIORef ""
     on UI.keyup input $ \_ -> liftIO . writeIORef nick . trim =<< get value input
-    return (nick,el)
+    pure (nick,el)
 
 mkMessage :: Message -> UI Element
 mkMessage (timestamp, nick, content) =

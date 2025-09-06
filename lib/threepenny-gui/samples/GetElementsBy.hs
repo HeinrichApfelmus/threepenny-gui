@@ -10,7 +10,7 @@ main = startGUI defaultConfig setup
 
 setup :: Window -> UI ()
 setup w = do
-    return w # set title "Element Test"
+    pure w # set title "Element Test"
 
     button1 <- UI.button # set UI.text "by tag"
     button2 <- UI.button # set UI.text "by class"

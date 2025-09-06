@@ -13,7 +13,6 @@ module Reactive.Threepenny (
 
     -- * Core Combinators
     -- | Minimal set of combinators for programming with 'Event' and 'Behavior'.
-    module Control.Applicative,
     never, filterJust, unionWith,
     accumE, apply, stepper,
     -- $classes
@@ -46,10 +45,9 @@ module Reactive.Threepenny (
     test, test_recursion1
     ) where
 
-import Control.Applicative
 import Control.Monad (void)
 import Control.Monad.Fix (mfix)
-import Control.Monad.IO.Class
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.IORef
 import qualified Data.Map as Map
 
@@ -95,7 +93,7 @@ type Handler a = a -> IO ()
 newEvent :: IO (Event a, Handler a)
 newEvent = do
     (p, fire) <- Prim.newPulse
-    return (E $ fromPure p, fire)
+    pure (E $ fromPure p, fire)
 
 
 -- | Create a series of events with delayed initialization.
@@ -108,15 +106,15 @@ newEventsNamed :: Ord name
     -> IO (name -> Event a)                 -- ^ Series of events.
 newEventsNamed initialize = do
     eventsRef <- newIORef Map.empty
-    return $ \name -> E $ memoize $ do
+    pure $ \name -> E $ memoize $ do
         events <- readIORef eventsRef
         case Map.lookup name events of
-            Just p  -> return p
+            Just p  -> pure p
             Nothing -> do
                 (p, fire) <- Prim.newPulse
                 writeIORef eventsRef $ Map.insert name p events
                 initialize (name, E $ fromPure p, fire)
-                return p
+                pure p
 
 
 -- | Register an event 'Handler' for an 'Event'.
@@ -212,13 +210,13 @@ accumB :: MonadIO m => a -> Event (a -> a) -> m (Behavior a)
 accumB a e = liftIO $ do
     (l1,p1) <- Prim.accumL a =<< at (unE e)
     p2      <- Prim.mapP (const ()) p1
-    return $ B l1 (E $ fromPure p2)
+    pure $ B l1 (E $ fromPure p2)
 
 
 -- | Construct a time-varying function from an initial value and
 -- a stream of new values. Think of it as
 --
--- > stepper x0 ex = return $ \time ->
+-- > stepper x0 ex = pure $ \time ->
 -- >     last (x0 : [x | (timex,x) <- ex, timex < time])
 --
 -- Note that the smaller-than-sign in the comparison @timex < time@ means
@@ -231,18 +229,22 @@ stepper a e = accumB a (const <$> e)
 -- Example:
 --
 -- > accumE "x" [(time1,(++"y")),(time2,(++"z"))]
--- >    = return [(time1,"xy"),(time2,"xyz")]
+-- >    = pure [(time1,"xy"),(time2,"xyz")]
 --
 -- Note that the output events are simultaneous with the input events,
 -- there is no \"delay\" like in the case of 'accumB'.
 accumE :: MonadIO m =>  a -> Event (a -> a) -> m (Event a)
 accumE a e = liftIO $ do
     p <- fmap snd . Prim.accumL a =<< at (unE e)
-    return $ E $ fromPure p
+    pure $ E $ fromPure p
 
 instance Functor Behavior where
     fmap f ~(B l e) = B (Prim.mapL f l) e
 
+-- | Think of it as
+--
+-- > pure x   = \time -> x
+-- > bf <*> bg = \time -> bf time (bg time)
 instance Applicative Behavior where
     pure a  = B (Prim.pureL a) never
     ~(B lf ef) <*> ~(B lx ex) =
@@ -338,7 +340,7 @@ mapAccum :: MonadIO m => acc -> Event (acc -> (x,acc)) -> m (Event x, Behavior a
 mapAccum acc ef = do
     e <- accumE (undefined,acc) ((. snd) <$> ef)
     b <- stepper acc (snd <$> e)
-    return (fst <$> e, b)
+    pure (fst <$> e, b)
 
 
 {-----------------------------------------------------------------------------
@@ -383,7 +385,7 @@ test = do
     e2 <- accumE 0 $ (+) <$> e1
     _  <- register e2 print
 
-    return fire
+    pure fire
 
 test_recursion1 :: IO (IO ())
 test_recursion1 = do
@@ -395,4 +397,4 @@ test_recursion1 = do
         pure (b, e2)
     _  <- register e2 print
 
-    return $ fire ()
+    pure $ fire ()

@@ -9,4 +9,4 @@ import Reactive.Threepenny.Types
 runEvalP :: Values -> EvalP a -> IO (a, Values)
 runEvalP pulses m = do
     (a, s, _) <- runRWST m () pulses
-    return (a, s)
+    pure (a, s)
