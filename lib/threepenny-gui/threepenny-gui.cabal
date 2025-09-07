@@ -98,6 +98,7 @@ library
 
   if impl(ghc)
     exposed-modules:
+      Graphics.UI.Threepenny.Server
       Graphics.UI.Threepenny.Timer
     build-depends:
         stm                        >=2.2   && <2.6

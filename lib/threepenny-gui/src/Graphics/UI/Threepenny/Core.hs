@@ -5,8 +5,7 @@ module Graphics.UI.Threepenny.Core (
 
     -- * Server
     -- $server
-    Config(..), ConfigSSL (..), defaultConfig, startGUI,
-    loadFile, loadDirectory,
+    startBrowserGUI,
 
     -- * UI monad
     -- $ui
@@ -70,10 +69,8 @@ import qualified Graphics.UI.Threepenny.Internal as Core
 import qualified Reactive.Threepenny             as Reactive
 
 -- exports
-import Foreign.JavaScript                   (Config(..), ConfigSSL (..), defaultConfig)
 import Graphics.UI.Threepenny.Internal
 import Reactive.Threepenny                  hiding (onChange)
-
 
 {-----------------------------------------------------------------------------
     Server
