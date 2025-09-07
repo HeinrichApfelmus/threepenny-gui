@@ -1,6 +1,6 @@
 import Control.Monad (void)
 import Text.Printf
-import Safe          (readMay)
+import Text.Read (readMaybe)
 
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
@@ -17,7 +17,7 @@ setup window = void $ do
 
     dollar <- UI.input
     euro   <- UI.input
-    
+
     getBody window #+ [
             column [
                 grid [[string "Dollar:", element dollar]
@@ -29,7 +29,7 @@ setup window = void $ do
     dollarIn <- stepper "0" $ UI.valueChange dollar
     let
         rate = 0.7 :: Double
-        withString f = maybe "-" (printf "%.2f") . fmap f . readMay
+        withString f = maybe "-" (printf "%.2f") . fmap f . readMaybe
     
         dollarOut = withString (/ rate) <$> euroIn
         euroOut   = withString (* rate) <$> dollarIn
