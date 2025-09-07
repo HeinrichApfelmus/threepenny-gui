@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>MicroHs and JavaScript</title>
+
+    <!-- See https://stackoverflow.com/a/37480521  -->
+    <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
+    <script src="js/lib/jquery.js"></script>
+    <script>var Haskell = {};</script>
+    <script src="js/ffi-microhs.js"></script>
+    <script src="js/lib.js"></script>
+    <script>if (window.module) module = window.module;</script>
+
+    <script type="text/javascript" charset="utf-8">
+      Haskell.initFFI();
+    </script>
+    <script src="Example.js"></script>
+  </head>
+  <body>
+    <script type="text/javascript">
+      var Module = {
+        preRun: [
+          function() {
+            // Grab text from the div
+            // var data = document.getElementById('data-source').textContent.trim();
+
+            // Write file into Emscripten FS
+            FS.writeFile('out.comb', combexpr);
+            console.log(FS.readFile('out.comb'));
+          }
+        ],
+        print: function(text) {
+          document.getElementById('output').textContent += text + "\n";
+        },
+        printErr: function(text) {
+          console.error(text);
+        }
+      };
+    </script>
+    <script src="mhseval.js"></script>
+  </body>
+</html>
