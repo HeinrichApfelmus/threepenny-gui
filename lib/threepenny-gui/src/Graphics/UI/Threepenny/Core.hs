@@ -305,7 +305,7 @@ instance Functor (ReadWriteAttr x i) where
 -- | Map input and output type of an attribute.
 bimapAttr :: (i' -> i) -> (o -> o')
           -> ReadWriteAttr x i o -> ReadWriteAttr x i' o'
-bimapAttr from to attribute = attribute
+bimapAttr from to attribute = ReadWriteAttr
     { get' = fmap to . get' attribute
     , set' = \i' -> set' attribute (from i')
     }

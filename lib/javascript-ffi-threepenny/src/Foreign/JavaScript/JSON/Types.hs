@@ -17,7 +17,7 @@ import qualified Data.Text as T
 data Number
     = Integer Integer
     | Double Double
-    deriving (Show)
+    deriving (Eq, Show)
 
 -- | A JSON value.
 data Value
@@ -27,4 +27,4 @@ data Value
     | Number Number -- FIXME
     | Bool Bool
     | Null
-    deriving (Show)
+    deriving (Eq, Show)

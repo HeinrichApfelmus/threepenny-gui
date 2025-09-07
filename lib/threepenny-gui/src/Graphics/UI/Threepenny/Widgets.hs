@@ -1,4 +1,5 @@
-{-# LANGUAGE RecordWildCards, ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
 module Graphics.UI.Threepenny.Widgets (
     -- * Synopsis
@@ -93,6 +94,7 @@ listBox bitems bsel bdisplay = do
         bindices = (Map.fromList . flip zip [0..]) <$> bitems
         bindex   = lookupIndex <$> bindices <*> bsel
 
+        lookupIndex :: Ord b => Map.Map b c -> Maybe b -> Maybe c
         lookupIndex _indices Nothing   = Nothing
         lookupIndex indices (Just sel) = Map.lookup sel indices
 
@@ -115,7 +117,3 @@ listBox bitems bsel bdisplay = do
 items :: WriteAttr Element [UI Element]
 items = mkWriteAttr $ \i x -> void $ do
     pure x # set children [] #+ map (\j -> UI.option #+ [j]) i
-
-
-
-

@@ -7,9 +7,12 @@ import Data.Map
     ( Map )
 import Data.Text
     ( Text )
+import Data.Typeable
+    ( Typeable )
 
-import qualified Foreign.RemotePtr  as RemotePtr
+import qualified Control.Exception  as E
 import qualified Data.Map           as Map
+import qualified Foreign.RemotePtr  as RemotePtr
 
 #if defined(__MHS__)
 import qualified Foreign.JavaScript.JSON    as JSON ( Value (..) )
@@ -27,15 +30,12 @@ import Data.ByteString.Char8
     ( ByteString )
 import Data.String
     ( fromString )
-import Data.Typeable
-    ( Typeable )
 import Snap.Core
     ( Cookie(..) )
 import System.IO
     ( stderr )
 
 import qualified Control.Concurrent.STM  as STM
-import qualified Control.Exception       as E
 import qualified Data.Aeson              as JSON
 import qualified Data.ByteString.Char8   as BS   ( hPutStrLn )
 
@@ -286,7 +286,7 @@ any subsequent IO exception; this makes it easier to pinpoint
 the root cause for library users.
 
 -}
-
+#endif
 
 data JavaScriptException = JavaScriptException String deriving Typeable
 
@@ -295,8 +295,6 @@ instance E.Exception JavaScriptException
 instance Show JavaScriptException where
     showsPrec _ (JavaScriptException err) =
         showString $ "JavaScript error: " ++ err
-
-#endif
 
 {-----------------------------------------------------------------------------
     Window & Event Loop

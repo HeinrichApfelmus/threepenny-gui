@@ -28,7 +28,7 @@ module Graphics.UI.Threepenny.SVG.Elements (
     image,
     line, linearGradient,
     marker, mask, metadata, missing_glyph, mpath,
-    path, pattern, polygon, polyline,
+    path, pattern_, polygon, polyline,
     radialGradient, rect,
     script, set, stop, style, svg, switch, symbol,
     text, textPath, title, tref, tspan,
@@ -103,7 +103,7 @@ metadata              = itag "metadata"
 missing_glyph         =  tag "missing-glyph"
 mpath                 = itag "mpath"
 path                  = itag "path"
-pattern               =  tag "pattern"
+pattern_              =  tag "pattern"
 polygon               =  tag "polygon"
 polyline              =  tag "polyline"
 radialGradient        =  tag "radialGradient"

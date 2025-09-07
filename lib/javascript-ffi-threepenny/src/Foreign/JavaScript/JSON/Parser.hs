@@ -6,6 +6,8 @@ module Foreign.JavaScript.JSON.Parser
 
 import Prelude hiding ( null, exponent )
 
+import Control.Monad
+    ( ap )
 import Data.Char
     ( isDigit )
 import Data.List
@@ -84,6 +86,14 @@ data Result a = Error String | Success a
 instance Functor Result where
     fmap f (Error   s) = Error s
     fmap f (Success x) = Success (f x)
+
+instance Applicative Result where
+    pure x = Success x
+    (<*>)  = ap
+
+instance Monad Result where
+    (Error   e) >>= _ = Error e
+    (Success x) >>= g = g x
 
 whitespace :: ReadP ()
 whitespace = skipSpaces

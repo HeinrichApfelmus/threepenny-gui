@@ -5,10 +5,7 @@
 -- The main functions are 'ffi', 'runFunction', and 'callFunction'.
 module Foreign.JavaScript.Functions
     ( -- * Types
-      ToJS (..), FromJS, JSFunction, JSObject
-#if !defined(__MHS__)
-    , JavaScriptException
-#endif
+      ToJS (..), FromJS, JSFunction, JSObject, JavaScriptException
     -- * Calling JavaScript from Haskell
     , FFI, ffi, runFunction, callFunction, root
     , NewJSObject, unsafeCreateJSObject

@@ -8,7 +8,9 @@ Added
 
 Changed
 
-* Split off JavaScript FFI to `javascript-ffi-threepenny`.
+* Rename `pattern` to `pattern_` in `Graphics.UI.Threepenny.SVG.Elements`
+  as `pattern` is a keyword for the `PatternSynonyms` extension.
+* Internal: Split off JavaScript FFI to `javascript-ffi-threepenny`.
 * Remove dependency on `aeson` and use `JSON` type from JavaScript FFI instead.
   * Change type `EventData`, function `unsafeFromJSON`.
 
