@@ -3,6 +3,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Foreign.JavaScript.Types where
 
+import Control.Concurrent.MVar
+    ( MVar )
+import Control.Concurrent.STM
+    ( STM, TMVar, TQueue, TVar )
 import Data.Map
     ( Map )
 import Data.Text
@@ -10,6 +14,7 @@ import Data.Text
 import Data.Typeable
     ( Typeable )
 
+import qualified Control.Concurrent.STM  as STM
 import qualified Control.Exception  as E
 import qualified Data.Map           as Map
 import qualified Foreign.RemotePtr  as RemotePtr
@@ -18,10 +23,6 @@ import qualified Foreign.RemotePtr  as RemotePtr
 import qualified Foreign.JavaScript.JSON    as JSON ( Value (..) )
 
 #else
-import Control.Concurrent.MVar
-    ( MVar )
-import Control.Concurrent.STM
-    ( STM, TMVar, TQueue, TVar )
 import Control.DeepSeq
     ( NFData (..), force )
 import Data.Aeson
@@ -35,7 +36,6 @@ import Snap.Core
 import System.IO
     ( stderr )
 
-import qualified Control.Concurrent.STM  as STM
 import qualified Data.Aeson              as JSON
 import qualified Data.ByteString.Char8   as BS   ( hPutStrLn )
 
@@ -347,12 +347,13 @@ data Window = Window
     -- ^ Server that the browser window communicates with.
     , getCookies     :: [Cookie]
     -- ^ Cookies that the browser window has sent to the server when connecting.
-
-    , wCallBuffer     :: TMVar (String -> String)
-    , wCallBufferMode :: TVar CallBufferMode
     ,
 #endif
-      runEval        :: String -> IO ()
+
+      wCallBuffer     :: TMVar (String -> String)
+    , wCallBufferMode :: TVar CallBufferMode
+
+    , runEval        :: String -> IO ()
     , callEval       :: String -> IO JSON.Value
 
     , timestamp      :: IO ()
@@ -367,15 +368,6 @@ data Window = Window
     , wJSObjects     :: RemotePtr.Vendor JSPtr
     }
 
-#if defined(__MHS__)
-newPartialWindow :: IO Window
-newPartialWindow = do
-    ptr <- RemotePtr.newRemotePtr "" () =<< RemotePtr.newVendor
-    let nop :: a -> IO ()
-        nop = const $ pure ()
-    Window nop undefined (pure ()) nop nop ptr
-        <$> RemotePtr.newVendor <*> RemotePtr.newVendor
-#else
 newPartialWindow :: IO Window
 newPartialWindow = do
     ptr <- RemotePtr.newRemotePtr "" () =<< RemotePtr.newVendor
@@ -383,6 +375,10 @@ newPartialWindow = do
     b2  <- STM.newTVarIO NoBuffering
     let nop :: a -> IO ()
         nop = const $ pure ()
+#if defined(__MHS__)
+    Window b1 b2 nop undefined (pure ()) nop nop ptr
+        <$> RemotePtr.newVendor <*> RemotePtr.newVendor
+#else
     Window undefined [] b1 b2 nop undefined (pure ()) nop nop ptr
         <$> RemotePtr.newVendor <*> RemotePtr.newVendor
 #endif

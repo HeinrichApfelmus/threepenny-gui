@@ -10,23 +10,6 @@ module Foreign.JavaScript.CallBuffer
 
 import Foreign.JavaScript.Types
 
-#if defined(__MHS__)
-{-----------------------------------------------------------------------------
-    MicroHs
-------------------------------------------------------------------------------}
-setCallBufferMode :: Window -> CallBufferMode -> IO ()
-setCallBufferMode _ _ = pure ()
-
-getCallBufferMode :: Window -> IO CallBufferMode
-getCallBufferMode _ = pure NoBuffering
-
-flushCallBuffer :: Window -> IO ()
-flushCallBuffer _ = pure ()
-
-bufferRunEval :: Window -> String -> IO ()
-bufferRunEval Window{runEval} code = runEval code
-
-#else
 {-----------------------------------------------------------------------------
    GHC
 ------------------------------------------------------------------------------}
@@ -77,4 +60,3 @@ bufferRunEval Window{wCallBufferMode,wCallBuffer,runEval} code = do
         Nothing    -> pure ()
         Just code1 -> runEval code1
 
-#endif
