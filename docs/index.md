@@ -25,7 +25,7 @@ As cool as Threepenny may be, it is ...
 
 If you want to write a web app, have a look at projects like [Fay][fay], [GHCJS][ghcjs] and [ Haste][haste]. That said, the Threepenny API may be ported to some of these projects as well in the future, but that is not the focus right now.
 
-   [chat]: https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/Chat.hs
+   [chat]: https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/lib/threepenny-gui/samples/Chat.hs
    [ghcjs]: https://github.com/ghcjs/ghcjs
    [fay]: https://github.com/faylang/fay/wiki
    [haste]: https://github.com/valderman/haste-compiler
@@ -83,7 +83,7 @@ Applications written with Threepenny.
 * Documentation
 
   * [API reference](http://hackage.haskell.org/package/threepenny-gui)
-  * *[Examples](../samples#readme)*
+  * *[Examples](../lib/threepenny-gui/samples#readme)*
   * [Tutorial slides from HaL 2017](../doc/hal-2017)
   * [A work in progress tutorial](https://github.com/yuvallanger/threepenny-gui/blob/tutorial/samples/BarTab.lhs) by [Yuval Langer](https://github.com/yuvallanger) - help will be dearly appreciated.
   * [Developer Blog](http://apfelmus.nfshost.com/blog.html#gui-programming )
