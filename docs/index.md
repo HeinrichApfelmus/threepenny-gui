@@ -30,6 +30,15 @@ If you want to write a web app, have a look at projects like [Fay][fay], [GHCJS]
    [fay]: https://github.com/faylang/fay/wiki
    [haste]: https://github.com/valderman/haste-compiler
 
+# Status
+
+The library is still very much in flux, significant API changes are likely in future versions. The goal is make GUI programming as simple as possible, and that just needs some experimentation.
+
+* 11 December  2022 — Release of threepenny-gui-0.9.4.0
+*  6 June      2020 — Release of threepenny-gui-0.9.0.0
+* 29 April     2017 — Release of threepenny-gui-0.8.0.0
+* 16 September 2016 — Release of threepenny-gui-0.7.0.0
+
 # Gallery
 
 Applications written with Threepenny.
