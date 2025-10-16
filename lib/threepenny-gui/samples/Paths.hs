@@ -21,4 +21,6 @@ getStaticDir = pure "static"
 
 -- | Base URL for the example source code.
 samplesURL :: String
-samplesURL = "https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/samples/"
+samplesURL =
+  "https://github.com/HeinrichApfelmus/threepenny-gui/"
+  <> "blob/master/lib/threepenny-gui/samples/"
