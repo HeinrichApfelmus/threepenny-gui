@@ -92,8 +92,8 @@ Applications written with Threepenny.
 * Documentation
 
   * [API reference](http://hackage.haskell.org/package/threepenny-gui)
-  * *[Examples](../threepenny-gui/lib/threepenny-gui/samples#readme)*
-  * [Tutorial slides from HaL 2017](../doc/hal-2017)
+  * *[Examples](https://github.com/HeinrichApfelmus/threepenny-gui/tree/master/lib/threepenny-gui/samples#readme)*
+  * [Tutorial slides from HaL 2017](https://github.com/HeinrichApfelmus/threepenny-gui/tree/master/doc/hal-2017)
   * [A work in progress tutorial](https://github.com/yuvallanger/threepenny-gui/blob/tutorial/samples/BarTab.lhs) by [Yuval Langer](https://github.com/yuvallanger) - help will be dearly appreciated.
   * [Developer Blog](http://apfelmus.nfshost.com/blog.html#gui-programming )
 
